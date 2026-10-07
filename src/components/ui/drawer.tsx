@@ -1,13 +1,31 @@
 "use client"
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
 import { Drawer as DrawerPrimitive } from "vaul"
+import { cn } from "@/lib/utils"
+import { useFrame } from "@/components/shell/FrameContext"
 
+// Every drawer portals into #app-frame (FrameContext), never document.body, so the
+// overlay and the sheet stay inside the 450px column. Overlay and content are
+// `absolute` against the frame (which is `relative`), so containment does not rely
+// on the frame's transform. `noBodyStyles`: the page never scrolls (globals), and
+// vaul's iOS `position:fixed` body hack would collapse the h-full frame.
 function Drawer({
+  container,
+  noBodyStyles = true,
+  shouldScaleBackground = false,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />
+  const frame = useFrame()
+  return (
+    <DrawerPrimitive.Root
+      data-slot="drawer"
+      container={container ?? frame}
+      noBodyStyles={noBodyStyles}
+      shouldScaleBackground={shouldScaleBackground}
+      {...props}
+    />
+  )
 }
 
 function DrawerTrigger({
@@ -16,10 +34,16 @@ function DrawerTrigger({
   return <DrawerPrimitive.Trigger data-slot="drawer-trigger" {...props} />
 }
 
+// Renders nothing until the frame element exists, so a sheet that is open on the
+// first client render never flashes into document.body.
 function DrawerPortal({
+  container,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Portal>) {
-  return <DrawerPrimitive.Portal data-slot="drawer-portal" {...props} />
+  const frame = useFrame()
+  const target = container ?? frame
+  if (!target) return null
+  return <DrawerPrimitive.Portal data-slot="drawer-portal" container={target} {...props} />
 }
 
 function DrawerClose({
@@ -35,10 +59,7 @@ function DrawerOverlay({
   return (
     <DrawerPrimitive.Overlay
       data-slot="drawer-overlay"
-      className={cn(
-        "fixed inset-0 z-50 bg-black/10 supports-backdrop-filter:backdrop-blur-xs data-open:animate-in data-open:fade-in-0 data-closed:animate-out data-closed:fade-out-0",
-        className
-      )}
+      className={cn("absolute inset-0 z-30 bg-scrim", className)}
       {...props}
     />
   )
@@ -46,47 +67,27 @@ function DrawerOverlay({
 
 function DrawerContent({
   className,
+  overlayClassName,
   children,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  overlayClassName?: string
+}) {
   return (
-    <DrawerPortal data-slot="drawer-portal">
-      <DrawerOverlay />
+    <DrawerPortal>
+      <DrawerOverlay className={overlayClassName} />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
         className={cn(
-          "group/drawer-content fixed z-50 flex h-auto flex-col bg-popover text-sm text-popover-foreground data-[vaul-drawer-direction=bottom]:inset-x-0 data-[vaul-drawer-direction=bottom]:bottom-0 data-[vaul-drawer-direction=bottom]:mt-24 data-[vaul-drawer-direction=bottom]:max-h-[80vh] data-[vaul-drawer-direction=bottom]:rounded-t-xl data-[vaul-drawer-direction=bottom]:border-t data-[vaul-drawer-direction=left]:inset-y-0 data-[vaul-drawer-direction=left]:left-0 data-[vaul-drawer-direction=left]:w-3/4 data-[vaul-drawer-direction=left]:rounded-r-xl data-[vaul-drawer-direction=left]:border-r data-[vaul-drawer-direction=right]:inset-y-0 data-[vaul-drawer-direction=right]:right-0 data-[vaul-drawer-direction=right]:w-3/4 data-[vaul-drawer-direction=right]:rounded-l-xl data-[vaul-drawer-direction=right]:border-l data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-xl data-[vaul-drawer-direction=top]:border-b data-[vaul-drawer-direction=left]:sm:max-w-sm data-[vaul-drawer-direction=right]:sm:max-w-sm",
+          "absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-8xl bg-canvas text-ink shadow-sheet outline-none",
           className
         )}
         {...props}
       >
-        <div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+        <span aria-hidden className="mx-auto mt-2 h-[5px] w-10 shrink-0 rounded-full bg-line-2" />
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
-  )
-}
-
-function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="drawer-header"
-      className={cn(
-        "flex flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center md:gap-0.5 md:text-left",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function DrawerFooter({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="drawer-footer"
-      className={cn("mt-auto flex flex-col gap-2 p-4", className)}
-      {...props}
-    />
   )
 }
 
@@ -97,10 +98,7 @@ function DrawerTitle({
   return (
     <DrawerPrimitive.Title
       data-slot="drawer-title"
-      className={cn(
-        "text-base font-medium text-foreground",
-        className
-      )}
+      className={cn("text-22 font-semibold tracking-h2", className)}
       {...props}
     />
   )
@@ -113,7 +111,7 @@ function DrawerDescription({
   return (
     <DrawerPrimitive.Description
       data-slot="drawer-description"
-      className={cn("text-sm text-muted-foreground", className)}
+      className={cn("text-14 leading-[1.4] tracking-sm text-pretty text-muted", className)}
       {...props}
     />
   )
@@ -126,8 +124,6 @@ export {
   DrawerTrigger,
   DrawerClose,
   DrawerContent,
-  DrawerHeader,
-  DrawerFooter,
   DrawerTitle,
   DrawerDescription,
 }

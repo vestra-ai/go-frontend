@@ -10,8 +10,13 @@ function Slider({
   value,
   min = 0,
   max = 100,
+  minStepsBetweenThumbs = 1,
+  thumbLabels,
   ...props
-}: React.ComponentProps<typeof SliderPrimitive.Root>) {
+}: React.ComponentProps<typeof SliderPrimitive.Root> & {
+  /** Accessible name per thumb, e.g. ["Minimum budget", "Maximum budget"]. */
+  thumbLabels?: string[]
+}) {
   const _values = React.useMemo(
     () =>
       Array.isArray(value)
@@ -29,26 +34,28 @@ function Slider({
       value={value}
       min={min}
       max={max}
+      minStepsBetweenThumbs={minStepsBetweenThumbs}
       className={cn(
-        "relative flex w-full touch-none items-center select-none data-disabled:opacity-50 data-vertical:h-full data-vertical:min-h-40 data-vertical:w-auto data-vertical:flex-col",
+        "relative flex h-11 w-full touch-none items-center select-none data-[disabled]:opacity-50",
         className
       )}
       {...props}
     >
       <SliderPrimitive.Track
         data-slot="slider-track"
-        className="relative grow overflow-hidden rounded-full bg-muted data-horizontal:h-1 data-horizontal:w-full data-vertical:h-full data-vertical:w-1"
+        className="relative h-1 w-full grow overflow-hidden rounded-full bg-line"
       >
         <SliderPrimitive.Range
           data-slot="slider-range"
-          className="absolute bg-primary select-none data-horizontal:h-full data-vertical:w-full"
+          className="absolute h-full bg-black select-none"
         />
       </SliderPrimitive.Track>
       {Array.from({ length: _values.length }, (_, index) => (
         <SliderPrimitive.Thumb
           data-slot="slider-thumb"
           key={index}
-          className="relative block size-3 shrink-0 rounded-full border border-ring bg-white ring-ring/50 transition-[color,box-shadow] select-none after:absolute after:-inset-2 hover:ring-3 focus-visible:ring-3 focus-visible:outline-hidden active:ring-3 disabled:pointer-events-none disabled:opacity-50"
+          aria-label={thumbLabels?.[index]}
+          className="block size-7 shrink-0 rounded-full border-2 border-black bg-white shadow-thumb outline-none select-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:pointer-events-none"
         />
       ))}
     </SliderPrimitive.Root>

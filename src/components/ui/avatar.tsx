@@ -1,26 +1,123 @@
 "use client"
 
 import * as React from "react"
+import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Avatar as AvatarPrimitive } from "radix-ui"
 
+// Design diameters (px, border included) -> initials size.
+const sizeMap = {
+  18: "size-[18px] text-9",
+  20: "size-5 text-10",
+  22: "size-[22px] text-10",
+  24: "size-6 text-11",
+  26: "size-[26px] text-11",
+  28: "size-7 text-12",
+  30: "size-[30px] text-12",
+  32: "size-8 text-13",
+  36: "size-9 text-14",
+  40: "size-10 text-15",
+  44: "size-11 text-16",
+  48: "size-12 text-17",
+  52: "size-[52px] text-18",
+  64: "size-16 text-22",
+} as const
+
+const avatarSizes = sizeMap
+type AvatarSize = keyof typeof sizeMap
+
+const tones = ["amber", "info", "success", "go", "peach"] as const
+type AvatarTone = (typeof tones)[number]
+
+const avatarVariants = cva(
+  "group/avatar relative flex shrink-0 items-center justify-center select-none font-semibold text-ink",
+  {
+    variants: {
+      // Real borders (border-box), so the design's diameter is kept with the ring inside it.
+      ring: {
+        none: "",
+        white: "border-2 border-white",
+        "white-thin": "border-[1.5px] border-white",
+        black: "border-2 border-black",
+      },
+      tone: {
+        amber: "bg-amber-soft",
+        info: "bg-info-tint",
+        success: "bg-success-soft",
+        go: "bg-go-soft",
+        peach: "bg-peach-tint",
+        none: "",
+      },
+      kind: {
+        user: "rounded-full",
+        go: "rounded-full bg-info-soft",
+        trip: "rounded-xl",
+      },
+    },
+    defaultVariants: { ring: "none", tone: "none", kind: "user" },
+  }
+)
+
+/** Stable per-user fallback tone, so the same name always gets the same colour. */
+function toneFor(name?: string): AvatarTone | "none" {
+  if (!name) return "none"
+  let h = 0
+  for (const ch of name) h = (h * 31 + ch.charCodeAt(0)) >>> 0
+  return tones[h % tones.length]
+}
+
+function initialsOf(name: string) {
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  return parts
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase()
+}
+
+type AvatarProps = Omit<React.ComponentProps<typeof AvatarPrimitive.Root>, "children"> &
+  Omit<VariantProps<typeof avatarVariants>, "tone"> & {
+    size?: AvatarSize
+    tone?: AvatarTone
+    /** Image URL (an `assets` entry's `.src`). */
+    src?: string
+    /** Used for the image alt and the initials fallback. */
+    name?: string
+    children?: React.ReactNode
+  }
+
 function Avatar({
   className,
-  size = "default",
+  size = 32,
+  ring = "none",
+  tone,
+  kind = "user",
+  src,
+  name,
+  children,
   ...props
-}: React.ComponentProps<typeof AvatarPrimitive.Root> & {
-  size?: "default" | "sm" | "lg"
-}) {
+}: AvatarProps) {
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
       className={cn(
-        "group/avatar relative flex size-8 shrink-0 rounded-full select-none after:absolute after:inset-0 after:rounded-full after:border after:border-border after:mix-blend-darken data-[size=lg]:size-10 data-[size=sm]:size-6 dark:after:mix-blend-lighten",
+        avatarVariants({ ring, kind, tone: tone ?? (kind === "user" ? toneFor(name) : "none") }),
+        sizeMap[size],
         className
       )}
       {...props}
-    />
+    >
+      {src && (
+        <AvatarImage
+          src={src}
+          alt={name ?? ""}
+          className={kind === "trip" ? "size-[91%] rounded-none object-contain" : undefined}
+        />
+      )}
+      {name && kind === "user" && <AvatarFallback>{initialsOf(name)}</AvatarFallback>}
+      {children}
+    </AvatarPrimitive.Root>
   )
 }
 
@@ -48,7 +145,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "flex size-full items-center justify-center rounded-full bg-muted text-sm text-muted-foreground group-data-[size=sm]/avatar:text-xs",
+        "flex size-full items-center justify-center rounded-full",
         className
       )}
       {...props}
@@ -61,39 +158,7 @@ function AvatarBadge({ className, ...props }: React.ComponentProps<"span">) {
     <span
       data-slot="avatar-badge"
       className={cn(
-        "absolute right-0 bottom-0 z-10 inline-flex items-center justify-center rounded-full bg-primary text-primary-foreground bg-blend-color ring-2 ring-background select-none",
-        "group-data-[size=sm]/avatar:size-2 group-data-[size=sm]/avatar:[&>svg]:hidden",
-        "group-data-[size=default]/avatar:size-2.5 group-data-[size=default]/avatar:[&>svg]:size-2",
-        "group-data-[size=lg]/avatar:size-3 group-data-[size=lg]/avatar:[&>svg]:size-2",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function AvatarGroup({ className, ...props }: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="avatar-group"
-      className={cn(
-        "group/avatar-group flex -space-x-2 *:data-[slot=avatar]:ring-2 *:data-[slot=avatar]:ring-background",
-        className
-      )}
-      {...props}
-    />
-  )
-}
-
-function AvatarGroupCount({
-  className,
-  ...props
-}: React.ComponentProps<"div">) {
-  return (
-    <div
-      data-slot="avatar-group-count"
-      className={cn(
-        "relative flex size-8 shrink-0 items-center justify-center rounded-full bg-muted text-sm text-muted-foreground ring-2 ring-background group-has-data-[size=lg]/avatar-group:size-10 group-has-data-[size=sm]/avatar-group:size-6 [&>svg]:size-4 group-has-data-[size=lg]/avatar-group:[&>svg]:size-5 group-has-data-[size=sm]/avatar-group:[&>svg]:size-3",
+        "absolute right-0 bottom-0 z-10 inline-flex size-2.5 items-center justify-center rounded-full bg-success ring-2 ring-white select-none",
         className
       )}
       {...props}
@@ -105,7 +170,9 @@ export {
   Avatar,
   AvatarImage,
   AvatarFallback,
-  AvatarGroup,
-  AvatarGroupCount,
   AvatarBadge,
+  avatarVariants,
+  avatarSizes,
+  type AvatarSize,
+  type AvatarTone,
 }

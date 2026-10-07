@@ -4,6 +4,7 @@ import { Figtree } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { AppFrame } from "@/components/shell/AppFrame";
 import { Toaster } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -34,10 +35,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="en" className={figtree.variable}>
       <body>
         <SerwistProvider swUrl="/serwist/sw.js">
-          <AppFrame>
-            {children}
-            <Toaster />
-          </AppFrame>
+          <TooltipProvider>
+            <AppFrame>
+              {children}
+              <Toaster />
+            </AppFrame>
+          </TooltipProvider>
         </SerwistProvider>
       </body>
     </html>

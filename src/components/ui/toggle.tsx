@@ -5,39 +5,81 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 import { Toggle as TogglePrimitive } from "radix-ui"
 
+import { chipVariants } from "@/components/ui/chip"
+
 const toggleVariants = cva(
-  "group/toggle inline-flex items-center justify-center gap-1 rounded-lg text-sm font-medium whitespace-nowrap transition-all outline-none hover:bg-muted hover:text-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-destructive/20 aria-pressed:bg-muted data-[state=on]:bg-muted dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/toggle inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap outline-none transition-[background-color,color,border-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "bg-transparent",
-        outline: "border border-input bg-transparent hover:bg-muted",
+        // Chip lg outline: pressed (data-[state=on]) swaps to solid black
+        chip: chipVariants({ variant: "outline", size: "lg" }),
+        tile: "flex-col items-start justify-start gap-0.5 rounded-3xl border border-line-2 bg-white p-3 text-left text-ink data-[state=on]:border-black data-[state=on]:bg-black data-[state=on]:text-white",
+        upload:
+          "h-28 flex-col gap-1.5 rounded-4xl border-[1.5px] border-dashed border-line-3 bg-white text-ink data-[state=on]:border-solid data-[state=on]:border-success data-[state=on]:bg-success-tint",
+        seat: "size-10 rounded-xl p-0 text-11 font-bold",
       },
-      size: {
-        default:
-          "h-8 min-w-8 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        sm: "h-7 min-w-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-[0.8rem] has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
-        lg: "h-9 min-w-9 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
+      seatState: {
+        free: "",
+        paid: "",
+        taken: "",
+        selected: "",
+        friend: "",
       },
     },
+    compoundVariants: [
+      {
+        variant: "seat",
+        seatState: "free",
+        className: "border-[1.5px] border-line-2 bg-white text-faint",
+      },
+      {
+        variant: "seat",
+        seatState: "paid",
+        className: "border-[1.5px] border-go-line bg-go-note text-go",
+      },
+      {
+        variant: "seat",
+        seatState: "taken",
+        className: "cursor-not-allowed bg-line text-line-4",
+      },
+      {
+        variant: "seat",
+        seatState: "selected",
+        className: "bg-black text-white",
+      },
+      {
+        variant: "seat",
+        seatState: "friend",
+        className: "border-2 border-info bg-info-tint-2",
+      },
+    ],
     defaultVariants: {
-      variant: "default",
-      size: "default",
+      variant: "chip",
     },
   }
 )
 
+type ToggleProps = React.ComponentProps<typeof TogglePrimitive.Root> &
+  VariantProps<typeof toggleVariants>
+
 function Toggle({
   className,
-  variant = "default",
-  size = "default",
+  variant = "chip",
+  seatState,
   ...props
-}: React.ComponentProps<typeof TogglePrimitive.Root> &
-  VariantProps<typeof toggleVariants>) {
+}: ToggleProps) {
   return (
     <TogglePrimitive.Root
       data-slot="toggle"
-      className={cn(toggleVariants({ variant, size, className }))}
+      data-variant={variant}
+      className={cn(
+        toggleVariants({
+          variant,
+          seatState: variant === "seat" ? (seatState ?? "free") : undefined,
+        }),
+        className
+      )}
       {...props}
     />
   )
