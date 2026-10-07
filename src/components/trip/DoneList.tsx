@@ -24,7 +24,7 @@ const BOOKING_ROWS = {
   fly: { vendor: "indigo", options: CALL_COPY.options.fly, details: FLIGHT_DETAILS },
 } as const;
 
-type DoneListProps = Omit<React.ComponentProps<typeof ListCard>, "children"> & {
+type DoneListProps = Omit<React.ComponentProps<typeof ListCard>, "children" | "onToggle"> & {
   /** `selectDone` result. */
   rows: DoneRow[];
   openRow: OpenRow;
