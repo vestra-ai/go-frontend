@@ -39,10 +39,12 @@ function ScopeToggle({
       {...props}
     >
       <SegmentedControlItem value="everyone">
+        {/* In a narrow `@container` row (itinerary toolbar beside the view toggle) the stack drops so both fit. */}
         <AvatarStack
           size={20}
           overlap={7}
           ring="white"
+          className="@max-[360px]:hidden"
           avatars={others.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
         />
         {scopeToggle.everyone}

@@ -26,6 +26,7 @@ export function BoardingPassCard({ checkin, seat, digiYatra = true }: BoardingPa
   return (
     <Card variant="shadow" radius="3xl" className="overflow-hidden">
       <div className="flex items-center justify-between bg-indigo px-[18px] py-3.5 text-white">
+        {/* eslint-disable-next-line @next/next/no-img-element -- SVG brand logo */}
         <img src={assets.indigo.src} alt={assets.indigo.alt} className="h-auto w-[70px]" />
         <span className="text-14 font-bold tracking-badge">{checkin.flight}</span>
       </div>

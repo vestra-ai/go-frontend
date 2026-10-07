@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useShallow } from "zustand/react/shallow";
 import { ListCard } from "@/components/common/ListCard";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { FadeDock } from "@/components/shell/FadeDock";
@@ -12,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { home as copy } from "@/data/seed/copy";
 import { assets } from "@/lib/assets";
 import { toastGo } from "@/lib/toast";
-import { useMyTrips, usePendingInvites, useStore } from "@/store";
+import { selectTripMembers, useMyTrips, usePendingInvites, useStore } from "@/store";
 
 /** A6: returning Home body (invites, your trips, past trips) plus the New-trip FAB. */
 export function AppHomeView() {
@@ -21,6 +22,8 @@ export function AppHomeView() {
   const tripsById = useStore((s) => s.trips.trips);
   const pastTrips = useStore((s) => s.trips.pastTrips);
   const users = useStore((s) => s.trips.members);
+  // Same stack as the trip home hero (A6 Goa shows Arjun too); memoised per trip, so shallow-equal between renders.
+  const tripMembers = useStore(useShallow((s) => trips.map((trip) => selectTripMembers(s, trip.id))));
   const declineInvite = useStore((s) => s.declineInvite);
 
   return (
@@ -44,7 +47,7 @@ export function AppHomeView() {
             />
           ))}
           <SectionHeader title={copy.tripsTitle} meta={copy.tripsMeta(trips.length)} className="mt-3.5" />
-          {trips.map((trip) => (
+          {trips.map((trip, i) => (
             <TripCard
               key={trip.id}
               href={`/trips/${trip.id}`}
@@ -52,7 +55,7 @@ export function AppHomeView() {
               cover={trip.cover ? { kind: "photo", ...trip.cover } : { kind: "gradient" }}
               coverTitle={trip.homeCard.coverTitle}
               coverSub={trip.homeCard.coverSub}
-              members={trip.memberIds.slice(0, 4).map((id) => users[id])}
+              members={tripMembers[i].slice(0, 4)}
               status={trip.homeCard.status}
               statusTone={trip.homeCard.statusTone}
             />

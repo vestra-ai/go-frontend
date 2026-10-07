@@ -5,5 +5,4 @@
 <circle cx="576" cy="204.00000000000003" r="72" fill="#fff" opacity="0.55"/>
 <path d="M0 468 Q240 360 440.00000000000006 456 T800 420 V600 H0Z" fill="#2BB38A" opacity="0.35"/>
 <path d="M0 540 Q280 456 560 528 T800 504 V600 H0Z" fill="#2BB38A" opacity="0.5"/>
-<text x="400" y="300" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="50" font-weight="600" fill="#0B1B3F">Goa beach</text>
 </svg>

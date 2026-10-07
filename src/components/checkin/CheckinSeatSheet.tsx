@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { GoNote } from "@/components/common/GoNote";
 import { StepIndicator } from "@/components/common/StepIndicator";
 import { SeatLegend } from "@/components/checkin/SeatLegend";
@@ -29,6 +30,8 @@ export function CheckinSeatSheet({ tripId, open, onBack }: CheckinSeatSheetProps
   const completeCheckin = useStore((s) => s.completeCheckin);
   const { seats, friendSeat, friendId, nextToFriend } = CHECKIN;
   const paid = seats.find((s) => s.id === sel)?.state === "paid";
+  // completeCheckin() closes the check-in guard on the trip home; keep the sheet up until the pass route replaces it.
+  const [leaving, setLeaving] = useState(false);
 
   const pick = (id: string) => {
     if (id === sel) return;
@@ -37,12 +40,13 @@ export function CheckinSeatSheet({ tripId, open, onBack }: CheckinSeatSheetProps
   };
 
   const checkIn = () => {
+    setLeaving(true);
     completeCheckin(tripId);
     router.push(`/trips/${tripId}/checkin/pass`);
   };
 
   return (
-    <BottomSheet top={96} open={open} onOpenChange={(o) => !o && onBack()}>
+    <BottomSheet top={96} open={open || leaving} onOpenChange={(o) => !o && !leaving && onBack()}>
       <SheetBody>
         <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel="Close" />
         <StepIndicator step={2} labels={CHECKIN_COPY.steps} />

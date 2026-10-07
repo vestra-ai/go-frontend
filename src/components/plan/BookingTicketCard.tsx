@@ -44,7 +44,7 @@ export function BookingTicketCard({ booking }: { booking: Booking }) {
       </div>
       <div className={cn("flex min-w-0 flex-1 flex-col justify-center gap-px border-l-[3px] p-3", ACCENT[booking.accent])}>
         <Eyebrow className="leading-[1.35]">{booking.eyebrow}</Eyebrow>
-        <span className="truncate text-[19px] font-semibold leading-[1.2] tracking-[-0.016em]">{booking.title}</span>
+        <span className="line-clamp-2 text-[19px] font-semibold leading-[1.2] tracking-[-0.016em]">{booking.title}</span>
         <span className="truncate text-13 tracking-caption text-muted">{booking.sub}</span>
         <AvatarStack
           className="mt-1"

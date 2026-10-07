@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { invite as copy } from "@/data/seed/copy";
 import type { Invite, Trip, User } from "@/data/types";
+import { splitEmoji } from "@/lib/emoji";
 import { formatWhosIn } from "@/lib/format";
 
 type InviteSheetProps = {
@@ -73,17 +74,17 @@ export function InviteSheet({ open, invite, trip, inviter, members, media, onAcc
             {copy.whenYouJoin}
           </Eyebrow>
           {invite.whenYouJoin.map((line) => {
-            const split = line.indexOf(" ");
+            const { emoji, label } = splitEmoji(line);
             return (
               <ListRow
                 key={line}
                 dense
                 leading={
                   <span aria-hidden className="w-5 text-center text-16 leading-none">
-                    {line.slice(0, split)}
+                    {emoji}
                   </span>
                 }
-                title={<span className="font-normal">{line.slice(split + 1)}</span>}
+                title={<span className="font-normal">{label}</span>}
               />
             );
           })}

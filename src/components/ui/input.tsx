@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 // Shapes style a standalone <input>. `inline` is the unstyled text field used
 // inside a wrapper that carries the shape (see InputField / SearchField).
 const inputVariants = cva(
-  "min-w-0 text-16 tracking-body text-ink outline-none transition-colors placeholder:text-muted disabled:pointer-events-none disabled:opacity-50",
+  "min-w-0 text-16 tracking-body text-ink outline-none transition-colors placeholder:text-muted disabled:pointer-events-none disabled:opacity-50 [&::-webkit-search-cancel-button]:appearance-none",
   {
     variants: {
       shape: {

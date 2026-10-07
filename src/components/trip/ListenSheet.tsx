@@ -8,6 +8,7 @@ import { CALL_COPY, liveTranscriptFor } from "@/data/seed/calls";
 import { FLIGHT_DETAILS, STAY_DETAILS } from "@/data/seed/bookings";
 import type { TripId, VendorId } from "@/data/types";
 import { assets } from "@/lib/assets";
+import { splitEmoji } from "@/lib/emoji";
 import { useHydrated, useLiveCalls, useStore } from "@/store";
 import type { LiveCall } from "@/store/selectors";
 import { BookingDetailsAccordion } from "./BookingDetailsAccordion";
@@ -18,10 +19,10 @@ const copy = CALL_COPY.listen;
 
 // "🔇 Mute" → aria-hidden emoji + label, as LiveCallCard does for "🎧 Listen in".
 function EmojiLabel({ text }: { text: string }) {
-  const at = text.indexOf(" ");
+  const { emoji, label } = splitEmoji(text);
   return (
     <>
-      <span aria-hidden>{text.slice(0, at)}</span> {text.slice(at + 1)}
+      <span aria-hidden>{emoji}</span> {label}
     </>
   );
 }

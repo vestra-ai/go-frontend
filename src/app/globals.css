@@ -199,5 +199,6 @@
 
 /* the phone frame on wide screens (see §4) */
 @media (min-width: 451px) {
+  body { background: var(--color-frame-bg); }
   #app-frame { box-shadow: var(--shadow-frame); border-inline: 1px solid rgb(11 27 63 / 0.06); }
 }

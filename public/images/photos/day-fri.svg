@@ -5,5 +5,4 @@
 <circle cx="172.79999999999998" cy="42.160000000000004" r="14.879999999999999" fill="#fff" opacity="0.55"/>
 <path d="M0 96.72 Q72 74.39999999999999 132 94.24 T240 86.8 V124 H0Z" fill="#E07A5F" opacity="0.35"/>
 <path d="M0 111.60000000000001 Q84 94.24 168 109.12 T240 104.16 V124 H0Z" fill="#E07A5F" opacity="0.5"/>
-<text x="120" y="62" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#0B1B3F">Fri</text>
 </svg>

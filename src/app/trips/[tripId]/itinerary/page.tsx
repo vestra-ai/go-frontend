@@ -102,7 +102,7 @@ function ItineraryPlan({ tripId, me, others }: { tripId: TripId; me: User; other
 
   return (
     <>
-      <div className="flex items-center gap-2">
+      <div className="@container flex items-center gap-2">
         {/* DESIGN-ASSUMPTION (L-itinerary-map.md §1.6 #1): scope is local state; a switch resets to that artboard's start. */}
         <ScopeToggle
           className="flex-1"

@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { paySheet } from "@/data/seed/copy";
 import type { Stay, User } from "@/data/types";
+import { splitEmoji } from "@/lib/emoji";
 
 type PayAskCardProps = {
   stay: Stay;
@@ -29,7 +30,7 @@ type PayAskCardProps = {
 /** E12/E13 "one person books for all" card: villa photo, total, green panel with the CTA or the live booker row. */
 export function PayAskCard({ stay, state, booker, copy, onClaim }: PayAskCardProps) {
   // "👤 ONE PERSON BOOKS FOR ALL": the leading emoji stays text, hidden from screen readers.
-  const space = Math.max(0, copy.badge.indexOf(" "));
+  const badge = splitEmoji(copy.badge);
 
   return (
     <InChatCard right={16}>
@@ -37,8 +38,8 @@ export function PayAskCard({ stay, state, booker, copy, onClaim }: PayAskCardPro
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
         <img src={stay.img} alt={paySheet.cardImgAlt} className="size-full object-cover" />
         <Badge variant="white" size="md-bold" className="absolute top-3 left-3 gap-1 border-0 px-2.5 tracking-badge">
-          {space > 0 && <span aria-hidden>{copy.badge.slice(0, space)}</span>}
-          {copy.badge.slice(space).trim()}
+          {badge.emoji && <span aria-hidden>{badge.emoji}</span>}
+          {badge.label}
         </Badge>
       </div>
       <div className="flex flex-col gap-2.5 px-4 pt-3 pb-4">

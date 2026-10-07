@@ -4,5 +4,4 @@
 <circle cx="106" cy="46" r="18" fill="#8E4A3A" opacity="0.55"/>
 <path d="M0 112 Q40 76 76 104 T152 92 V152 H0Z" fill="#8E4A3A" opacity="0.35"/>
 <path d="M0 128 Q50 100 100 122 T152 116 V152 H0Z" fill="#8E4A3A" opacity="0.5"/>
-<text x="76" y="76" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="16" font-weight="600" fill="#0B1B3F">Ladakh</text>
 </svg>

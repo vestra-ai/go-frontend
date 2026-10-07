@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { polls as copy } from "@/data/seed/copy";
 import { USERS } from "@/data/seed/users";
 import type { Stay, UserId } from "@/data/types";
+import { splitEmoji } from "@/lib/emoji";
 
 type StayCardProps = {
   stay: Stay;
@@ -19,9 +20,7 @@ type StayCardProps = {
 /** 236px stay poll card in the E8 rail: photo with price/rating pill, area, tags, voters, Details / Vote. */
 export function StayCard({ stay, voters, mine, onDetails, onVote }: StayCardProps) {
   // Seed tags lead with an emoji ("🏊 Private pool · 3 rooms"); it stays text, hidden from screen readers.
-  const space = Math.max(0, stay.tags.indexOf(" "));
-  const tagEmoji = stay.tags.slice(0, space);
-  const tagText = stay.tags.slice(space);
+  const tag = splitEmoji(stay.tags);
 
   return (
     <Card variant="float" radius="xl" className="flex w-[236px] shrink-0 snap-start flex-col overflow-hidden">
@@ -45,8 +44,7 @@ export function StayCard({ stay, voters, mine, onDetails, onVote }: StayCardProp
           {stay.area}
         </span>
         <span className="text-13 text-muted">
-          <span aria-hidden>{tagEmoji}</span>
-          {tagText}
+          <span aria-hidden>{tag.emoji}</span> {tag.label}
         </span>
         <div className="flex items-center gap-1.5 text-13 font-semibold text-ink">
           {voters.length > 0 && (
