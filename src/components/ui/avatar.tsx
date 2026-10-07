@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { assets } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 import { Avatar as AvatarPrimitive } from "radix-ui"
 
@@ -84,7 +85,7 @@ type AvatarProps = Omit<React.ComponentProps<typeof AvatarPrimitive.Root>, "chil
   Omit<VariantProps<typeof avatarVariants>, "tone"> & {
     size?: AvatarSize
     tone?: AvatarTone
-    /** Image URL (an `assets` entry's `.src`). */
+    /** Image URL (an `assets` entry's `.src`). kind="go" defaults to Go's avatar. */
     src?: string
     /** Used for the image alt and the initials fallback. */
     name?: string
@@ -106,10 +107,25 @@ function Avatar({
   children,
   ...props
 }: AvatarProps) {
+  const imageSrc = src ?? (kind === "go" ? assets.goAvatar.src : undefined)
+  // Load state of `imageSrc` (keyed by src, so a new src starts over at "loading").
+  const [image, setImage] = React.useState<{ src: string; state: "loaded" | "error" } | null>(null)
+  const imageState = image && image.src === imageSrc ? image.state : "loading"
+  // Also the ref: an <img> that settled before hydration never gets a React load/error event.
+  const settle = React.useCallback(
+    (img: HTMLImageElement | null) => {
+      if (!img?.complete || !imageSrc) return
+      const state = img.naturalWidth > 0 ? "loaded" : "error"
+      setImage((prev) => (prev?.src === imageSrc && prev.state === state ? prev : { src: imageSrc, state }))
+    },
+    [imageSrc]
+  )
+
   return (
     <AvatarPrimitive.Root
       data-slot="avatar"
       data-size={size}
+      data-image={imageSrc ? imageState : undefined}
       className={cn(
         avatarVariants({ ring, kind, shape, tone: tone ?? (kind === "user" ? toneFor(name) : "none") }),
         sizeMap[size],
@@ -117,15 +133,25 @@ function Avatar({
       )}
       {...props}
     >
-      {src && (
-        <AvatarImage
-          src={src}
-          alt={name ?? ""}
-          className={kind === "trip" ? "size-[91%] rounded-none object-contain" : undefined}
-        />
-      )}
       {(initials ?? name) && kind === "user" && <AvatarFallback>{initials ?? initialsOf(name!)}</AvatarFallback>}
       {children}
+      {/* A plain <img> over the fallback, not Radix's AvatarImage: that one renders nothing until hydration plus a
+          JS preload, so server HTML and every first paint showed initials (or an empty circle for Go). */}
+      {imageSrc && imageState !== "error" && (
+        // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo inside a sized circle
+        <img
+          ref={settle}
+          data-slot="avatar-image"
+          src={imageSrc}
+          alt={name ?? ""}
+          onLoad={(e) => settle(e.currentTarget)}
+          onError={(e) => settle(e.currentTarget)}
+          className={cn(
+            "absolute inset-0 m-auto",
+            kind === "trip" ? "size-[91%] object-contain" : "size-full rounded-full object-cover"
+          )}
+        />
+      )}
     </AvatarPrimitive.Root>
   )
 }
@@ -154,7 +180,7 @@ function AvatarFallback({
     <AvatarPrimitive.Fallback
       data-slot="avatar-fallback"
       className={cn(
-        "flex size-full items-center justify-center rounded-full",
+        "flex size-full items-center justify-center rounded-full group-data-[image=loaded]/avatar:hidden",
         className
       )}
       {...props}

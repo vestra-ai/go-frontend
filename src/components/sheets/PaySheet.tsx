@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { AvatarStack } from "@/components/common/AvatarStack";
+import type { EmojiTileTint } from "@/components/common/EmojiTile";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { RadioOptionCard } from "@/components/common/RadioOptionCard";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader, TrustLine } from "@/components/shell/BottomSheet";
@@ -58,7 +59,17 @@ export function PaySheet({ open, onOpenChange, stay, summary, methods, split, ct
             className="flex flex-col gap-2"
           >
             {methods.map((m) => (
-              <RadioOptionCard key={m.id} value={m.id} variant="ring" emoji={m.emoji} title={m.title} sub={m.sub} />
+              <RadioOptionCard
+                key={m.id}
+                value={m.id}
+                variant="ring"
+                emoji={m.emoji}
+                // Seed tints are `bg-<token>` classes ("bg-success-soft"); EmojiTile takes the token.
+                emojiTint={m.tint.replace(/^bg-/, "") as EmojiTileTint}
+                emojiShape="circle"
+                title={m.title}
+                sub={m.sub}
+              />
             ))}
           </RadioGroup>
         </div>

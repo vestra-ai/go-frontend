@@ -36,6 +36,9 @@ const sizeMap = {
   64: "size-16 text-30",
 } as const
 
+type EmojiTileTint = NonNullable<VariantProps<typeof emojiTileVariants>["tint"]>
+type EmojiTileShape = NonNullable<VariantProps<typeof emojiTileVariants>["shape"]>
+
 type EmojiTileProps = Omit<React.ComponentProps<"span">, "children"> &
   VariantProps<typeof emojiTileVariants> & {
     emoji: string
@@ -57,3 +60,4 @@ function EmojiTile({ emoji, size = 36, shape, tint, className, ...props }: Emoji
 }
 
 export { EmojiTile, emojiTileVariants }
+export type { EmojiTileTint, EmojiTileShape }

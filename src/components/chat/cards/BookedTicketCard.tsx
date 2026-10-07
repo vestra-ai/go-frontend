@@ -46,7 +46,7 @@ export function BookedTicketCard({
       <div className="relative flex w-[84px] flex-col items-center justify-center gap-1.5 border-l-[1.5px] border-dashed border-line-2">
         <span aria-hidden className="absolute -top-[9px] -left-[9px] size-4 rounded-full bg-canvas" />
         <span aria-hidden className="absolute -bottom-[9px] -left-[9px] size-4 rounded-full bg-canvas" />
-        <CheckBadge size={30} />
+        <CheckBadge size={30} strokeWidth={3.2} />
         <span className="text-11 font-bold tracking-eyebrow text-muted">{stub}</span>
       </div>
       {showReaction && reaction && (
@@ -54,7 +54,7 @@ export function BookedTicketCard({
           floating
           emoji={reaction.emoji}
           count={reaction.count}
-          className={cn("-bottom-2.5 left-2.5 shadow-bubble", animate && "motion-safe:animate-[popIn_380ms_var(--ease-out)_both]")}
+          className={cn("-bottom-2.5 left-2.5", animate && "motion-safe:animate-[popIn_380ms_var(--ease-out)_both]")}
         />
       )}
     </div>

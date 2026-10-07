@@ -22,6 +22,8 @@ type SegmentedProgressProps = Omit<React.ComponentProps<"div">, "children"> & {
   tone?: keyof typeof toneClass
   /** Accessible summary ("0 of 5 decided"); without it the bar is decorative. */
   label?: string
+  /** Extra classes per segment index, e.g. a slower fill transition on the last one. */
+  segmentClassName?: (index: number) => string | undefined
 }
 
 function SegmentedProgress({
@@ -30,6 +32,7 @@ function SegmentedProgress({
   size = "steps",
   tone = "success",
   label,
+  segmentClassName,
   className,
   ...props
 }: SegmentedProgressProps) {
@@ -49,7 +52,8 @@ function SegmentedProgress({
           className={cn(
             "block rounded-full transition-colors duration-200",
             s.segment,
-            i < filled ? toneClass[tone] : s.empty
+            i < filled ? toneClass[tone] : s.empty,
+            segmentClassName?.(i)
           )}
         />
       ))}

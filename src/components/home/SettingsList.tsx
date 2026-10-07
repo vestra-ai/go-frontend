@@ -17,7 +17,7 @@ export function SettingsList({ rows }: { rows: SettingsRow[] }) {
     <ListCard padding="rows">
       {rows.map((row) => {
         const common = {
-          className: "py-[13px]",
+          pad: "settings" as const,
           leading: <EmojiTile emoji={row.emoji} size={36} shape="circle" tint="surface-2" />,
           title: row.title,
           sub: row.sub,

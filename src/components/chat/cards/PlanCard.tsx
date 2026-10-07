@@ -29,8 +29,7 @@ export function PlanCard({ eyebrow, place, dates, countdown, hero, seal, memberI
   return (
     <div className="relative">
       <InChatCard right={22}>
-        {/* #C9D6E2 has no token (placeholder behind the hero photo). */}
-        <div className="relative h-[176px] bg-[#C9D6E2]">
+        <div className="relative h-[176px] bg-plan-hero">
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo */}
           <img src={hero.src} alt={hero.alt} className="size-full object-cover" />
           <ProgressiveBlur layers="hero" />
@@ -81,7 +80,8 @@ export function PlanCard({ eyebrow, place, dates, countdown, hero, seal, memberI
           floating
           emoji={reaction.emoji}
           count={reaction.count}
-          className="-bottom-3.5 left-[52px] h-[26px] px-[9px] text-13 shadow-chip"
+          // The plan card's chip keeps its 26px bordered pill (P-Chat-Plan).
+          className="-bottom-3.5 left-[52px] h-[26px] gap-1 border px-[9px] py-0 shadow-chip"
         />
       )}
     </div>

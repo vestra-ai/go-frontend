@@ -43,7 +43,7 @@ export const VENDOR_CALLS: Record<VendorId, VendorCall> = {
     who: "IndiGo",
     phone: "Customer care · PNR K7QX2M",
     emoji: "✈️",
-    bg: "bg-info-tint-3", // design #E8EEFB → nearest token (J-triphome-calls.md §1.7 #9)
+    bg: "bg-indigo-tint", // design #E8EEFB
     defaultAsk: "Add a 15 kg extra bag on your Fri flight",
     line: "“Please hold while I check the fee…”",
     time: "03:40",

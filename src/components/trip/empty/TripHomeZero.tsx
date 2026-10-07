@@ -61,7 +61,8 @@ export function TripHomeZero({ tripId, onInvite }: TripHomeZeroProps) {
               <LinkIcon className="size-5 text-ink" />
             </span>
           }
-          title={<span className="text-16 leading-[1.3] tracking-body">{copy.inviteTitle}</span>}
+          titleSize={16}
+          title={copy.inviteTitle}
           sub={copy.inviteSub}
         />
       </ListCard>

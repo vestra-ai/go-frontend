@@ -1,10 +1,10 @@
-import { AvatarStack, type StackAvatar } from "@/components/common/AvatarStack";
+import { AvatarStack } from "@/components/common/AvatarStack";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { polls as copy } from "@/data/seed/copy";
-import { USERS } from "@/data/seed/users";
 import type { PlaceOption, UserId } from "@/data/types";
+import { userStackAvatar } from "@/lib/avatars";
 import { cn } from "@/lib/utils";
 
 type PlaceCardProps = {
@@ -15,11 +15,6 @@ type PlaceCardProps = {
   onDetails: () => void;
   onVote: () => void;
 };
-
-function voterAvatar(id: UserId): StackAvatar {
-  const u = USERS[id];
-  return { name: u.firstName, initials: u.initials, src: u.avatar, tone: u.tone };
-}
 
 /** 236px place card in the E1 rail: illustration on a tint, price pill, why line, tally, Details / Vote (E-deciding.md §1.3). */
 export function PlaceCard({ place, voters, mine, onDetails, onVote }: PlaceCardProps) {
@@ -44,7 +39,7 @@ export function PlaceCard({ place, voters, mine, onDetails, onVote }: PlaceCardP
         <span className="text-13 font-semibold text-success-ink">{place.why}</span>
         <div className="flex items-center gap-1.5 text-13 font-semibold text-ink">
           {voters.length > 0 && (
-            <AvatarStack avatars={voters.map(voterAvatar)} size={20} overlap={6} ring="white" max={3} />
+            <AvatarStack avatars={voters.map(userStackAvatar)} size={20} overlap={6} ring="white" max={3} />
           )}
           {copy.votes(voters.length)}
         </div>

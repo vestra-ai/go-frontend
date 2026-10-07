@@ -14,9 +14,11 @@ const sizeMap = {
 
 type CheckBadgeProps = Omit<React.ComponentProps<"span">, "children"> & {
   size?: keyof typeof sizeMap
+  /** Overrides the size's check stroke (the booked-ticket stub's 30px badge uses 3.2). */
+  strokeWidth?: number
 }
 
-function CheckBadge({ size = 22, className, ...props }: CheckBadgeProps) {
+function CheckBadge({ size = 22, strokeWidth, className, ...props }: CheckBadgeProps) {
   const s = sizeMap[size]
   return (
     <span
@@ -29,7 +31,7 @@ function CheckBadge({ size = 22, className, ...props }: CheckBadgeProps) {
       )}
       {...props}
     >
-      <Check className={s.check} strokeWidth={s.stroke} />
+      <Check className={s.check} strokeWidth={strokeWidth ?? s.stroke} />
     </span>
   )
 }

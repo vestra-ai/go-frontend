@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { AvatarStack, type StackAvatar } from "@/components/common/AvatarStack";
+import { AvatarStack } from "@/components/common/AvatarStack";
 import { CheckBadge } from "@/components/common/CheckBadge";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { GoNote } from "@/components/common/GoNote";
@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { placeSheet as copy, polls } from "@/data/seed/copy";
-import { USERS } from "@/data/seed/users";
 import type { PlaceOption, UserId } from "@/data/types";
+import { userStackAvatar } from "@/lib/avatars";
+import { splitEmoji } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
 
 type PlaceDetailsSheetProps = {
@@ -27,17 +28,6 @@ type PlaceDetailsSheetProps = {
   /** votePlace(id), then close: the caller closes the sheet. */
   onVote: (id: PlaceOption["id"]) => void;
 };
-
-function voterAvatar(id: UserId): StackAvatar {
-  const u = USERS[id];
-  return { name: u.firstName, initials: u.initials, src: u.avatar, tone: u.tone };
-}
-
-/** Seed strings like "🏖️ Beaches" split at the first space into an aria-hidden emoji + label. */
-function splitEmoji(text: string): [string, string] {
-  const i = text.indexOf(" ");
-  return i < 0 ? ["", text] : [text.slice(0, i), text.slice(i + 1)];
-}
 
 /** E2 (rich, Goa) and E3/E4 (light, Gokarna/Udaipur) place details (E-deciding.md §1.3). */
 export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }: PlaceDetailsSheetProps) {
@@ -105,7 +95,7 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }:
               <Eyebrow className="px-1">{copy.activities}</Eyebrow>
               <div className="flex flex-wrap gap-1.5">
                 {details.activities.map((activity) => {
-                  const [emoji, label] = splitEmoji(activity);
+                  const { emoji, label } = splitEmoji(activity);
                   return (
                     <Chip key={activity} size="sm" variant="plain" emoji={emoji || undefined} className="border-line-2">
                       {label}
@@ -116,7 +106,7 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }:
             </div>
 
             <Card variant="outline" radius="lg" className="flex items-center gap-2.5 px-3.5 py-3">
-              {voters.length > 0 && <AvatarStack avatars={voters.map(voterAvatar)} size={26} overlap={8} ring="white" />}
+              {voters.length > 0 && <AvatarStack avatars={voters.map(userStackAvatar)} size={26} overlap={8} ring="white" />}
               <span className="flex-1 text-14">{details.votersLine}</span>
             </Card>
           </>

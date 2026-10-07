@@ -1,17 +1,15 @@
 "use client";
 
-import { useId } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
-import { Input, inputShellVariants } from "@/components/ui/input";
 import { Eyebrow } from "@/components/common/Eyebrow";
+import { InputField } from "@/components/common/InputField";
 import { CALL_COPY } from "@/data/seed/calls";
 import type { ChipOption } from "@/data/types";
-import { cn } from "@/lib/utils";
+import { splitEmoji } from "@/lib/emoji";
 
-const call = CALL_COPY.options.call;
-const callAt = call.indexOf(" "); // "📞 Call" → emoji + label
+const call = splitEmoji(CALL_COPY.options.call); // "📞 Call"
 
 type CallOptionsPanelProps = {
   /** "ASK GO TO CALL VILLA SOL" | "ASK GO TO CALL INDIGO". */
@@ -41,7 +39,6 @@ export function CallOptionsPanel({
   srLabel,
   onCall,
 }: CallOptionsPanelProps) {
-  const id = useId();
   return (
     <Card variant="outline" radius="lg" data-slot="call-options-panel" className="flex flex-col gap-2.5 p-3">
       <Eyebrow tone="muted">{eyebrow}</Eyebrow>
@@ -52,24 +49,22 @@ export function CallOptionsPanel({
           </Chip>
         ))}
       </div>
-      {/* InputField's shell takes no className, so the ask shape is composed here at the design's 48px. */}
-      <div className={cn(inputShellVariants({ shape: "ask" }), "h-12 gap-2 pr-[5px] pl-[14px]")}>
-        <label htmlFor={id} className="sr-only">
-          {srLabel}
-        </label>
-        <Input
-          id={id}
-          shape="inline"
-          className="text-15"
-          value={draft}
-          placeholder={placeholder}
-          onChange={(e) => onDraft(e.target.value)}
-        />
-        <Button variant="primary" size="38" weight="semibold" className="gap-1" onClick={onCall}>
-          <span aria-hidden>{call.slice(0, callAt)}</span>
-          {call.slice(callAt + 1)}
-        </Button>
-      </div>
+      {/* The ask shape at the design's 48px. */}
+      <InputField
+        shape="ask"
+        srLabel={srLabel}
+        shellClassName="h-12 gap-2 pr-[5px] pl-[14px]"
+        className="text-15"
+        value={draft}
+        placeholder={placeholder}
+        onChange={(e) => onDraft(e.target.value)}
+        trailing={
+          <Button variant="primary" size="38" weight="semibold" className="gap-1" onClick={onCall}>
+            <span aria-hidden>{call.emoji}</span>
+            {call.label}
+          </Button>
+        }
+      />
     </Card>
   );
 }

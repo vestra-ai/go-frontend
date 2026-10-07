@@ -11,7 +11,8 @@ export function ReturnRow({ emoji, title, sub }: ReturnRowProps) {
       <ListRow
         className="px-3.5"
         leading={<EmojiTile emoji={emoji} size={40} shape="circle" className="text-[19px]" />}
-        title={<span className="text-16 tracking-body leading-[1.3]">{title}</span>}
+        titleSize={16}
+        title={title}
         sub={sub}
       />
     </Card>

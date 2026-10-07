@@ -83,7 +83,7 @@ export function CityPicker({
         <div className="flex animate-fade-in flex-col gap-2.5">
           <SearchField
             autoFocus
-            aria-label={copy.searchLabel}
+            srLabel={copy.searchLabel}
             placeholder={copy.placeholder}
             value={query}
             onChange={(e) => onQueryChange(e.target.value)}

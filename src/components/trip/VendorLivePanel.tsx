@@ -4,10 +4,10 @@ import { Button } from "@/components/ui/button";
 import { AudioBars } from "@/components/icons/custom/AudioBars";
 import { CALL_COPY } from "@/data/seed/calls";
 import { assets } from "@/lib/assets";
+import { splitEmoji } from "@/lib/emoji";
 
 const copy = CALL_COPY.panel;
-const listen = CALL_COPY.card.listen;
-const listenAt = listen.indexOf(" "); // "🎧 Listen in" → emoji + label
+const listen = splitEmoji(CALL_COPY.card.listen); // "🎧 Listen in"
 
 type VendorLivePanelProps = {
   who: string;
@@ -44,8 +44,8 @@ export function VendorLivePanel({ who, asking, onListen, onEnd }: VendorLivePane
         <AudioBars className="h-[26px] shrink-0" />
         <span className="flex-1" />
         <Button variant="success-ink" size="38" weight="semibold" className="gap-1" onClick={onListen}>
-          <span aria-hidden>{listen.slice(0, listenAt)}</span>
-          {listen.slice(listenAt + 1)}
+          <span aria-hidden>{listen.emoji}</span>
+          {listen.label}
         </Button>
         <Button variant="white" size="38" className="text-danger shadow-none" onClick={onEnd}>
           {CALL_COPY.card.end}

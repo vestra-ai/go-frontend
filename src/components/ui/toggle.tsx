@@ -16,7 +16,7 @@ const toggleVariants = cva(
         chip: chipVariants({ variant: "outline", size: "lg" }),
         tile: "flex-col items-start justify-start gap-0.5 rounded-3xl border border-line-2 bg-white p-3 text-left text-ink data-[state=on]:border-black data-[state=on]:bg-black data-[state=on]:text-white",
         upload:
-          "h-28 flex-col gap-1.5 rounded-4xl border-[1.5px] border-dashed border-line-3 bg-white text-ink data-[state=on]:border-solid data-[state=on]:border-success data-[state=on]:bg-success-tint",
+          "h-28 flex-col gap-1.5 rounded-4xl border-[1.5px] border-dashed border-line-3 bg-white text-ink data-[state=on]:border-success data-[state=on]:bg-success-tint",
         seat: "size-10 rounded-xl p-0 text-11 font-bold",
       },
       seatState: {

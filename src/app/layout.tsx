@@ -34,7 +34,9 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en" className={figtree.variable}>
       <body>
-        <SerwistProvider swUrl="/serwist/sw.js">
+        {/* Production only: in dev the worker's CacheFirst/defaultCache routes would serve stale assets, and
+            @serwist/window's register() throws (unhandled) when register() yields no registration (SW-blocking harness). */}
+        <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV !== "production"}>
           <TooltipProvider>
             <AppFrame>
               {children}

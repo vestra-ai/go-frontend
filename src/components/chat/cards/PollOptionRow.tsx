@@ -1,11 +1,11 @@
 "use client";
 
 import { useId, type ComponentProps } from "react";
-import { AvatarStack, type StackAvatar } from "@/components/common/AvatarStack";
+import { AvatarStack } from "@/components/common/AvatarStack";
 import { RadioGroupItem } from "@/components/ui/radio-group";
 import { polls as copy } from "@/data/seed/copy";
-import { USERS } from "@/data/seed/users";
 import type { DateOption, UserId } from "@/data/types";
+import { userStackAvatar } from "@/lib/avatars";
 import { cn } from "@/lib/utils";
 import { CalendarTile } from "./CalendarTile";
 
@@ -23,11 +23,6 @@ const fitToneClass: Record<DateOption["fitTone"], string> = {
   go: "text-go",
   muted: "text-muted",
 };
-
-function voterAvatar(id: UserId): StackAvatar {
-  const u = USERS[id];
-  return { name: u.firstName, initials: u.initials, src: u.avatar, tone: u.tone };
-}
 
 /**
  * One full-width dates-poll option: calendar tile, name + check radio, meta, fit + tally.
@@ -58,7 +53,7 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
           <span className={cn("font-semibold", fitToneClass[option.fitTone])}>{option.fit}</span>
           <span className="flex items-center gap-1.5">
             {voters.length > 0 && (
-              <AvatarStack aria-hidden avatars={voters.map(voterAvatar)} size={20} overlap={6} ring="white" max={3} />
+              <AvatarStack aria-hidden avatars={voters.map(userStackAvatar)} size={20} overlap={6} ring="white" max={3} />
             )}
             <span className="font-semibold whitespace-nowrap">{copy.dateVotes(voters.length)}</span>
           </span>

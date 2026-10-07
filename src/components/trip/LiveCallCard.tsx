@@ -8,12 +8,13 @@ import { Eyebrow } from "@/components/common/Eyebrow";
 import { AudioBars } from "@/components/icons/custom/AudioBars";
 import { CALL_COPY } from "@/data/seed/calls";
 import { assets } from "@/lib/assets";
+import { splitEmoji } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
 import type { LiveCall } from "@/store/selectors";
 import { useElapsed } from "./useElapsed";
 
 const copy = CALL_COPY.card;
-const listenAt = copy.listen.indexOf(" "); // "🎧 Listen in" → emoji + label
+const listen = splitEmoji(copy.listen); // "🎧 Listen in"
 
 type LiveCallCardProps = Omit<React.ComponentProps<typeof Card>, "children"> & {
   call: LiveCall;
@@ -75,8 +76,8 @@ export function LiveCallCard({ call, layout, onListen, onEnd, className, ...prop
       </div>
       <div className="flex gap-2">
         <Button variant="primary" size="46" weight="semibold" className="flex-1 gap-1" onClick={onListen}>
-          <span aria-hidden>{copy.listen.slice(0, listenAt)}</span>
-          {copy.listen.slice(listenAt + 1)}
+          <span aria-hidden>{listen.emoji}</span>
+          {listen.label}
         </Button>
         <Button variant="danger-soft" size="46" onClick={onEnd}>
           {copy.end}

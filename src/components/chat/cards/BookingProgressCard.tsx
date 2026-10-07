@@ -140,7 +140,13 @@ export function BookingProgressCard({
               </div>
             </div>
             <div className="flex items-center justify-between gap-2">
-              <SegmentedProgress segments={4} filled={step >= SEG4_FILLS ? 4 : 3} size="booking" tone="success" />
+              <SegmentedProgress
+                segments={4}
+                filled={step >= SEG4_FILLS ? 4 : 3}
+                size="booking"
+                tone="success"
+                segmentClassName={(i) => (i === 3 ? "duration-300 ease-out" : undefined)}
+              />
               <div aria-live="polite" className="grid text-right text-13 tabular-nums">
                 <span
                   aria-hidden={step >= PAYING_LEAVES}

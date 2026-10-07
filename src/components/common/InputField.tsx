@@ -6,6 +6,8 @@ type InputFieldProps = Omit<React.ComponentProps<"input">, "size"> & {
   shape?: Exclude<InputShape, "inline">
   /** Eyebrow caption above the field. */
   label?: React.ReactNode
+  /** Visually hidden label (the accessible name) when there is no visible `label`. */
+  srLabel?: React.ReactNode
   hint?: React.ReactNode
   error?: React.ReactNode
   /** Leading icon inside the field. */
@@ -14,11 +16,14 @@ type InputFieldProps = Omit<React.ComponentProps<"input">, "size"> & {
   trailing?: React.ReactNode
   /** Classes for the outer wrapper. */
   wrapperClassName?: string
+  /** Classes for the shape shell: the slot row around the input, or the input itself when there are no slots. */
+  shellClassName?: string
 }
 
 function InputField({
   shape = "field",
   label,
+  srLabel,
   hint,
   error,
   icon,
@@ -26,6 +31,7 @@ function InputField({
   id,
   className,
   wrapperClassName,
+  shellClassName,
   ...props
 }: InputFieldProps) {
   const autoId = React.useId()
@@ -35,19 +41,26 @@ function InputField({
 
   return (
     <div data-slot="input-field" className={cn("flex flex-col gap-1.5", wrapperClassName)}>
-      {label && (
+      {label ? (
         <label
           htmlFor={inputId}
           className="text-11 font-bold uppercase tracking-eyebrow text-muted"
         >
           {label}
         </label>
+      ) : (
+        srLabel && (
+          <label htmlFor={inputId} className="sr-only">
+            {srLabel}
+          </label>
+        )
       )}
       {hasSlots ? (
         <div
           className={cn(
             inputShellVariants({ shape }),
-            error && "border-danger focus-within:border-danger"
+            error && "border-danger focus-within:border-danger",
+            shellClassName
           )}
         >
           {icon && <span className="flex shrink-0 text-muted">{icon}</span>}
@@ -67,7 +80,7 @@ function InputField({
           shape={shape}
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
-          className={className}
+          className={cn(shellClassName, className)}
           {...props}
         />
       )}

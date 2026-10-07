@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cn } from "@/lib/utils"
+import { EmojiTile, type EmojiTileShape, type EmojiTileTint } from "@/components/common/EmojiTile"
 import { RadioGroupItem, type radioIndicatorVariants } from "@/components/ui/radio-group"
 import type { VariantProps } from "class-variance-authority"
 
@@ -9,8 +10,12 @@ type RadioOptionCardProps = Omit<React.ComponentProps<typeof RadioGroupItem>, "t
   VariantProps<typeof radioIndicatorVariants> & {
     title: React.ReactNode
     sub?: React.ReactNode
-    /** Emoji for the leading 36px tile (rendered aria-hidden). */
+    /** Emoji for the leading 36px EmojiTile (rendered aria-hidden). */
     emoji?: string
+    /** Tile background (EmojiTile `tint`). Default surface-2. */
+    emojiTint?: EmojiTileTint
+    /** Tile shape. Default rounded-xl; the pay sheet's method tiles are circles. */
+    emojiShape?: Extract<EmojiTileShape, "rounded-xl" | "circle">
   }
 
 /** Must be rendered inside <RadioGroup>. */
@@ -18,6 +23,8 @@ function RadioOptionCard({
   title,
   sub,
   emoji,
+  emojiTint = "surface-2",
+  emojiShape = "rounded-xl",
   id,
   variant,
   className,
@@ -35,14 +42,7 @@ function RadioOptionCard({
         className
       )}
     >
-      {emoji && (
-        <span
-          aria-hidden
-          className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-surface-2 text-18"
-        >
-          {emoji}
-        </span>
-      )}
+      {emoji && <EmojiTile emoji={emoji} size={36} shape={emojiShape} tint={emojiTint} />}
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-15 font-semibold tracking-sub text-ink">{title}</span>
         {sub && <span className="text-13 tracking-caption text-muted">{sub}</span>}

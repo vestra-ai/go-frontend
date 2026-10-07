@@ -12,10 +12,13 @@ function Slider({
   max = 100,
   minStepsBetweenThumbs = 1,
   thumbLabels,
+  thumbValueText,
   ...props
 }: React.ComponentProps<typeof SliderPrimitive.Root> & {
   /** Accessible name per thumb, e.g. ["Minimum budget", "Maximum budget"]. */
   thumbLabels?: string[]
+  /** Spoken value per thumb (`aria-valuetext`), e.g. kFormat → "₹21.8k". Tracks a controlled `value`. */
+  thumbValueText?: (value: number) => string
 }) {
   const _values = React.useMemo(
     () =>
@@ -55,6 +58,7 @@ function Slider({
           data-slot="slider-thumb"
           key={index}
           aria-label={thumbLabels?.[index]}
+          aria-valuetext={thumbValueText?.(_values[index])}
           className="block size-7 shrink-0 rounded-full border-2 border-black bg-white shadow-thumb outline-none select-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:pointer-events-none"
         />
       ))}

@@ -1,6 +1,7 @@
 import { Slider } from "@/components/ui/slider";
 import { budgetSheet as copy } from "@/data/seed/copy";
 import { BUDGET_RANGE } from "@/data/seed/money";
+import { kFormat } from "@/lib/format";
 
 type BudgetRangeSliderProps = {
   value: [number, number];
@@ -21,6 +22,7 @@ export function BudgetRangeSlider({ value, onValueChange }: BudgetRangeSliderPro
       step={BUDGET_RANGE.step}
       minStepsBetweenThumbs={1}
       thumbLabels={[copy.thumbs.min, copy.thumbs.max]}
+      thumbValueText={kFormat}
     />
   );
 }

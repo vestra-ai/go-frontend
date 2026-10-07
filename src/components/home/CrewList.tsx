@@ -14,9 +14,10 @@ export function CrewList({ rows }: { rows: CrewListRow[] }) {
         <ListRow
           key={user.id}
           dense
+          titleSize={16}
           className="transition-[opacity,transform] duration-220 starting:translate-y-1.5 starting:opacity-0"
           leading={<Avatar size={44} name={user.name} src={user.avatar} tone={user.tone} />}
-          title={<span className="text-16 leading-[1.3] tracking-body">{name}</span>}
+          title={name}
           sub={
             joined ? (
               <span className="inline-flex items-center gap-1.5 font-medium text-success-ink">

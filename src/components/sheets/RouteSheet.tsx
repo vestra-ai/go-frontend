@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
+import { FilterChipRow } from "@/components/common/FilterChipRow";
 import { InfoNote } from "@/components/common/InfoNote";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { SegmentedControl, SegmentedControlItem } from "@/components/ui/segmented-control";
 import { ROUTE_COPY, ROUTE_MODES, TRIP_TYPES } from "@/data/seed/routes";
 import type { RouteMode, TripId, TripType } from "@/data/types";
@@ -52,14 +52,6 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
     wasOpen.current = open;
   }, [open, tripId]);
 
-  // The nested TimeSheet opens a frame after this sheet, so its focus/dismiss layer always stacks on top
-  // (the F3 preset opens both in one commit, which would leave the time sheet inert and aria-hidden).
-  const [layered, setLayered] = useState(false);
-  useEffect(() => {
-    const frame = requestAnimationFrame(() => setLayered(open));
-    return () => cancelAnimationFrame(frame);
-  }, [open]);
-
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} top={96}>
       <SheetBody>
@@ -94,24 +86,15 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
 
         <LegSummaryCard legs={legs} />
 
-        <div
-          role="group"
+        <FilterChipRow
+          mode="pressed"
           aria-label={ROUTE_COPY.filterLabel}
-          className="-mx-4 flex gap-1.5 overflow-x-auto px-4 scrollbar-none"
-        >
-          {filtersFor(mode, trip).map((f) => (
-            <Chip
-              key={f.id}
-              size="lg"
-              pressed={filt === f.id}
-              onClick={() => useStore.getState().setRouteFilter(tripId, f.id)}
-              className="transition-colors duration-160"
-            >
-              {f.label}
-            </Chip>
-          ))}
-          <TimeChip count={nTime(route)} onOpen={() => useStore.getState().openTimeSheet(tripId)} />
-        </div>
+          className="-mx-4"
+          options={filtersFor(mode, trip).map((f) => ({ value: f.id, label: f.label }))}
+          value={filt}
+          onValueChange={(v) => useStore.getState().setRouteFilter(tripId, v)}
+          trailing={<TimeChip count={nTime(route)} onOpen={() => useStore.getState().openTimeSheet(tripId)} />}
+        />
 
         <span className="px-1 text-13 font-semibold tracking-caption text-muted">{countLine(shown.length)}</span>
 
@@ -157,7 +140,7 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
       </SheetFooter>
 
       <TimeSheet
-        open={layered && draft !== null}
+        open={draft !== null}
         trip={trip}
         codes={codes}
         draft={draft ?? { on: route.on, ret: route.ret }}
