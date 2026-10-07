@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source not "../../plans";
+@source not "../../design";
 @import "tw-animate-css";   /* installed by shadcn init; keep only if shadcn components reference its classes, else delete the import */
 
 @theme {

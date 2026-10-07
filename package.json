@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "icons": "svgr --config-file svgr.config.js --out-dir src/components/icons/generated public/icons",
+    "icons": "rm -rf src/components/icons/generated && svgr --config-file svgr.config.js --out-dir src/components/icons/generated public/icons --silent && rm -rf src/components/icons/generated/brand",
     "pwa:icons": "node scripts/pwa-icons.mjs"
   },
   "dependencies": {

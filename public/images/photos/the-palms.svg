@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270" role="img" aria-label="The Palms">
+<title>The Palms</title>
+<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#E4F4E4"/><stop offset="1" stop-color="#D6EAE6"/></linearGradient></defs>
+<rect width="480" height="270" fill="url(#g)"/>
+<circle cx="345.59999999999997" cy="91.80000000000001" r="32.4" fill="#fff" opacity="0.55"/>
+<path d="M0 210.6 Q144 162 264 205.2 T480 189 V270 H0Z" fill="#16A34A" opacity="0.35"/>
+<path d="M0 243 Q168 205.2 336 237.6 T480 226.79999999999998 V270 H0Z" fill="#16A34A" opacity="0.5"/>
+<text x="240" y="135" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif" font-size="23" font-weight="600" fill="#0B1B3F">The Palms</text>
+</svg>

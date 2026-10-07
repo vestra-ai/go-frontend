@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Figtree } from "next/font/google";
+import { SerwistProvider } from "@serwist/turbopack/react";
 import { AppFrame } from "@/components/shell/AppFrame";
 import { Toaster } from "@/components/ui/sonner";
 import "./globals.css";
@@ -14,6 +15,8 @@ const figtree = Figtree({
 export const metadata: Metadata = {
   title: "Go — Group Trip Agent",
   applicationName: "Go",
+  manifest: "/manifest.webmanifest",
+  icons: { apple: "/pwa/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Go" },
   formatDetection: { telephone: false },
 };
@@ -30,10 +33,12 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
   return (
     <html lang="en" className={figtree.variable}>
       <body>
-        <AppFrame>
-          {children}
-          <Toaster />
-        </AppFrame>
+        <SerwistProvider swUrl="/serwist/sw.js">
+          <AppFrame>
+            {children}
+            <Toaster />
+          </AppFrame>
+        </SerwistProvider>
       </body>
     </html>
   );
