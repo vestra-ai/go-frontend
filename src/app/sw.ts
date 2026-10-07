@@ -35,4 +35,15 @@ const serwist = new Serwist({
   },
 });
 
+// The first page loads before this worker controls it, so its HTML never went through the runtime cache. On install,
+// fetch the open windows' URLs through the same route a navigation takes (NetworkFirst), so a page seen once also opens
+// offline. Best effort: a failed fetch must never fail the install.
+self.addEventListener("install", (event) => {
+  event.waitUntil(
+    self.clients
+      .matchAll({ type: "window", includeUncontrolled: true })
+      .then((windows) => Promise.allSettled(windows.map((w) => serwist.handleRequest({ request: new Request(w.url), event })))),
+  );
+});
+
 serwist.addEventListeners();

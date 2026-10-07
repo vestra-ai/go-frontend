@@ -3,6 +3,7 @@ import { BUDGET_SAVED_CHIP } from "@/data/scenario/goa";
 import { BOOKINGS } from "@/data/seed/bookings";
 import { VENDOR_CALLS } from "@/data/seed/calls";
 import { board as boardCopy, chat as chatCopy, planZero, tripHome } from "@/data/seed/copy";
+import { HOME_CARD_STATUS } from "@/data/seed/homeCards";
 import { ITINERARY, ITINERARY_DAYS } from "@/data/seed/itinerary";
 import { MONEY_COPY, MY_BUDGET_INR, MY_STAY_SHARE_INR } from "@/data/seed/money";
 import { ALL_ROUTES } from "@/data/seed/routes";
@@ -365,6 +366,29 @@ export const selectChatPreview = memo(
 // ---------------------------------------------------------------------------
 // Home / trips
 // ---------------------------------------------------------------------------
+
+export interface TripCardStatus {
+  text: string;
+  tone: "go" | "muted";
+}
+
+/**
+ * App-home trip card status line, from the HOME_CARD_STATUS templates: a planned trip counts the trip home's pending
+ * list ("2 things pending on you" → "You’re all set"); Bali asks for the visa until it is sent, then shows nothing;
+ * any other trip is still being planned.
+ */
+export const selectTripCardStatus = memo(
+  (s, tripId: TripId) => [selectTripHomeMode(s, tripId), selectPending(s, tripId), s.chat[tripId].visa.sent] as const,
+  ([mode, pending, visaSent], tripId): TripCardStatus | null => {
+    if (mode === "populated") {
+      return pending.length > 0
+        ? { text: HOME_CARD_STATUS.pending(pending.length), tone: "go" }
+        : { text: HOME_CARD_STATUS.allSet, tone: "muted" };
+    }
+    if (tripId === "bali") return visaSent ? null : { text: HOME_CARD_STATUS.visa, tone: "go" };
+    return { text: HOME_CARD_STATUS.collecting, tone: "muted" };
+  },
+);
 
 /** Trips you are a member of, in seed order (A-onboarding.md §1.1 `activeTrips`). Empty → A4. */
 export const selectMyTrips = memo(

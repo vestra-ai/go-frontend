@@ -50,7 +50,7 @@ export function PdfViewer({ tripId, ticket }: { tripId: TripId; ticket: TicketDo
           </Link>
         </Button>
         <div className="flex min-w-0 flex-1 flex-col gap-px">
-          <span className="truncate text-16 font-semibold leading-[1.3] tracking-body">{ticket.title}</span>
+          <h1 className="truncate text-16 font-semibold leading-[1.3] tracking-body">{ticket.title}</h1>
           <span className="truncate text-13 tracking-caption text-muted">{copy.fileLine(ticket.fileName, ticket.pages)}</span>
         </div>
         <Button variant="ghost" size="icon" aria-label={copy.download} onClick={() => toastGo("Ticket PDF downloaded")}>

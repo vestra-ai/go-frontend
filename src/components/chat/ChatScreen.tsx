@@ -34,6 +34,7 @@ import { TRIPS } from "@/data/seed/trips";
 import { baliVisa } from "@/data/seed/visa";
 import { AUTO_SCROLL_DONE_MS, DATES_NUDGE_MS, GO_TYPING_MS, RAHUL_CLAIMS_MS } from "@/data/timing";
 import type { CardKind, ChipKey, FrameRect, StageId, TripId, UserId } from "@/data/types";
+import { scrollBehavior } from "@/lib/motion";
 import { toastGo } from "@/lib/toast";
 import { useChatHeader, useChips, useMessages, useNextPill, useStage, useStore, useVisaRows } from "@/store";
 import { MessageRenderer, userAvatar, type CardActions } from "./MessageRenderer";
@@ -94,7 +95,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
   useEffect(() => {
     if (!scrollTarget || !settled) return;
     const t = window.setTimeout(() => {
-      document.querySelector(`[data-card="${scrollTarget}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+      document.querySelector(`[data-card="${scrollTarget}"]`)?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
       setScrollTarget(null);
     }, AUTO_SCROLL_DONE_MS);
     return () => window.clearTimeout(t);

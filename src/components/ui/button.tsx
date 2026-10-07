@@ -8,7 +8,7 @@ const pressOnDark = "active:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.18)]"
 const pressOnLight = "active:shadow-[inset_0_0_0_999px_rgb(11_27_63/0.07)]"
 
 const buttonVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-full whitespace-nowrap select-none transition-[scale,transform,box-shadow,background-color,opacity] duration-160 ease-out active:scale-[0.97] disabled:pointer-events-none disabled:bg-line-2 disabled:text-faint-2 aria-disabled:pointer-events-none aria-disabled:bg-line-2 aria-disabled:text-faint-2 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "inline-flex cursor-pointer items-center justify-center gap-2 rounded-full whitespace-nowrap outline-none select-none transition-[scale,transform,box-shadow,background-color,opacity] duration-160 ease-out focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 active:scale-[0.97] disabled:pointer-events-none disabled:bg-line-2 disabled:text-faint-2 aria-disabled:pointer-events-none aria-disabled:bg-line-2 aria-disabled:text-faint-2 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     // Key order matters: `weight` comes after `variant` so tailwind-merge lets it override the variant's weight.
     variants: {

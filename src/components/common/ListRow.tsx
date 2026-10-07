@@ -63,7 +63,7 @@ function ListRow({
     "flex w-full items-center gap-3 text-left text-ink [[data-row]+&]:border-t [[data-row]+&]:border-line",
     padClass[pad ?? (dense ? "dense" : "default")],
     interactive &&
-      "cursor-pointer outline-none transition-[transform,background-color] duration-160 ease-out focus-visible:bg-surface-pressed active:scale-[0.985] active:bg-surface-pressed",
+      "cursor-pointer outline-none transition-[transform,background-color] duration-160 ease-out focus-visible:bg-surface-pressed focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset active:scale-[0.985] active:bg-surface-pressed",
     className
   )
   const content = (

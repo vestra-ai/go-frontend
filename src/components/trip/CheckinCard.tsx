@@ -22,7 +22,7 @@ export function CheckinCard({ companion, onCheckIn, className, ...props }: Check
       <div className="flex items-center gap-3">
         <span className="grid h-10 w-14 shrink-0 place-items-center rounded-xl bg-indigo">
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG airline wordmark */}
-          <img src={assets.indigo.src} alt={assets.indigo.alt} className="block h-auto w-[46px]" />
+          <img src={assets.indigo.src} alt={assets.indigo.alt} width={assets.indigo.width} height={assets.indigo.height} className="block h-auto w-[46px]" />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-px">
           <span className="flex items-center gap-1.5 text-16 leading-[1.3] font-semibold tracking-body">

@@ -78,7 +78,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
               ) : (
                 <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo">
                   {/* eslint-disable-next-line @next/next/no-img-element -- brand SVG wordmark */}
-                  <img src={assets.indigo.src} alt="" className="w-7" />
+                  <img src={assets.indigo.src} alt="" width={assets.indigo.width} height={assets.indigo.height} className="w-7" />
                 </span>
               )
             }

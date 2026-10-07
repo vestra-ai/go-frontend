@@ -33,12 +33,10 @@ export interface TripDates {
   countdown: string; // literal "in 34 days" (PLAN §12.1 #4)
 }
 
-// A-onboarding.md §1.8: one label set per trip, used for every stage.
+// A-onboarding.md §1.8: one label set per trip, used for every stage. The status line is live (selectTripCardStatus).
 export interface TripHomeCard {
   coverTitle: string;
   coverSub: string;
-  status: string;
-  statusTone: "go" | "muted";
 }
 
 export interface Trip {

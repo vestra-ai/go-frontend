@@ -15,7 +15,7 @@ export function PdfPage({ ticket }: { ticket: TicketDoc }) {
       <div className="flex items-center justify-between">
         <span className="flex h-[26px] items-center bg-indigo px-2">
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG brand wordmark */}
-          <img src={assets.indigo.src} alt="IndiGo" width={50} />
+          <img src={assets.indigo.src} alt="IndiGo" width={50} height={15} />
         </span>
         <span className="text-11 font-bold tracking-badge">{copy.header}</span>
       </div>

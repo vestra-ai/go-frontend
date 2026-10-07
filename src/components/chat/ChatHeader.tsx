@@ -54,6 +54,8 @@ export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, on
 
   return (
     <header className="relative z-[2] shrink-0 bg-white pt-safe pb-3 shadow-header">
+      {/* The visible title is a button/link (avatar + name + crew line), so the page heading is announced separately. */}
+      <h1 className="sr-only">{trip.name}</h1>
       <div className="flex items-center gap-1 pr-2 pl-3">
         <Button asChild variant="ghost" size="icon" className="text-black">
           <Link href={backHref} aria-label={copy.header.back}>

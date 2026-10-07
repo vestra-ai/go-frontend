@@ -15,16 +15,17 @@ type ScreenProps = {
   children: ReactNode;
 };
 
+// The page's `main` landmark: one Screen per rendered route; sheets portal to the frame as dialogs.
 export function Screen({ bg = "canvas", scroll = "page", onScroll, children }: ScreenProps) {
   if (scroll === "none") {
-    return <div className={cn("relative flex h-full flex-col overflow-hidden", bgClass[bg])}>{children}</div>;
+    return <main className={cn("relative flex h-full flex-col overflow-hidden", bgClass[bg])}>{children}</main>;
   }
 
   return (
-    <div className={cn("relative flex h-full flex-col", bgClass[bg])}>
+    <main className={cn("relative flex h-full flex-col", bgClass[bg])}>
       <div onScroll={onScroll} className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
         {children}
       </div>
-    </div>
+    </main>
   );
 }

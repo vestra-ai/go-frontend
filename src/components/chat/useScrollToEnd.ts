@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { SCROLL_DELAY_MS } from "@/data/timing";
+import { scrollBehavior } from "@/lib/motion";
 
 /**
  * Keeps the message list pinned to its end sentinel (C-chat-kickoff.md §1.2).
@@ -17,7 +18,7 @@ export function useScrollToEnd(anchorRef: React.RefObject<HTMLElement | null>, d
     }
     const t = window.setTimeout(() => {
       try {
-        anchorRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+        anchorRef.current?.scrollIntoView({ behavior: scrollBehavior(), block: "end" });
       } catch {
         // Older engines reject the options object; staying put is fine.
       }

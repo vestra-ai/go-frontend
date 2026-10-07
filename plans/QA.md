@@ -260,3 +260,118 @@ Two J1/J2 clicks during the run logged `Module not found: ./src/app/dev/cleanup/
 - Real devices and iOS Safari: vaul inside the transformed frame, safe-area insets, native `navigator.share`. Headless Chromium has no `navigator.share`, so the share tiles were exercised through the copy/toast fallback.
 - Offline/PWA install (P4-1).
 - Scripts (`walk.cjs`, `story*.cjs`, `audit.cjs`, `links.cjs`, `desk.cjs`, `keys.cjs`) and screenshots are in the session scratchpad, not the repo.
+
+---
+
+# Hardening (P4-1)
+
+Branch `feat/go-pwa` (base `c2cf7d8`). Production checks ran against `pnpm build && pnpm start -p 3300`; the preset walk ran against the shared dev server on `:3200`. Headless Chromium (playwright-core 1.63) and axe-core 4.13, both loaded read-only from sibling projects. Run on 2026-10-08.
+
+## Results at a glance
+
+| Check | Result |
+|---|---|
+| `pnpm build` | succeeds · 110 precache entries (1,714 KiB) |
+| PWA / offline checks on prod | **27/27 PASS** |
+| Chrome installability (`Page.getInstallabilityErrors`, the check Lighthouse's installable audit uses) | **no errors** |
+| axe-core (WCAG 2.0/2.1/2.2 A+AA + best practice), all 72 presets on prod | before: 5 rules (1,393 nodes) · after: **2 rules (23 nodes)**, see "Left" |
+| Console errors / page errors / same-origin HTTP ≥400, all 72 presets on prod | **0** |
+| Sheets with an accessible name (every open dialog across the 72 presets) | **31/31** |
+| Icon-only buttons without a name (axe `button-name`/`link-name` + a source scan of `size="icon*"` and `GlassIconButton`) | **0** |
+| Keyboard focus indicator per atom (every preset; first visible instance of each slot, focused vs blurred) | **13 slots, 0 without a visible change** |
+| `prefers-reduced-motion: reduce` on 9 animated presets | **0** animations or transitions longer than 1 ms · 0 infinite (71 animated elements without the preference) |
+| Layout shift on load, 14 main routes (prod, cold cache) | **CLS 0** on every route |
+| 72-preset walk, `scratchpad/p3-18/walk.cjs` on `:3200` | **72/72 PASS** (also 72/72 on prod) |
+| `tsc --noEmit` · `pnpm lint` · `check-store.ts` · `check-seed.ts` | 0 errors · 0 warnings · pass · pass |
+
+## PWA and offline
+
+- **Manifest.** It parses with no errors: `display: standalone`, `start_url: /`, `scope: /`, theme and background `#F6F7F9`, name and short name. The 192, 512 and 512-maskable icons load at their declared sizes.
+- **Head tags.** `apple-touch-icon` is 180×180. The page has `theme-color #F6F7F9`, `viewport-fit=cover`, `apple-mobile-web-app-capable=yes`, status-bar style `default`, title `Go` and `lang="en"`.
+- **Service worker.** `/serwist/sw.js` registers and reaches `activated`. It controls the first page through `clientsClaim`, and the precache fills with 110 entries: Next static JS and CSS plus `public/**`, revisioned by hash.
+- **Offline, several visits.**
+  - Visited routes (`/home`, `/trips/goa`, `/trips/goa/itinerary`) load the app shell with Figtree. The fonts come from the runtime cache.
+  - Unvisited routes (`/profile`, `/trips/goa/expenses/transactions`) get `/~offline`.
+  - A client-side tab link to an unvisited route falls back to a document request, which also gets `/~offline`.
+- **Offline, exactly one visit** (fresh profile). Reloading `/` offline shows the Welcome page, and `/trips/goa/bookings` shows `/~offline`. Before this pass, the first page loaded before the worker controlled it, so its HTML was never cached and a single visit gave `/~offline` everywhere. `sw.ts` now runs each open window's URL through the navigation route when the worker installs (best effort, `allSettled`).
+- **Caching strategy** (§5) suits state that lives in localStorage:
+  - Navigations hit the `NetworkFirst` "others" route with no network timeout. A probe overwrote the cached copy of `/profile` and navigated online: the page came through the worker but from the network (`servedStale: false`), and the cache entry was refreshed.
+  - RSC payloads are `NetworkFirst`. Hashed `/_next/static` and `public/**` come from the precache, so a deploy re-revisions them and stale images are not a risk.
+  - `skipWaiting` + `clientsClaim` is kept. A tab left open across a deploy can still ask for a removed lazy chunk. Next recovers by hard-navigating, and the app state survives in localStorage.
+- `SerwistProvider` defaults stay on.
+  - `cacheOnNavigation` caches pushState/replaceState URLs.
+  - `reloadOnOnline` reloads the page when the browser goes back online. That is what moves `/~offline` back to the real page. It also drops transient UI such as an open sheet or composer text; noted, not changed.
+
+## Accessibility
+
+- **Focus rings.** Every interactive atom now shows the existing ring, `focus-visible:ring-2 ring-ink ring-offset-2`:
+  - Newly added to **Button** and **Chip**. Before, they showed only the browser's default outline.
+  - Already present on Toggle, SegmentedControl, Switch, Checkbox, Radio and Slider thumb.
+  - Full-bleed rows (**MenuItem**, **ListRow** buttons and links) use the same ring inset (`ring-inset`) so a card's `overflow-hidden` can't clip it. Their pressed-background cue stays.
+  - Text inputs get the plan's softer `ring-2 ring-ink/20` halo, plus the field's existing `border-ink`. Text inputs match `:focus-visible` on every tap, so a full navy ring would show on touch. Input shells use `focus-within:` for the same halo.
+  - The audit focused each slot on each preset with keyboard modality (`button` 72 presets, `chip` 28, `input` 24, `drawer-close` 26, `dropdown-menu-trigger` 15, `radio-group-item` 11, `segmented-control-item` 9, `switch`/`list-row`/`toggle` 3, `menu-item`/`slider-thumb`/`checkbox` 1). Every one changed visibly. Inside sheets the audit used the topmost dialog.
+  - A Tab-through of 28 presets reached 126 elements. The only ones with no visible change were Radix's invisible focus guards.
+- **Names.** Every open sheet has a name. Examples: "Quick start", "Travelling from", "BLR ⇄ GOA", "Preferred times", "Pick your seat", "Record a payment". axe found no unnamed buttons or links.
+- **Landmarks and headings.**
+  - `Screen` now renders `<main>`, which fixes axe `landmark-one-main` on 42 presets and `region` (1,239 nodes).
+  - The chat header gets a screen-reader-only `<h1>` with the trip name, because the visible title is a button.
+  - The ticket viewer's title is now an `<h1>`.
+- **Zoom.** `maximumScale: 1` is removed from the viewport, so pinch-zoom works again (axe `meta-viewport`, WCAG 1.4.4). Every input is ≥16 px, so iOS still doesn't auto-zoom on focus. **This deviates from PLAN §4**; restoring the one line brings back the old behaviour.
+- **Reduced motion.**
+  - The global `prefers-reduced-motion` block now also zeroes `animation-delay` and `transition-delay` (WelcomeOrbit's staggered inline delays, `animate-fill`'s 500 ms) and sets `scroll-behavior: auto`.
+  - The two JS `scrollIntoView({ behavior: "smooth" })` calls (chat auto-scroll, deep-link scroll) now use `scrollBehavior()` from `lib/motion.ts`. That returns `"auto"` under the preference, because CSS can't override an explicit JS behaviour.
+  - With reduced motion, vaul sheets still open, close on Escape and sync the URL.
+- **Colour contrast**, as text on the tokens it actually sits on:
+  - Body copy passes everywhere: `muted` #4A5878 is 6.0–7.1:1 on canvas, white and every tint, and `ink` is ≥12.9:1.
+  - `go` (5.0–5.6) and `success-ink` (4.6–5.4) pass on their light fills.
+  - The failing pairs, none of them body copy, are listed under "Left".
+
+## Performance
+
+- **Fonts.** Figtree loads through `next/font/google` with `font-display: swap` (all 10 `@font-face` rules). That is 20–30 KiB of woff2 per route.
+- **Layout shift.** CLS is 0 on `/`, `/home`, `/profile`, `/trips/new`, `/invite/goa-k7q`, `/trips/goa`, chat, itinerary, bookings, ticket, expenses, transactions, pass and `/~offline`. Measurements used a prod build, a cleared HTTP cache, no SW and buffered `layout-shift` entries.
+  - Every `<img>` has a CSS-fixed box or `width`/`height` attributes.
+  - The four IndiGo wordmarks that sized themselves from the SVG (pass card, check-in card, listen sheet, PDF page) now carry intrinsic `width`/`height`.
+- **JS per route** (gzip on the wire, cold load). The framework and layout baseline is 173 KiB (`/~offline`: react-dom, Next runtime, Radix tooltip, sonner, Serwist).
+
+  | Route | JS (gzip) |
+  |---|---|
+  | `/~offline` (baseline) | 173 KiB |
+  | `/trips/goa/bookings/travel-out/ticket` | 216 KiB |
+  | `/` and `/trips/goa/checkin/pass` | 220 KiB |
+  | `/home` | 258 KiB |
+  | `/trips/goa` | 272 KiB |
+  | `/trips/goa/chat` | 286 KiB |
+
+  - CSS is 16 KiB gzip.
+  - Only the Radix primitives the app uses are bundled. NavigationMenu, Menubar, Select, Toast, Accordion and the like are absent.
+  - The chat route carries its 11 sheets and is the largest. It is 14 KiB over the trip home, and no route is clearly oversized, so nothing moved to `next/dynamic`. Lazy sheets would also delay the `?sheet=` presets and the first open.
+
+## App-home status lines (QA "Static App-home status lines")
+
+- **Change.** The trip cards' status line is live, from `selectTripCardStatus` (store selectors). The seed copy became templates in `seed/homeCards.ts` (`HOME_CARD_STATUS`). The static `status`/`statusTone` fields were dropped from `TripHomeCard`.
+- **Goa, once planned.** The line uses the trip home's own pending list (`selectPending`):
+  - A6 "2 things pending on you"
+  - K1 "3 things pending on you"
+  - after recording the payment, "1 thing pending on you"
+  - J6 "You're all set" (muted)
+- **Bali.** It reads "Visa details pending on you" until the visa is sent, then the line is gone.
+- **Trips still being planned** (College, and Goa before stage `plan`) read "Go is collecting everyone's answers".
+- **Verification.** Checked on the click path and presets; A6 still renders the artboard copy.
+
+## Files changed
+
+`src/app/sw.ts`, `src/app/layout.tsx`, `src/app/globals.css` (reduced-motion block only), `src/components/ui/{button,chip,input}.tsx`, `src/components/common/{MenuItem,ListRow}.tsx`, `src/components/shell/Screen.tsx`, `src/components/chat/{ChatHeader,ChatScreen,useScrollToEnd}.tsx|ts`, `src/components/plan/{PdfViewer,PdfPage}.tsx`, `src/components/checkin/BoardingPassCard.tsx`, `src/components/trip/{CheckinCard,ListenSheet}.tsx`, `src/components/home/{AppHomeView,TripCard}.tsx`, `src/data/seed/homeCards.ts`, `src/data/types.ts`, `src/store/selectors.ts`, new `src/lib/motion.ts`.
+
+## Left
+
+- **Contrast tokens that fail 4.5:1 for text** (none is body copy; kept as designed, reported for a design call):
+  - `faint` #A5ACB8: 2.0–2.3:1. Used as text for the zero amounts "₹0" on I4/I5 (44 px bold needs 3:1, 18 px), the inactive check-in step labels (K2) and the seat-map row numbers (K3).
+  - White on `success` #16A34A: 3.3:1. Used for the "Voted ✓" success button (D2, D3, E12) and the selected price badge (F2, F5). `success-ink` #0F7A37 would give 5.4:1.
+  - `info` #3E73D6 on `success-tint`: 4.25:1. This is the "mixed airlines" route tag on a selected route row (F2).
+  - Also low as text, though not flagged in a rendered state: `faint-2` #8A93A3 at 3.1:1 (disabled-button text, which is exempt) and `amber` #B7791F at 3.4–3.6:1 (the ★ glyph).
+- **One axe heading finding.** M2's `?collapsed=1` preset renders only the compact header, which has no `<h1>`. On the real scroll path, the hero's `<h1>` stays in the DOM.
+- **Serwist registration error.** When service-worker registration is refused, `@serwist/window` throws an unhandled `Cannot read properties of undefined (reading 'waiting')` or rejection. It shows in a Playwright context with `serviceWorkers: 'block'`. Normal Chrome logs no errors. The library lacks a catch; the comment in `layout.tsx` already notes it.
+- **Install payload.** The precache includes the 29 svgr source icons in `public/icons/*.svg` (about 7 KiB). Only `public/icons/brand/*` is fetched at runtime. A `globIgnores` entry would drop them, but the saving is negligible, so it was left alone.
+- **Static cover lines.** "in 34 days" on the App-home card is still literal while the trip home says "in 2 days" at K1 (PLAN §12.1 #4).
+- **Not run:** Lighthouse (its PWA category was removed in v12; installability was checked through the same Chrome API), real devices, iOS Safari standalone mode, and a real deploy-over-deploy upgrade.

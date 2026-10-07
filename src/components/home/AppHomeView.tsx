@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { home as copy } from "@/data/seed/copy";
 import { assets } from "@/lib/assets";
 import { toastGo } from "@/lib/toast";
-import { selectTripMembers, useMyTrips, usePendingInvites, useStore } from "@/store";
+import { selectTripCardStatus, selectTripMembers, useMyTrips, usePendingInvites, useStore } from "@/store";
 
 /** A6: returning Home body (invites, your trips, past trips) plus the New-trip FAB. */
 export function AppHomeView() {
@@ -24,6 +24,8 @@ export function AppHomeView() {
   const users = useStore((s) => s.trips.members);
   // Same stack as the trip home hero (A6 Goa shows Arjun too); memoised per trip, so shallow-equal between renders.
   const tripMembers = useStore(useShallow((s) => trips.map((trip) => selectTripMembers(s, trip.id))));
+  // Live status lines (pending count, visa) built from the seed templates; memoised per trip like the stacks.
+  const tripStatus = useStore(useShallow((s) => trips.map((trip) => selectTripCardStatus(s, trip.id))));
   const declineInvite = useStore((s) => s.declineInvite);
 
   return (
@@ -56,8 +58,8 @@ export function AppHomeView() {
               coverTitle={trip.homeCard.coverTitle}
               coverSub={trip.homeCard.coverSub}
               members={tripMembers[i].slice(0, 4)}
-              status={trip.homeCard.status}
-              statusTone={trip.homeCard.statusTone}
+              status={tripStatus[i]?.text}
+              statusTone={tripStatus[i]?.tone}
             />
           ))}
           {pastTrips.length > 0 && (

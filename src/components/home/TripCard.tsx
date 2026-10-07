@@ -14,8 +14,9 @@ type TripCardProps = {
   coverTitle: string;
   coverSub: string;
   members: User[];
-  status: string;
-  statusTone: "go" | "muted";
+  /** Omitted → no status line. */
+  status?: string;
+  statusTone?: "go" | "muted";
 };
 
 const LEADING_EMOJI = /^(\p{Extended_Pictographic}️?)\s+(.*)$/u;
@@ -61,9 +62,11 @@ export function TripCard({ href, name, cover, coverTitle, coverSub, members, sta
         <span className="flex items-center gap-2.5 px-3.5 py-3">
           <span className="flex flex-1 flex-col gap-px">
             <span className="text-16 leading-[1.3] font-semibold tracking-body">{name}</span>
-            <span className={cn("text-13", statusTone === "go" ? "font-semibold text-go" : "tracking-caption text-muted")}>
-              {status}
-            </span>
+            {status && (
+              <span className={cn("text-13", statusTone === "go" ? "font-semibold text-go" : "tracking-caption text-muted")}>
+                {status}
+              </span>
+            )}
           </span>
           <ChevronRight className="size-4 text-faint" strokeWidth={2.4} />
         </span>

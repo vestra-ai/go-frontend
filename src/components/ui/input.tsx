@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils"
 // Shapes style a standalone <input>. `inline` is the unstyled text field used
 // inside a wrapper that carries the shape (see InputField / SearchField).
 const inputVariants = cva(
-  "min-w-0 text-16 tracking-body text-ink outline-none transition-colors placeholder:text-muted disabled:pointer-events-none disabled:opacity-50 [&::-webkit-search-cancel-button]:appearance-none",
+  "min-w-0 text-16 tracking-body text-ink outline-none transition-[color,border-color,box-shadow] placeholder:text-muted focus-visible:ring-2 focus-visible:ring-ink/20 disabled:pointer-events-none disabled:opacity-50 [&::-webkit-search-cancel-button]:appearance-none",
   {
     variants: {
       shape: {
@@ -17,7 +17,7 @@ const inputVariants = cva(
           "h-[52px] w-full rounded-3xl border-[1.5px] border-ink bg-white px-4",
         bare: "w-[170px] border-0 bg-transparent p-0 text-44 font-bold tracking-display tabular-nums",
         ask: "h-[52px] w-full rounded-full bg-surface-2 pl-4 pr-1.5",
-        inline: "flex-1 border-0 bg-transparent p-0",
+        inline: "flex-1 border-0 bg-transparent p-0 focus-visible:ring-0",
       },
     },
     defaultVariants: { shape: "field" },
@@ -26,7 +26,7 @@ const inputVariants = cva(
 
 // Wrapper classes for shapes that host icons / trailing slots around an `inline` input.
 const inputShellVariants = cva(
-  "flex items-center gap-2.5 transition-colors focus-within:border-ink",
+  "flex items-center gap-2.5 transition-[color,border-color,box-shadow] focus-within:border-ink focus-within:ring-2 focus-within:ring-ink/20",
   {
     variants: {
       shape: {
