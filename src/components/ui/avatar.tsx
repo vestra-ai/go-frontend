@@ -53,8 +53,13 @@ const avatarVariants = cva(
         go: "rounded-full bg-info-soft",
         trip: "rounded-xl",
       },
+      // Overrides the kind's corner radius (kind="trip" is rounded by default).
+      shape: {
+        rounded: "",
+        circle: "rounded-full",
+      },
     },
-    defaultVariants: { ring: "none", tone: "none", kind: "user" },
+    defaultVariants: { ring: "none", tone: "none", kind: "user", shape: "rounded" },
   }
 )
 
@@ -83,6 +88,8 @@ type AvatarProps = Omit<React.ComponentProps<typeof AvatarPrimitive.Root>, "chil
     src?: string
     /** Used for the image alt and the initials fallback. */
     name?: string
+    /** Fallback text; defaults to the initials of `name`. */
+    initials?: string
     children?: React.ReactNode
   }
 
@@ -92,8 +99,10 @@ function Avatar({
   ring = "none",
   tone,
   kind = "user",
+  shape = "rounded",
   src,
   name,
+  initials,
   children,
   ...props
 }: AvatarProps) {
@@ -102,7 +111,7 @@ function Avatar({
       data-slot="avatar"
       data-size={size}
       className={cn(
-        avatarVariants({ ring, kind, tone: tone ?? (kind === "user" ? toneFor(name) : "none") }),
+        avatarVariants({ ring, kind, shape, tone: tone ?? (kind === "user" ? toneFor(name) : "none") }),
         sizeMap[size],
         className
       )}
@@ -115,7 +124,7 @@ function Avatar({
           className={kind === "trip" ? "size-[91%] rounded-none object-contain" : undefined}
         />
       )}
-      {name && kind === "user" && <AvatarFallback>{initialsOf(name)}</AvatarFallback>}
+      {(initials ?? name) && kind === "user" && <AvatarFallback>{initials ?? initialsOf(name!)}</AvatarFallback>}
       {children}
     </AvatarPrimitive.Root>
   )

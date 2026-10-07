@@ -72,6 +72,7 @@ function Chip({
       data-variant={variant}
       data-size={size}
       aria-pressed={pressed}
+      {...(Comp === "button" && { type: "button" })}
       className={cn(chipVariants({ size, variant, className }))}
       {...props}
     >

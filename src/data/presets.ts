@@ -19,10 +19,11 @@ import type {
 } from "@/data/types";
 
 // One entry per artboard of the 72-artboard Prototype page (PLAN §9.4 `demo`, §9.6).
-// Skeleton: ids, titles, target hrefs and declarative state descriptors taken from each spec's §1.1.
-// P2-2 turns a descriptor into a store patch in `applyPreset(id)` and returns `href`. applyPreset starts from the
-// initial store every time (deterministic whatever came before), then applies, in order: signedIn → trips (goa, bali)
-// → ensureStage(tripId) → chat → home → money / cabBooked. Unlisted fields keep their initial or fast-forwarded values.
+// Ids, titles, target hrefs and declarative state descriptors taken from each spec's §1.1.
+// `applyPreset(id)` (src/store/presets.ts) starts from the initial store every time (deterministic whatever came
+// before), then applies, in order: signedIn → trips (goa, bali) → ensureStage(tripId) → chat → home → money /
+// cabBooked, and returns `href`. Unlisted fields keep their initial or fast-forwarded values. The chat patch lands
+// after ensureStage, so it can undo a default completion (e.g. E1 placeVote null).
 
 export type PresetGroup = "A" | "B" | "C" | "D" | "E" | "F" | "G" | "H" | "I" | "J" | "K" | "L" | "M";
 
@@ -71,6 +72,7 @@ export interface PresetHomePatch {
   resolved?: VendorId[];
   checkin?: { status?: CheckinStatus; digiYatra?: boolean; declaration?: boolean; seat?: string };
   daysToGo?: string;
+  openRow?: "stay" | "fly" | null; // mirrors the href's `?open=` (J2–J4) so the store matches the artboard
 }
 
 export interface PresetState {
@@ -239,14 +241,17 @@ export const PRESETS: Preset[] = [
 
   // J · Trip home & calls (J-triphome-calls.md §1.1)
   preset("J1", "Home · one live call, full width · updated", HOME, { ...PLANNED, home: { ...HOME_IDLE, calls: ["villa"] } }),
-  preset("J2", "Home · stay row opened · call options + details · new", `${HOME}?open=stay`, { ...PLANNED, home: HOME_IDLE }),
+  preset("J2", "Home · stay row opened · call options + details · new", `${HOME}?open=stay`, {
+    ...PLANNED,
+    home: { ...HOME_IDLE, openRow: "stay" },
+  }),
   preset("J3", "Home · flights row opened · call options + details · new", `${HOME}?open=fly`, {
     ...PLANNED,
-    home: { ...HOME_IDLE, calls: ["villa"] },
+    home: { ...HOME_IDLE, calls: ["villa"], openRow: "fly" },
   }),
   preset("J4", "Home · tapped Call IndiGo · 2 calls, swipe · updated", `${HOME}?open=fly`, {
     ...PLANNED,
-    home: { ...HOME_IDLE, calls: ["villa", "indigo"] },
+    home: { ...HOME_IDLE, calls: ["villa", "indigo"], openRow: "fly" },
   }),
   preset("J5", "Listening in · booking details, mute, take over, end · updated", `${HOME}?sheet=listen&call=villa`, {
     ...PLANNED,

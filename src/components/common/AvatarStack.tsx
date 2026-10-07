@@ -9,7 +9,14 @@ const overlapMap = {
   12: "-ml-3",
 } as const
 
-type StackAvatar = { name: string; src?: string; tone?: AvatarTone }
+type StackAvatar = {
+  name: string
+  src?: string
+  tone?: AvatarTone
+  kind?: "user" | "go" | "trip"
+  /** Fallback text instead of the initials derived from `name`. */
+  initials?: string
+}
 
 type AvatarStackProps = Omit<React.ComponentProps<"div">, "children"> & {
   avatars: StackAvatar[]
@@ -45,6 +52,8 @@ function AvatarStack({
           size={size}
           ring={ring}
           tone={a.tone}
+          kind={a.kind}
+          initials={a.initials}
           src={a.src}
           name={a.name}
           className={cn(i > 0 && overlapMap[overlap])}
