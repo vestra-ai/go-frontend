@@ -1,0 +1,201 @@
+@import "tailwindcss";
+@import "tw-animate-css";   /* installed by shadcn init; keep only if shadcn components reference its classes, else delete the import */
+
+@theme {
+  /* ── breakpoints: mobile-only, nothing above 450px ────────────── */
+  --breakpoint-*: initial;
+  --breakpoint-xs: 360px;   /* small phones; use max-xs: for ≤360 tweaks */
+  --breakpoint-sm: 400px;
+
+  /* ── fonts ─────────────────────────────────────────────────────── */
+  --font-sans: var(--font-figtree), system-ui, sans-serif;
+  --font-serif: Georgia, "Times New Roman", serif;
+
+  /* ── colour: ink & text ────────────────────────────────────────── */
+  --color-ink: #0B1B3F;            /* primary text, navy surfaces (toast, nudge pill, lock badge) */
+  --color-ink-hover: #22365F;      /* link hover (fine pointer only) */
+  --color-muted: #4A5878;          /* secondary text, placeholders */
+  --color-faint: #A5ACB8;          /* tertiary text, chevrons, dashed "other" borders */
+  --color-faint-2: #8A93A3;        /* disabled button text */
+  --color-black: #000000;          /* primary button fill, my bubble, selected seat/segment */
+  --color-white: #FFFFFF;
+
+  /* ── colour: surfaces & lines ──────────────────────────────────── */
+  --color-canvas: #F6F7F9;         /* page + sheet background */
+  --color-surface: #FFFFFF;        /* cards, header */
+  --color-surface-2: #F4F5F7;      /* grey chips, grey input, emoji bubbles, option tiles */
+  --color-surface-3: #F2F2F2;      /* secondary buttons ("Details", "Decline", "Download") */
+  --color-surface-pressed: #F5F6F8;/* .row active */
+  --color-line: #ECEFF3;           /* hairline dividers, card borders, taken seat fill */
+  --color-line-2: #DDE1E6;         /* chip borders, sheet grabber, switch off, slider track, disabled button */
+  --color-line-3: #CDD3DC;         /* dashed placeholder avatars, radio-off border, dashed tiles */
+  --color-line-4: #C9CED6;         /* dashed route rule, taken-seat text, checkbox-off border */
+  --color-scrim: rgb(11 27 63 / 0.38);        /* sheet backdrop */
+  --color-scrim-strong: rgb(11 27 63 / 0.42); /* long-press backdrop (+ blur 6px) */
+
+  /* ── colour: Go brand (terracotta) ─────────────────────────────── */
+  --color-go: #A44F3A;             /* "Go" label, Skip/Not now links, pending accents, unread badge, tint-button text */
+  --color-go-soft: #F6EAE6;        /* Go bubble, tint buttons ("Book", "Open", "Fix split") */
+  --color-go-note: #FFF6F2;        /* Go note / privacy note background, paid-seat fill */
+  --color-go-line: #F0C9BC;        /* quote rule on black bubble, paid-seat border */
+  --color-go-ring: #EFDCD5;        /* dashed decorative ring (welcome, hero) */
+  --color-go-glow: #FBE9E2;        /* radial glow */
+
+  /* ── colour: status ────────────────────────────────────────────── */
+  --color-success: #16A34A;        /* check badges, live dot, voted, switch on */
+  --color-success-ink: #0F7A37;    /* green text */
+  --color-success-soft: #E3F5EA;   /* green panels, "Saved" button, NEW pill */
+  --color-success-tint: #F0FAF3;   /* selected rows (poll option, route option, picked city) */
+  --color-success-ring: #D7F2E0;   /* spinner track */
+  --color-danger: #B42318;         /* recording, Sign out text */
+  --color-danger-soft: #FDECEC;
+  --color-info: #3E73D6;           /* friend seat border, "mix" tag */
+  --color-info-soft: #DCEBFF;      /* Go avatar background */
+  --color-info-tint: #E1F0FA;      /* Gokarna/Bali tint, invite thumb */
+  --color-info-tint-2: #EAF1FC;    /* friend seat fill */
+  --color-info-tint-3: #E6EEFB;    /* Udaipur tint */
+  --color-amber: #B7791F;          /* ★ rating */
+  --color-amber-soft: #FFF1DC;     /* Goa tint, trip avatar bg */
+  --color-amber-2: #E3A63A;
+  --color-amber-ink: #9A5B00;
+  --color-amber-tint: #FFF4D9;     /* Pondy tint */
+  --color-green-tint: #E4F4E4;     /* Coorg tint */
+  --color-stay: #3E73D6; --color-stay-soft: #E3EEFB;      /* expenses "Stay" category (= info) */
+  --color-travel: #E07A5F; --color-travel-soft: #FBE8DC;  /* expenses "Travel" category */
+  --color-wave-idle: #D5D9E0;      /* recording waveform unplayed bars */
+  --color-dot-idle: #C9CED6;       /* carousel inactive dots (= line-4) */
+  --color-seat-taken-text: #C9CED6;
+  --color-plan-hero: #C9D6E2;      /* plan card hero fallback */
+  --color-indigo-tint: #E8EEFB;    /* IndiGo call badge tint */
+  --color-peach-tint: #FCE7E4;     /* Jaipur tint */
+  --color-peach-tint-2: #FBE8DC;   /* Hampi tint */
+  --color-teal: #2BB38A;
+
+  /* ── colour: brands & misc ─────────────────────────────────────── */
+  --color-whatsapp: #25D366;
+  --color-indigo: #2B399B;         /* IndiGo tile, boarding pass band */
+  --color-calendar: #111111;       /* calendar tile month band */
+  --color-sunset: #E9945A;         /* hero image fallback */
+  --color-cover-1: #F4C9A8; --color-cover-2: #D98A68; --color-cover-3: #8E4A3A;  /* warm cover gradient 160deg 0/45/100% */
+  --color-map-sea: #D6EAE6; --color-map-land: #F1EFE8; --color-map-road: #E4E1D6; --color-map-label: #8FB3AD;
+  --color-viewer: #E4E7EC;         /* PDF viewer canvas */
+  --color-skeleton: #E6E9EE;       /* PDF skeleton bars */
+  --color-track-empty: #E3E5E8;    /* booking progress empty segment */
+  --color-frame-bg: #E9EDF2;       /* desktop background outside the phone frame */
+
+  /* ── typography scale (px; name = size). Line-heights baked where the design is consistent */
+  --text-9: 9px;    --text-9--line-height: 1;
+  --text-10: 10px;  --text-10--line-height: 1.35;
+  --text-11: 11px;  --text-11--line-height: 1.35;   /* eyebrows (700, tracking-eyebrow) */
+  --text-12: 12px;  --text-12--line-height: 1.35;
+  --text-13: 13px;  --text-13--line-height: 1.35;   /* captions, meta */
+  --text-14: 14px;  --text-14--line-height: 1.35;   /* chips, notes (1.4 for note bodies) */
+  --text-15: 15px;  --text-15--line-height: 1.3;    /* row titles, sheet rows */
+  --text-16: 16px;  --text-16--line-height: 1.4;    /* body, bubbles, card titles (1.3) */
+  --text-17: 17px;  --text-17--line-height: 1.3;
+  --text-18: 18px;  --text-18--line-height: 1.3;    /* primary CTA, card titles */
+  --text-20: 20px;  --text-20--line-height: 1.3;    /* section headers (600) */
+  --text-22: 22px;  --text-22--line-height: 1.3;    /* sheet titles (600) */
+  --text-24: 24px;  --text-24--line-height: 1.1;    /* cover titles (700) */
+  --text-26: 26px;  --text-26--line-height: 1.15;
+  --text-30: 30px;  --text-30--line-height: 1.05;
+  --text-32: 32px;  --text-32--line-height: 1.1;    /* budget readout (700) */
+  --text-34: 34px;  --text-34--line-height: 1.12;   /* screen titles (600), IATA codes (700/800) */
+  --text-40: 40px;  --text-40--line-height: 1;
+  --text-44: 44px;  --text-44--line-height: 1;      /* hero city (700) */
+
+  /* ── letter-spacing ────────────────────────────────────────────── */
+  --tracking-display: -0.03em;    /* 40–44px */
+  --tracking-title: -0.025em;     /* 34px */
+  --tracking-h2: -0.02em;         /* 22–24px */
+  --tracking-h3: -0.018em;        /* 20px */
+  --tracking-h4: -0.014em;        /* 18px, primary CTA, "Accept" */
+  --tracking-body: -0.011em;      /* 16px */
+  --tracking-sub: -0.008em;       /* 15px */
+  --tracking-sm: -0.004em;        /* 14px chips / secondary buttons */
+  --tracking-caption: 0.002em;    /* 13px */
+  --tracking-badge: 0.04em;       /* 11–14px uppercase badges */
+  --tracking-tag: 0.06em;         /* 11px option tags, "ONLY YOU CAN SEE THIS" */
+  --tracking-eyebrow: 0.08em;     /* 11–12px uppercase eyebrows */
+
+  /* ── radii (px). Use rounded-full for pills (999px) and 50% circles */
+  --radius-*: initial;
+  --radius-xs: 3px;  --radius-sm: 4px;  --radius-md: 8px;  --radius-lg: 10px; --radius-xl: 12px;
+  --radius-2xl: 14px; --radius-3xl: 16px; --radius-4xl: 18px; --radius-5xl: 20px; --radius-6xl: 22px;
+  --radius-7xl: 24px; --radius-8xl: 28px;
+
+  /* ── shadows ───────────────────────────────────────────────────── */
+  --shadow-card:    0 1px 2px rgb(11 27 63 / 0.05), 0 6px 18px rgb(11 27 63 / 0.06);   /* white cards */
+  --shadow-bubble:  0 1px 2px rgb(11 27 63 / 0.06), 0 4px 12px rgb(11 27 63 / 0.04);   /* bubbles, system pill */
+  --shadow-float:   0 8px 24px rgb(11 27 63 / 0.08);                                   /* in-chat cards */
+  --shadow-float-sm:0 8px 24px rgb(11 27 63 / 0.06);                                   /* option list cards */
+  --shadow-header:  0 1px 0 rgb(11 27 63 / 0.04), 0 6px 16px rgb(11 27 63 / 0.06);     /* chat header */
+  --shadow-header-2:0 1px 0 rgb(11 27 63 / 0.05), 0 8px 20px rgb(11 27 63 / 0.08);     /* collapsed trip header */
+  --shadow-tabs:    0 1px 2px rgb(11 27 63 / 0.06), 0 8px 24px rgb(11 27 63 / 0.12);   /* floating tab bar */
+  --shadow-glass:   0 1px 2px rgb(11 27 63 / 0.06), 0 10px 28px rgb(11 27 63 / 0.12);  /* welcome glass pills */
+  --shadow-sheet:   0 -8px 30px rgb(11 27 63 / 0.18);                                  /* bottom sheets */
+  --shadow-tray:    0 -1px 0 rgb(11 27 63 / 0.06), 0 -8px 24px rgb(11 27 63 / 0.08);   /* composer tray */
+  --shadow-pop:     0 10px 30px rgb(11 27 63 / 0.22);                                  /* attach menu */
+  --shadow-menu:    0 10px 30px rgb(11 27 63 / 0.25);                                  /* long-press menu, reaction bar */
+  --shadow-toast:   0 10px 30px rgb(11 27 63 / 0.30);
+  --shadow-fab:     0 8px 24px rgb(11 27 63 / 0.25);                                   /* FAB, chat pill */
+  --shadow-pill:    0 6px 18px rgb(11 27 63 / 0.20);                                   /* navy nudge pill */
+  --shadow-btn:     0 1px 3px rgb(0 0 0 / 0.08);                                       /* white round buttons */
+  --shadow-knob:    0 1px 3px rgb(0 0 0 / 0.20);
+  --shadow-thumb:   0 2px 6px rgb(11 27 63 / 0.20);                                    /* slider thumb */
+  --shadow-chip:    0 2px 6px rgb(11 27 63 / 0.08);                                    /* reaction chip on card */
+  --shadow-tile:    0 1px 4px rgb(0 0 0 / 0.12);                                       /* calendar tile */
+  --shadow-page:    0 2px 6px rgb(0 0 0 / 0.12), 0 12px 30px rgb(0 0 0 / 0.10);        /* PDF page */
+  --shadow-frame:   0 24px 80px rgb(11 27 63 / 0.18);                                  /* phone frame on desktop */
+
+  /* ── motion ────────────────────────────────────────────────────── */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --animate-rise: rise 520ms var(--ease-out) both;
+  --animate-rise-slow: rise 600ms var(--ease-out) both;
+  --animate-pop: popIn 420ms var(--ease-out) both;
+  --animate-spin-slow: spin 800ms linear infinite;
+  --animate-fill: fill 1400ms var(--ease-out) 500ms both;
+  --animate-live: live 1600ms ease-in-out infinite;
+  --animate-wave: wave 900ms ease-in-out infinite;
+  --animate-fade-away: fadeAway 200ms ease-out forwards;
+  --animate-fade-in: fadeIn 200ms ease-out forwards;
+}
+
+/* keyframes referenced by --animate-* */
+@keyframes rise     { from { opacity: 0; transform: translateY(8px) scale(0.96); } }
+@keyframes popIn    { from { opacity: 0; transform: translateY(6px) scale(0.96); } to { opacity: 1; transform: none; } }
+@keyframes spin     { to { transform: rotate(360deg); } }
+@keyframes fill     { from { transform: scaleX(0.15); } }
+@keyframes live     { 50% { box-shadow: 0 0 0 7px rgb(22 163 74 / 0.12); } }
+@keyframes wave     { 50% { transform: scaleY(0.4); } }
+@keyframes fadeAway { to { opacity: 0; transform: scale(0.97); } }
+@keyframes fadeIn   { to { opacity: 1; } }
+
+/* base resets */
+@layer base {
+  html, body { height: 100%; }
+  html { background: var(--color-frame-bg); -webkit-text-size-adjust: 100%; }
+  body { margin: 0; font-family: var(--font-sans); color: var(--color-ink); font-kerning: normal;
+         font-feature-settings: "kern" 1; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
+         overflow: hidden; overscroll-behavior: none; }
+  a, button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-touch-callout: none; }
+  input::placeholder, textarea::placeholder { color: var(--color-muted); }
+  input, button, textarea { font: inherit; color: inherit; }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+/* scroll + safe-area utilities (global-level only) */
+@utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
+@utility pb-safe { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+@utility pt-safe { padding-top: max(56px, env(safe-area-inset-top)); }  /* design header top padding */
+@utility pt-safe-hero { padding-top: max(46px, env(safe-area-inset-top)); }  /* trip hero / collapsed header / viewer toolbars */
+@utility top-safe-hero { top: max(46px, env(safe-area-inset-top)); }        /* glass buttons on heroes */
+@utility mask-scallop { mask: radial-gradient(circle 6px at 50% 0, transparent 97%, #000) 50% 0 / 16px 51% repeat-x,
+                               radial-gradient(circle 6px at 50% 100%, transparent 97%, #000) 50% 100% / 16px 51% repeat-x; }
+
+/* the phone frame on wide screens (see §4) */
+@media (min-width: 451px) {
+  #app-frame { box-shadow: var(--shadow-frame); border-inline: 1px solid rgb(11 27 63 / 0.06); }
+}
