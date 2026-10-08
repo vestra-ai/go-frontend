@@ -24,8 +24,9 @@ const segmentedItemVariants = cva(
   {
     variants: {
       variant: {
-        hero: "h-[42px] flex-1 px-3 text-15 font-semibold",
-        compact: "h-9 flex-1 px-3 text-14 font-semibold",
+        // min-w-0 + light padding: the row must shrink to the phone (the trip tabs overflowed their pill below ~360px).
+        hero: "h-[42px] min-w-0 flex-1 px-1.5 text-15 font-semibold",
+        compact: "h-9 min-w-0 flex-1 px-1.5 text-14 font-semibold",
         contained: "h-10 flex-1 px-3 text-15 font-semibold",
         icon: "size-10",
         scope: "h-[34px] px-3 text-13 font-semibold",
