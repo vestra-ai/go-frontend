@@ -52,8 +52,10 @@ export function RecordingSheet({ callId, open, onOpenChange, tripId = "goa" }: R
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} top={0} minTop={48} aria-label={rec.title}>
-      {/* No page scroll: the transcript takes the leftover height and is the only thing that scrolls. */}
-      <SheetBody className="overflow-hidden pb-[96px] [@media(max-height:720px)]:gap-2">
+      {/* No page scroll: the transcript takes the leftover height and is the only thing that scrolls. The footer sits in
+          the flow below it (not the usual absolute dock over a reserved padding), so the transcript always ends above
+          the buttons whatever the footer's height (the home-indicator inset on iPhones). */}
+      <SheetBody className="overflow-hidden pb-0 [@media(max-height:720px)]:gap-2">
         <SheetHeader title={rec.title} subtitle={rec.meta} />
         <OutcomeBanner headline={rec.outcome.headline} body={rec.outcome.body} />
         <RecordingPlayer
@@ -88,7 +90,7 @@ export function RecordingSheet({ callId, open, onOpenChange, tripId = "goa" }: R
           </div>
         </Card>
       </SheetBody>
-      <SheetFooter>
+      <SheetFooter className="relative shrink-0 pt-3">
         <div className="flex gap-2">
           <Button asChild variant="primary" size="lg" className="flex-1 px-[18px]">
             <Link href={`/trips/${tripId}/chat`}>{copy.share}</Link>

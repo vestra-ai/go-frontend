@@ -72,8 +72,10 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} top={0} minTop={48} aria-label={copy.title}>
-      {/* No page scroll: the transcript takes the leftover height and is the only thing that scrolls. */}
-      <SheetBody className="gap-3 overflow-hidden pb-[112px] [@media(max-height:720px)]:gap-2">
+      {/* No page scroll: the transcript takes the leftover height and is the only thing that scrolls. The footer sits in
+          the flow below it (not the usual absolute dock over a reserved padding), so the transcript always ends above
+          the buttons whatever the footer's height: the home-indicator inset on iPhones, a wrapped note line. */}
+      <SheetBody className="gap-3 overflow-hidden pb-0 [@media(max-height:720px)]:gap-2">
         <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel={copy.close} />
         {details && (
           // Reserves the collapsed height; the expanded card grows downward over the call card and transcript instead of squeezing them.
@@ -109,7 +111,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
         />
         <LiveTranscript lines={liveTranscriptFor(call.id, call.asking)} who={who} className="min-h-[120px] flex-1 shrink!" />
       </SheetBody>
-      <SheetFooter>
+      <SheetFooter className="relative shrink-0 pt-3">
         <div className="flex gap-2">
           <Button
             type="button"
