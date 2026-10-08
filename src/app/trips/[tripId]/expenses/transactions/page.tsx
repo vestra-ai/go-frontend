@@ -75,7 +75,7 @@ function Transactions({ tripId }: { tripId: TripId }) {
         </div>
         <FilterChips value={filter} onChange={setFilter} count={transactions.length} />
       </header>
-      <div className="flex flex-col gap-2 px-4 pb-[120px] pt-3">
+      <div className="flex flex-col gap-2 px-4 pb-[120px] pt-3 [[data-own]_&]:animate-page-in">
         {groups.length === 0 ? (
           <p className="px-4 py-[30px] text-center text-13 text-muted">{T.empty}</p>
         ) : (
@@ -83,7 +83,7 @@ function Transactions({ tripId }: { tripId: TripId }) {
         )}
       </div>
       <StickyDock>
-        <FadeDock variant="gradient" className="px-4 pt-[30px]">
+        <FadeDock variant="gradient" className="px-4 pt-[30px] [[data-own]_&]:animate-page-in">
           <Button variant="primary" size="xl" asChild className="w-full gap-2">
             <Link href={`/trips/${tripId}/expenses?scope=me&sheet=record`}>
               <Plus className="size-[18px]" />

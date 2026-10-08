@@ -36,7 +36,7 @@ export function Composer({ value, onChange, onSend, recording, onMic, attachOpen
   return (
     <StickyDock>
       <FadeDock variant="gradient">
-        <div className="relative flex items-center gap-2.5 px-4 pt-6">
+        <div className="relative flex items-center gap-2.5 px-4 pt-6 [[data-own]_&]:animate-page-in">
           <AttachMenu open={attachOpen} onOpenChange={onAttachOpenChange} onPick={onAttach}>
             <Button type="button" variant="white" size="icon-lg" aria-label={copy.composer.add} aria-expanded={attachOpen}>
               <Plus className="size-5" />

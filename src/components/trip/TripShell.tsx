@@ -62,7 +62,8 @@ export function TripShell({
           <TripTabs tripId={trip.id} active={active} variant="hero" className="relative z-[2] mx-4 -mt-[26px]" />
         </>
       )}
-      <div className={`flex flex-col gap-2.5 px-4 pb-[120px] ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}>{children}</div>
+      {/* Switching trip tabs re-animates just this content (PageTransition marks the wrapper `data-switch="tab"`). */}
+      <div className={`flex flex-col gap-2.5 px-4 pb-[120px] [[data-switch=tab]_&]:animate-page-in ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}>{children}</div>
       <StickyDock>
         <FadeDock variant="fade" aria-hidden className="h-[120px]" />
         <ChatFab tripId={trip.id} avatars={chatPreview.avatars} preview={chatPreview.text} unread={chatPreview.unread} />

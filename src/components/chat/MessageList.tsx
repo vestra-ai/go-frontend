@@ -26,7 +26,12 @@ type MessageListProps = {
 /** The chat thread, in the document flow (the body scrolls). No date separators, timestamps, receipts or typing rows (as designed). */
 export function MessageList({ bottomPadding, anchorRef, children }: MessageListProps) {
   return (
-    <div className={cn("flex flex-1 flex-col gap-2.5 px-4 pt-4", padClass[bottomPadding])}>
+    <div
+      className={cn(
+        "flex flex-1 flex-col gap-2.5 px-4 pt-4 [[data-own]_&]:animate-page-in", // the page slide-up, minus the pinned header
+        padClass[bottomPadding],
+      )}
+    >
       {children}
       <span ref={anchorRef} data-chat-end="" className={cn("block h-px", endMarginClass[bottomPadding])} />
     </div>
