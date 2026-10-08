@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/card";
 import { DrawerTitle } from "@/components/ui/drawer";
 import { share as copy } from "@/data/seed/copy";
 import type { Trip } from "@/data/types";
-import { copyInviteLink, inviteNative, inviteViaWhatsApp } from "@/lib/share";
+import { copyInviteLink, inviteNative, inviteViaWhatsApp, type ShareFile } from "@/lib/share";
 import { cn } from "@/lib/utils";
 
 export type ShareAction = "card-copy" | "recent" | "whatsapp" | "messages" | "gmail" | "copy-link" | "more";
@@ -20,11 +20,13 @@ type ShareInviteSheetProps = {
   onShared?: (action: ShareAction) => void;
   /** Stack above another open sheet. */
   nested?: boolean;
+  /** Share this file (ticket PDF…) instead of the trip invite: the top card shows it and every action sends it. */
+  file?: ShareFile;
 };
 
 const tileClass = "size-14 rounded-4xl border border-line text-24";
 
-export function ShareInviteSheet({ trip, open, onOpenChange, onShared, nested }: ShareInviteSheetProps) {
+export function ShareInviteSheet({ trip, open, onOpenChange, onShared, nested, file }: ShareInviteSheetProps) {
   // Handlers run navigator.share synchronously (inside the tap) before closing.
   function run(action: ShareAction, fn: () => Promise<void>) {
     void fn();
@@ -35,13 +37,13 @@ export function ShareInviteSheet({ trip, open, onOpenChange, onShared, nested }:
   function handlers(id: (typeof copy.targets)[number]["id"]): () => void {
     switch (id) {
       case "whatsapp":
-        return () => run("whatsapp", () => inviteViaWhatsApp(trip));
+        return () => run("whatsapp", () => inviteViaWhatsApp(trip, file));
       case "messages":
       case "gmail":
       case "more":
-        return () => run(id, () => inviteNative(trip, id));
+        return () => run(id, () => inviteNative(trip, id, file));
       case "copy-link":
-        return () => run("copy-link", () => copyInviteLink(trip));
+        return () => run("copy-link", () => copyInviteLink(trip, file));
     }
   }
 
@@ -50,8 +52,10 @@ export function ShareInviteSheet({ trip, open, onOpenChange, onShared, nested }:
       <DrawerTitle className="sr-only">{copy.dialogLabel}</DrawerTitle>
       <div className="flex flex-col gap-3.5 px-4 pt-3.5 pb-[max(30px,env(safe-area-inset-bottom))]">
         <Card variant="outline" radius="lg" className="flex items-center gap-3 p-3">
-          <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", trip.tintClass)}>
-            {trip.illustration ? (
+          <span className={cn("flex size-11 shrink-0 items-center justify-center rounded-xl", file ? "bg-surface-2" : trip.tintClass)}>
+            {file ? (
+              <span aria-hidden className="text-24">{file.emoji}</span>
+            ) : trip.illustration ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={trip.illustration} alt="" className="size-11 object-contain" />
             ) : (
@@ -59,15 +63,15 @@ export function ShareInviteSheet({ trip, open, onOpenChange, onShared, nested }:
             )}
           </span>
           <div className="flex min-w-0 flex-1 flex-col gap-px">
-            <span className="text-15 font-semibold">{copy.title(trip.name)}</span>
-            <span className="truncate text-13 text-muted">{trip.inviteUrl}</span>
+            <span className="truncate text-15 font-semibold">{file ? file.title : copy.title(trip.name)}</span>
+            <span className="truncate text-13 text-muted">{file ? file.sub : trip.inviteUrl}</span>
           </div>
           <Button
             variant="soft"
             size="sm"
             className="px-3 text-13"
             onClick={() => {
-              void copyInviteLink(trip);
+              void copyInviteLink(trip, file);
               onShared?.("card-copy");
             }}
           >
@@ -82,7 +86,7 @@ export function ShareInviteSheet({ trip, open, onOpenChange, onShared, nested }:
         >
           <button
             type="button"
-            onClick={() => run("recent", () => inviteViaWhatsApp(trip))}
+            onClick={() => run("recent", () => inviteViaWhatsApp(trip, file))}
             className="flex items-center gap-3 px-3 py-2.5 text-left transition-transform active:scale-[0.97]"
           >
             <span className={cn("relative flex size-11 shrink-0 items-center justify-center rounded-full", trip.tintClass)}>

@@ -5,12 +5,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Share, X } from "@/components/icons/generated";
 import { PageCounterPill } from "@/components/plan/PageCounterPill";
 import { PdfPage } from "@/components/plan/PdfPage";
+import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
 import { BOOKINGS_COPY } from "@/data/seed/bookings";
 import type { TicketDoc, TripId } from "@/data/types";
 import { toastGo } from "@/lib/toast";
+import { inviteLink } from "@/lib/share";
 import { cn } from "@/lib/utils";
+import { useStore } from "@/store";
+import { selectTrip } from "@/store/selectors";
 
 const copy = BOOKINGS_COPY.viewer;
 
@@ -30,6 +34,9 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const pagesRef = useRef<HTMLDivElement>(null);
   const [current, setCurrent] = useState(1);
+  // Both Share buttons open the same share sheet the trip pages use.
+  const [shareOpen, setShareOpen] = useState(false);
+  const trip = useStore((s) => selectTrip(s, tripId));
   const raf = useRef(0);
 
   const update = useCallback(() => {
@@ -97,7 +104,7 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
         <Button variant="ghost" size="icon" aria-label={copy.download} onClick={() => toastGo("Ticket PDF downloaded")}>
           <Download className="size-5" />
         </Button>
-        <Button variant="ghost" size="icon" aria-label={copy.share} onClick={() => toastGo("Ticket shared to Goa crew")}>
+        <Button variant="ghost" size="icon" aria-label={copy.share} onClick={() => setShareOpen(true)}>
           <Share className="size-5" />
         </Button>
       </div>
@@ -122,12 +129,28 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
             <Download className="size-[18px]" />
             {copy.save}
           </Button>
-          <Button variant="primary" size="md" className="flex-1 gap-2 text-15" onClick={() => toastGo("Ticket shared to Goa crew")}>
+          <Button variant="primary" size="md" className="flex-1 gap-2 text-15" onClick={() => setShareOpen(true)}>
             <Share className="size-[18px]" />
             {copy.share}
           </Button>
         </div>
       </StickyDock>
+      {/* Stacks above the ticket sheet when the viewer is embedded in the chat. */}
+      {trip && (
+        <ShareInviteSheet
+          trip={trip}
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          nested={embedded}
+          // The top card shows this ticket, and every action sends it. (The link is a mock: the prototype has no file hosting.)
+          file={{
+            title: ticket.title,
+            sub: copy.fileLine(ticket.fileName, ticket.pages),
+            url: `${inviteLink(trip)}/files/${ticket.fileName}`,
+            emoji: "📄",
+          }}
+        />
+      )}
     </div>
   );
 }
