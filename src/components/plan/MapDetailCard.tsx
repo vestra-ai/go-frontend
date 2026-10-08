@@ -1,16 +1,22 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useRef } from "react";
 import { EmojiTile } from "@/components/common/EmojiTile";
 import { X } from "@/components/icons/generated";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import type { MapCard } from "@/data/types";
 import { MAP_COPY } from "@/data/seed/map";
+import { scrollBehavior } from "@/lib/motion";
 
 /** A spot's card with the audience's `me` overrides already applied. */
 export type ResolvedMapCard = Omit<MapCard, "me">;
 
 export interface MapDetailCardProps {
   card: ResolvedMapCard;
+  /** Bumped by each tap on a spot (0 = none yet): the card scrolls itself into view, so it is not left below the fold. */
+  revealKey: number;
   onClose: () => void;
   /** Non-link CTAs: the Goa drill-down and the Directions toast. */
   onAction: () => void;
@@ -20,17 +26,25 @@ export interface MapDetailCardProps {
  * Detail card docked to the bottom of the map. Not keyed by spot, so switching pins swaps the content in place
  * and only the first open plays the enter transition.
  */
-export function MapDetailCard({ card, onClose, onAction }: MapDetailCardProps) {
+export function MapDetailCard({ card, revealKey, onClose, onAction }: MapDetailCardProps) {
+  const ref = useRef<HTMLDivElement>(null);
+  // The map is taller than the screen at the top of the page, so the card docked to its bottom starts off-screen.
+  // Scrolls the least that shows it all, clear of the compact header and the chat button (scroll-mt / scroll-mb below).
+  useEffect(() => {
+    if (revealKey > 0) ref.current?.scrollIntoView({ block: "nearest", behavior: scrollBehavior() });
+  }, [revealKey]);
+
   // DESIGN-ASSUMPTION (L-itinerary-map.md §1.6 #7): the CTA overrides Button primary's font-medium to 13/600.
   const cta = "shrink-0 text-13 font-semibold";
 
   return (
     <Card
+      ref={ref}
       radius="xl"
       role="dialog"
       aria-label={card.title}
       // Tailwind v4 moves elements with the `translate` property, so that is what the enter transition animates.
-      className="absolute inset-x-2.5 bottom-2.5 z-3 flex flex-col gap-2.5 bg-white p-3 shadow-pop transition-[opacity,translate] duration-220 ease-[var(--ease-out)] starting:translate-y-1.5 starting:opacity-0"
+      className="absolute inset-x-2.5 bottom-2.5 z-3 scroll-mt-[calc(env(safe-area-inset-top,0px)+130px)] scroll-mb-[140px] flex flex-col gap-2.5 bg-white p-3 shadow-pop transition-[opacity,translate] duration-220 ease-[var(--ease-out)] starting:translate-y-1.5 starting:opacity-0"
     >
       <div className="flex items-center gap-2.5">
         {/* DESIGN-ASSUMPTION (L-itinerary-map.md §1.6 #4): emoji tile only, no image, as designed. */}
