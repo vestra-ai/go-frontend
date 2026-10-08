@@ -64,7 +64,7 @@ Sections, in order (each only when its condition holds):
      3. `DetailsList {rows}`: `rounded-3xl bg-canvas px-3 py-0.5`; `KVRow size=14` rows `flex justify-between gap-3 py-[9px] text-14`, label `text-muted`, value `font-semibold text-right`, `border-t border-line` from the 2nd row. Stay = 6 rows, flights = 5 rows (§1.6).
 2. Static done rows (`ListRow muted` `py-[11px] gap-2.5`): `EmojiTile size=36 shape=circle tint=surface-2` + title/sub as above + trailing `CheckBadge size=22`.
 
-Accordion: one row open at a time (`toggleRow`). Auto-scroll: when the page mounts with `?open=stay|fly`, set `openRow` from the param and after `AUTO_SCROLL_DONE_MS` (350) call `doneRef.current.scrollIntoView({block:'start'})` (the 160px scroll margin lands "Done" under the fully shown collapsed header); clear the timeout on unmount. Row toggles keep `?open=` in sync with `history.replaceState` (other params preserved). No auto-scroll for J1/J5/J6/J7/K1.
+Accordion: one row open at a time (`toggleRow`). `?open=stay|fly` is a one-shot deep link: when the page mounts with it, set `openRow` from the param, then remove it from the URL with `history.replaceState` (other params kept); no auto-scroll. Row toggles never touch the URL, so a refresh never restores an expanded row. The page scrolls only when the user has just expanded a row (the row scrolls itself into view when its expand transition ends). 
 
 ### 1.3 Call state machine (`home` slice, P2-2)
 

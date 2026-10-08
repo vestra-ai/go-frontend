@@ -1,7 +1,6 @@
 "use client";
 
 import { notFound } from "next/navigation";
-import { useRef } from "react";
 import { CheckinSheet } from "@/components/checkin/CheckinSheet";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { MOCK_LAST_CALL } from "@/data/seed/calls";
@@ -27,8 +26,7 @@ import { useTripShellProps } from "./useTripShellProps";
 export function TripHomeScreen({ tripId }: { tripId: TripId }) {
   const shell = useTripShellProps(tripId, "home");
   const populated = useTripHomeMode(tripId) === "populated";
-  const doneRef = useRef<HTMLDivElement>(null);
-  const sheets = useTripHomeSheets(tripId, { populated, doneRef });
+  const sheets = useTripHomeSheets(tripId, { populated });
 
   const pending = usePending(tripId);
   const done = useDone(tripId);
@@ -72,9 +70,8 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
             )}
 
             <SectionHeader
-              ref={doneRef}
               data-anchor="done"
-              className="mt-2 scroll-mt-[calc(env(safe-area-inset-top,0px)+120px)]"
+              className="mt-2"
               title={copy.doneTitle}
               meta={copy.doneLabel(done.length, allSet)}
             />

@@ -28,6 +28,9 @@ type ExpandableBookingRowProps = {
 export function ExpandableBookingRow({ emoji, title, sub, live, open, onToggle, children }: ExpandableBookingRowProps) {
   const bodyId = useId();
   const rowRef = useRef<HTMLDivElement>(null);
+  // Set by a tap on the header, so only a row the user just expanded scrolls itself into view. A row opened by a
+  // deep link (`?open=`) plays the same expand transition but must leave the scroll alone.
+  const tapped = useRef(false);
   return (
     <div
       ref={rowRef}
@@ -40,7 +43,10 @@ export function ExpandableBookingRow({ emoji, title, sub, live, open, onToggle, 
         type="button"
         aria-expanded={open}
         aria-controls={bodyId}
-        onClick={onToggle}
+        onClick={() => {
+          tapped.current = true;
+          onToggle();
+        }}
         className="flex w-full cursor-pointer items-center gap-2.5 py-[11px] text-left text-ink"
       >
         <span className="relative shrink-0">
@@ -65,11 +71,12 @@ export function ExpandableBookingRow({ emoji, title, sub, live, open, onToggle, 
       <div
         id={bodyId}
         inert={!open}
-        // Once it has finished growing, bring the whole expanded row into view (it may extend below the fold).
+        // Once a row the user tapped open has finished growing, bring the whole row into view (it may extend below the fold).
         onTransitionEnd={(e) => {
-          if (open && e.target === e.currentTarget && e.propertyName === "grid-template-rows") {
-            rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
-          }
+          if (e.target !== e.currentTarget || e.propertyName !== "grid-template-rows") return;
+          const byUser = tapped.current;
+          tapped.current = false;
+          if (open && byUser) rowRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
         }}
         className={cn(
           "grid transition-[grid-template-rows,opacity] duration-300 ease-[var(--ease-out)] motion-reduce:transition-none",
