@@ -18,6 +18,7 @@ type RouteOptionRowProps = {
 // Static maps: never build class names from template strings.
 const tagTone: Record<string, string> = { mix: "text-info", stop: "text-go" };
 
+/** Leading carrier logo (airline) or mode icon (train/bus): same tile size so every row starts on one edge. */
 function CarrierTile({ leg, modeEmoji }: { leg: RouteLeg; modeEmoji: string }) {
   if (leg.carrier === "indigo")
     return (
@@ -38,10 +39,17 @@ function CarrierTile({ leg, modeEmoji }: { leg: RouteLeg; modeEmoji: string }) {
   );
 }
 
-/** One route option: tag + price pill, then the onward leg (and the return leg when round trip). */
+/**
+ * One route option, left to right: carrier logo · times + details · price.
+ * The leg codes live in the sheet header; on a round trip the day sits under the logo to tell the legs apart.
+ * A highlight line (tag) is shown only when it says something the legs don't.
+ */
 export function RouteOptionRow({ option, trip, selected, onSelect }: RouteOptionRowProps) {
-  const legs = trip === "round" ? option.legs : option.legs.slice(0, 1);
+  const round = trip === "round";
+  const legs = round ? option.legs : option.legs.slice(0, 1);
   const modeEmoji = ROUTE_MODES.find((m) => m.id === option.mode)?.emoji ?? "";
+  // Train/bus have no carrier, so their tag ("AC 3-tier · overnight") is the title; flights only highlight the notable ones.
+  const showTag = option.mode !== "flight" || !option.quiet;
 
   return (
     <button
@@ -49,37 +57,38 @@ export function RouteOptionRow({ option, trip, selected, onSelect }: RouteOption
       aria-pressed={selected}
       onClick={onSelect}
       className={cn(
-        "flex w-full cursor-pointer flex-col gap-2 px-3.5 py-3 text-left active:scale-[0.985]",
+        "flex w-full cursor-pointer items-center gap-3 px-3.5 py-3.5 text-left active:scale-[0.985]",
         selected && "bg-success-tint",
       )}
     >
-      <span className="flex w-full items-center justify-between gap-2.5">
-        <span className={cn("text-11 font-bold tracking-tag uppercase", tagTone[option.kind] ?? "text-muted")}>
-          {option.tag}
-        </span>
-        <Badge size="lg" variant={selected ? "price-selected" : "price"}>
-          {inr(priceOf(option, trip))}
-        </Badge>
+      <span className="flex min-w-0 flex-1 flex-col gap-2.5">
+        {showTag && (
+          <span className={cn("text-11 font-bold tracking-tag uppercase", tagTone[option.kind] ?? "text-muted")}>
+            {option.tag}
+          </span>
+        )}
+        {legs.map((leg) => (
+          <span key={leg.code} className="flex w-full items-center gap-3">
+            <span className="flex w-[52px] shrink-0 flex-col items-center gap-1">
+              <CarrierTile leg={leg} modeEmoji={modeEmoji} />
+              {round && <span className="text-11 font-semibold whitespace-nowrap text-muted">{leg.day}</span>}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-px">
+              <span className="text-15 font-semibold tabular-nums">{leg.time}</span>
+              <span className="text-13 tracking-caption text-muted">{leg.meta}</span>
+              {leg.stop && (
+                <span className="flex items-center gap-1 text-12 font-semibold text-go">
+                  <Stopwatch className="size-3 shrink-0" strokeWidth={2.2} />
+                  {leg.stop}
+                </span>
+              )}
+            </span>
+          </span>
+        ))}
       </span>
-      {legs.map((leg) => (
-        <span key={leg.code} className="flex w-full items-center gap-2.5">
-          <span className="flex w-16 shrink-0 flex-col">
-            <span className="text-12 font-bold whitespace-nowrap text-ink">{leg.code}</span>
-            <span className="text-11 font-semibold text-muted">{leg.day}</span>
-          </span>
-          <CarrierTile leg={leg} modeEmoji={modeEmoji} />
-          <span className="flex min-w-0 flex-1 flex-col gap-px">
-            <span className="text-15 font-semibold tabular-nums">{leg.time}</span>
-            <span className="text-13 tracking-caption text-muted">{leg.meta}</span>
-            {leg.stop && (
-              <span className="flex items-center gap-1 text-12 font-semibold text-go">
-                <Stopwatch className="size-3 shrink-0" strokeWidth={2.2} />
-                {leg.stop}
-              </span>
-            )}
-          </span>
-        </span>
-      ))}
+      <Badge size="price-sm" variant={selected ? "price-selected" : "price"}>
+        {inr(priceOf(option, trip))}
+      </Badge>
     </button>
   );
 }

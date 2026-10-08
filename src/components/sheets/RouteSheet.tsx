@@ -16,12 +16,10 @@ import {
   legCodes,
   nTime,
   previewCount,
-  slotText,
   visibleRoutes,
 } from "@/lib/routes";
 import { cn } from "@/lib/utils";
 import { useStore } from "@/store";
-import { LegSummaryCard } from "./LegSummaryCard";
 import { OptionListCard } from "./OptionListCard";
 import { RouteOptionRow } from "./RouteOptionRow";
 import { TimeChip } from "./TimeChip";
@@ -41,9 +39,6 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
   const codes = legCodes(mode);
   const shown = visibleRoutes(route);
   const chosen = chosenRoute(shown, route.pick);
-  const onward = { eyebrow: ROUTE_COPY.onwardEyebrow, value: codes[0], meta: slotText(route.on) };
-  const back = { eyebrow: ROUTE_COPY.returnEyebrow, value: codes[1], meta: slotText(route.ret) };
-  const legs = trip === "round" ? [onward, back] : [onward];
 
   // Every close (X, scrim, drag, or Back changing `open`) discards the time-sheet drafts; the stage never changes.
   const wasOpen = useRef(open);
@@ -58,7 +53,7 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
         <SheetHeader title={ROUTE_COPY.title[trip]} subtitle={ROUTE_COPY.sub[trip]} closeLabel={ROUTE_COPY.close} />
 
         <SegmentedControl
-          variant="contained"
+          variant="compact"
           aria-label={ROUTE_COPY.tripTypeLabel}
           value={trip}
           onValueChange={(v) => useStore.getState().setRouteTrip(tripId, v as TripType)}
@@ -84,19 +79,24 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
           ))}
         </SegmentedControl>
 
-        <LegSummaryCard legs={legs} />
+        {/* Time stays pinned at the end of the filter row so it is never scrolled out of reach. */}
+        <div className="-mx-4 flex items-center">
+          <FilterChipRow
+            mode="pressed"
+            aria-label={ROUTE_COPY.filterLabel}
+            className="min-w-0 flex-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]"
+            options={filtersFor(mode, trip).map((f) => ({ value: f.id, label: f.label }))}
+            value={filt}
+            onValueChange={(v) => useStore.getState().setRouteFilter(tripId, v)}
+          />
+          <div className="shrink-0 pr-4 pl-1.5">
+            <TimeChip count={nTime(route)} onOpen={() => useStore.getState().openTimeSheet(tripId)} />
+          </div>
+        </div>
 
-        <FilterChipRow
-          mode="pressed"
-          aria-label={ROUTE_COPY.filterLabel}
-          className="-mx-4"
-          options={filtersFor(mode, trip).map((f) => ({ value: f.id, label: f.label }))}
-          value={filt}
-          onValueChange={(v) => useStore.getState().setRouteFilter(tripId, v)}
-          trailing={<TimeChip count={nTime(route)} onOpen={() => useStore.getState().openTimeSheet(tripId)} />}
-        />
-
-        <span className="px-1 text-13 font-semibold tracking-caption text-muted">{countLine(shown.length)}</span>
+        <span className="sr-only" role="status">
+          {countLine(shown.length)}
+        </span>
 
         <OptionListCard>
           {shown.length > 0 ? (

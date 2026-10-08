@@ -22,9 +22,10 @@ import { PrivateSheet } from "@/components/sheets/PrivateSheet";
 import { QuickStartSheet } from "@/components/sheets/QuickStartSheet";
 import { RouteSheet } from "@/components/sheets/RouteSheet";
 import { StayDetailsSheet } from "@/components/sheets/StayDetailsSheet";
+import { TicketSheet } from "@/components/sheets/TicketSheet";
 import { VisaSheet } from "@/components/sheets/VisaSheet";
 import { stageIndexOf } from "@/data/scenario/engine";
-import { PRIVATE_COPY, PRIVATE_DETAILS } from "@/data/seed/bookings";
+import { BOOKINGS, PRIVATE_COPY, PRIVATE_DETAILS } from "@/data/seed/bookings";
 import { DEFAULT_CITY } from "@/data/seed/cities";
 import { baliToasts, chat as chatCopy, paySheet, staySheet, toasts } from "@/data/seed/copy";
 import { PLACES } from "@/data/seed/places";
@@ -236,6 +237,11 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
   if (stayId && stayId !== lastStayId) setLastStayId(stayId);
   const stayDetails = STAYS.find((s) => s.id === (stayId ?? lastStayId)) ?? null;
 
+  const [lastTicketId, setLastTicketId] = useState<string | null>(null);
+  const ticketId = sheet === "ticket" ? sheets.sheetId : null;
+  if (ticketId && ticketId !== lastTicketId) setLastTicketId(ticketId);
+  const ticket = BOOKINGS.find((b) => b.id === (ticketId ?? lastTicketId))?.ticket ?? null;
+
   const payStayId = messages.flatMap((m) => (m.card?.kind === "pay-ask" ? [m.card.payload.stayId] : []))[0];
   const payStay = STAYS.find((s) => s.id === payStayId);
 
@@ -425,8 +431,10 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
         title={PRIVATE_COPY.title}
         sub={PRIVATE_COPY.sub}
         details={PRIVATE_DETAILS}
-        ticketHref={`/trips/${tripId}/bookings/${PRIVATE_DETAILS.bookingId}/ticket`}
+        // Private sheet -> ticket viewer in one URL replace, so closing the viewer lands back on the chat.
+        onOpenTicket={() => sheets.swap("ticket", PRIVATE_DETAILS.bookingId)}
       />
+      <TicketSheet tripId={tripId} open={sheet === "ticket"} onOpenChange={closeOnFalse} ticket={ticket} />
       <VisaSheet
         open={sheet === "visa"}
         onOpenChange={closeOnFalse}

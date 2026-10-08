@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { searchCities as searchSavedCities } from "@/data/seed/cities";
 import type { CityRef } from "@/data/types";
-import { fetchTopCities, searchCitiesOnline } from "@/lib/geocode";
+import { MIN_SEARCH_CHARS, fetchTopCities, searchCitiesOnline } from "@/lib/geocode";
 
 /** Quiet time after the last keystroke before a search request goes out. */
 const DEBOUNCE_MS = 400;
@@ -31,8 +31,8 @@ export type CityResults = {
 const includes = (c: CityRef, q: string) => c.name.toLowerCase().includes(q);
 
 /**
- * City results for the dropdown: top Indian cities while the query is empty, a filter of those for one character, a
- * live search from two. A search goes out only after the user has stopped typing for DEBOUNCE_MS, and typing again
+ * City results for the dropdown: top Indian cities while the query is empty, a filter of those below
+ * MIN_SEARCH_CHARS, a live search from there. A search goes out only after the user has stopped typing for DEBOUNCE_MS, and typing again
  * cancels the request that is still in flight (aborting its fetch) before the next one is scheduled. An unreachable
  * API (offline PWA, blocked network) falls back to the bundled list instead of showing nothing.
  */
@@ -56,7 +56,7 @@ export function useCityResults(query: string, active: boolean): CityResults {
 
     const run = async () => {
       try {
-        if (q.length < 2) {
+        if (q.length < MIN_SEARCH_CHARS) {
           const top = await fetchTopCities();
           settle({ query: q, cities: q ? top.filter((c) => includes(c, q)) : top, offline: false });
         } else {
@@ -68,8 +68,8 @@ export function useCityResults(query: string, active: boolean): CityResults {
       }
     };
 
-    // Empty / one-character queries come from the cached top list: no need to wait for typing to settle.
-    const timer = window.setTimeout(run, q.length < 2 ? 0 : DEBOUNCE_MS);
+    // Short queries come from the cached top list: no need to wait for typing to settle.
+    const timer = window.setTimeout(run, q.length < MIN_SEARCH_CHARS ? 0 : DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
       controller.abort();

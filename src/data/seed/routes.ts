@@ -9,12 +9,12 @@ export const ROUTE_OPTIONS: Record<RouteMode, RouteOption[]> = {
         { code: "BLR → GOX", day: "Fri 6", time: "8:40 pm → 9:55 pm", meta: "IndiGo · nonstop · 1h 15m", h: 20, carrier: "indigo" },
         { code: "GOX → BLR", day: "Mon 9", time: "5:30 pm → 6:40 pm", meta: "Air India · nonstop · 1h 10m", h: 17, carrier: "airindia" },
       ] },
-    { id: "f2", mode: "flight", kind: "nonstop", tag: "Same airline", one: 3960, round: 8060,
+    { id: "f2", mode: "flight", kind: "nonstop", tag: "Same airline", quiet: true, one: 3960, round: 8060,
       legs: [
         { code: "BLR → GOX", day: "Fri 6", time: "8:40 pm → 9:55 pm", meta: "IndiGo · nonstop · 1h 15m", h: 20, carrier: "indigo" },
         { code: "GOX → BLR", day: "Mon 9", time: "4:10 pm → 5:25 pm", meta: "IndiGo · nonstop · 1h 15m", h: 16, carrier: "indigo" },
       ] },
-    { id: "f3", mode: "flight", kind: "nonstop", tag: "Same airline", one: 4180, round: 8450,
+    { id: "f3", mode: "flight", kind: "nonstop", tag: "Same airline", quiet: true, one: 4180, round: 8450,
       legs: [
         { code: "BLR → GOX", day: "Fri 6", time: "9:20 pm → 10:45 pm", meta: "Air India · nonstop · 1h 25m", h: 21, carrier: "airindia" },
         { code: "GOX → BLR", day: "Mon 9", time: "5:30 pm → 6:40 pm", meta: "Air India · nonstop · 1h 10m", h: 17, carrier: "airindia" },
@@ -24,7 +24,7 @@ export const ROUTE_OPTIONS: Record<RouteMode, RouteOption[]> = {
         { code: "BLR → GOX", day: "Fri 6", time: "6:05 am → 7:20 am", meta: "IndiGo · nonstop · 1h 15m", h: 6, carrier: "indigo" },
         { code: "GOX → BLR", day: "Mon 9", time: "1:05 pm → 2:20 pm", meta: "IndiGo · nonstop · 1h 15m", h: 13, carrier: "indigo" },
       ] },
-    { id: "f7", mode: "flight", kind: "nonstop", tag: "Same airline", one: 3700, round: 7500,
+    { id: "f7", mode: "flight", kind: "nonstop", tag: "Same airline", quiet: true, one: 3700, round: 7500,
       legs: [
         { code: "BLR → GOX", day: "Fri 6", time: "12:30 pm → 1:45 pm", meta: "Air India · nonstop · 1h 15m", h: 12, carrier: "airindia" },
         { code: "GOX → BLR", day: "Mon 9", time: "9:30 pm → 10:45 pm", meta: "Air India · nonstop · 1h 15m", h: 21, carrier: "airindia" },
@@ -97,7 +97,7 @@ export const ROUTE_FILTERS: Record<RouteMode, RouteFilter[]> = {
   flight: [
     { id: "all", label: "All" },
     { id: "nonstop", label: "Nonstop" },
-    { id: "stop", label: "With a stop" },
+    { id: "cheapest", label: "Cheapest" },
     { id: "mix", label: "Mix airlines" },
   ],
   train: [
@@ -150,7 +150,7 @@ export const ROUTE_COPY = {
   slots: (n: number) => `${n} time slots`,
   timeChip: "🕘 Time",
   timeChipCount: (n: number) => `🕘 Time · ${n}`,
-  countLine: (n: number) => `${n}${n === 1 ? " option" : " options"}${n > 2 ? " · scroll for more" : ""}`,
+  countLine: (n: number) => `${n}${n === 1 ? " option" : " options"}`,
   cta: (trip: TripType, price: string) => `Book ${trip === "round" ? "round trip" : "one way"} · ${price}`,
   privacy: "Only you see these. Go shares just your arrival time with the group.",
   emptyTitle: "Nothing matches these filters",

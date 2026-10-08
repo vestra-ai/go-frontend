@@ -28,11 +28,16 @@ function inSlots(h: number, list: SlotId[]): boolean {
   return list.length === 0 || TIME_SLOTS.some((slot) => list.includes(slot.id) && slot.from <= h && h < slot.to);
 }
 
+/** How many options "Cheapest" keeps. */
+const CHEAPEST_COUNT = 3;
+
 function okFilt(o: RouteOption, mode: RouteMode, filt: string): boolean {
-  if (filt === "all") return true;
+  // A filter this mode doesn't offer (e.g. one left in the persisted store) behaves like "All".
+  if (filt === "all" || !ROUTE_FILTERS[mode].some((f) => f.id === filt)) return true;
   if (mode !== "flight") return o.kind === filt;
   if (filt === "nonstop") return o.kind !== "stop"; // the mixed-airline f1 counts as nonstop (as designed)
-  return o.kind === filt; // stop | mix
+  if (filt === "cheapest") return true; // narrowed and re-ordered by price in visibleRoutes
+  return o.kind === filt; // mix
 }
 
 export function matchRoute(o: RouteOption, q: RouteQuery): boolean {
@@ -44,9 +49,14 @@ export function matchRoute(o: RouteOption, q: RouteQuery): boolean {
   );
 }
 
-/** Matching options in seed order (flight: f1 f2 f3 f6 f7 f4 f5 f8). */
+/**
+ * Matching options in seed order (flight: f1 f2 f3 f6 f7 f4 f5 f8).
+ * "Cheapest" instead keeps the lowest few fares among the matches (after the time slots), cheapest first.
+ */
 export function visibleRoutes(q: RouteQuery): RouteOption[] {
-  return ROUTE_OPTIONS[q.mode].filter((o) => matchRoute(o, q));
+  const matches = ROUTE_OPTIONS[q.mode].filter((o) => matchRoute(o, q));
+  if (q.mode !== "flight" || q.filt !== "cheapest") return matches;
+  return matches.sort((a, b) => priceOf(a, q.trip) - priceOf(b, q.trip)).slice(0, CHEAPEST_COUNT);
 }
 
 /** The picked option if visible, else the first visible one, else null. Silent: `pick` itself is unchanged. */

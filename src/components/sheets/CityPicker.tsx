@@ -11,6 +11,7 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { cityPicker as copy } from "@/data/seed/copy";
 import { CIT } from "@/data/seed/cities";
 import type { CityRef } from "@/data/types";
+import { MIN_SEARCH_CHARS } from "@/lib/geocode";
 import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useCityResults } from "./useCityResults";
@@ -151,7 +152,7 @@ export function CityPicker({
                   aria-label={copy.changeLabel(value.name)}
                   onClick={openSearch}
                   className={cn(
-                    "h-full cursor-pointer rounded-full pl-[14px] outline-none focus-visible:ring-2 focus-visible:ring-white",
+                    "h-full cursor-pointer rounded-full pl-[14px] outline-none focus-visible:ring-2 focus-visible:ring-ink",
                     allowDeselect ? "pr-1.5" : "pr-[14px]",
                   )}
                 >
@@ -162,7 +163,7 @@ export function CityPicker({
                     type="button"
                     aria-label={copy.clearLabel}
                     onClick={() => onChange(null)}
-                    className="mr-1 grid size-8 cursor-pointer place-items-center rounded-full outline-none hover:bg-white/15 focus-visible:ring-2 focus-visible:ring-white"
+                    className="mr-1 grid size-8 cursor-pointer place-items-center rounded-full outline-none hover:bg-ink/10 focus-visible:ring-2 focus-visible:ring-ink"
                   >
                     <X className="size-3.5" strokeWidth={2.4} />
                   </button>
@@ -195,7 +196,13 @@ export function CityPicker({
                   <Spinner className="size-4 border-line-2 border-t-ink border-r-ink" />
                 </span>
               )}
-              {loading ? (query.trim() ? copy.searching : copy.loadingTop) : copy.empty}
+              {loading
+                ? query.trim()
+                  ? copy.searching
+                  : copy.loadingTop
+                : query.trim().length < MIN_SEARCH_CHARS
+                  ? copy.keepTyping
+                  : copy.empty}
             </p>
           ) : (
             // The previous results stay (dimmed) while a new query is on its way.

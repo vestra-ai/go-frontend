@@ -68,10 +68,13 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   overlayClassName,
+  handle = true,
   children,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content> & {
   overlayClassName?: string
+  /** false: no grab bar (sheets that can't be dragged). */
+  handle?: boolean
 }) {
   return (
     <DrawerPortal>
@@ -84,7 +87,7 @@ function DrawerContent({
         )}
         {...props}
       >
-        <span aria-hidden className="mx-auto mt-2 h-[5px] w-10 shrink-0 rounded-full bg-line-2" />
+        {handle && <span aria-hidden className="mx-auto mt-2 h-[5px] w-10 shrink-0 rounded-full bg-line-2" />}
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>

@@ -3,6 +3,7 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { stageAt, stageIndexOf } from "@/data/scenario/engine";
+import { BOOKINGS } from "@/data/seed/bookings";
 import { PLACES } from "@/data/seed/places";
 import { STAYS } from "@/data/seed/stays";
 import type { CardKind, StageId, TripId } from "@/data/types";
@@ -22,6 +23,7 @@ export type ChatSheet =
   | "route"
   | "cab"
   | "private"
+  | "ticket"
   | "visa"
   | "board"
   | "share";
@@ -36,6 +38,7 @@ const SHEETS: readonly ChatSheet[] = [
   "route",
   "cab",
   "private",
+  "ticket",
   "visa",
   "board",
   "share",
@@ -103,6 +106,9 @@ function sheetAllowed(sheet: ChatSheet, id: string | null, g: Guard): boolean {
       return hasStage(g.tripId, "route-confirm");
     case "private":
       return reached(g, "private");
+    case "ticket":
+      // The e-ticket viewer opens from the private sheet, so it needs that stage and a booking that has a ticket.
+      return reached(g, "private") && BOOKINGS.some((b) => b.id === id && b.ticket);
     case "visa":
       return hasStage(g.tripId, "visa");
     case "board":
@@ -125,8 +131,8 @@ export interface ChatSheets {
   query: string | null;
   /** Opens by tap: pushes an entry so Back closes the sheet first. */
   open(sheet: ChatSheet, id?: string): void;
-  /** Swaps the open sheet for another in one URL replace (board → budget / route). */
-  swap(sheet: ChatSheet): void;
+  /** Swaps the open sheet for another in one URL replace (board → budget / route, private → ticket). */
+  swap(sheet: ChatSheet, id?: string): void;
   /** Closes the open sheet: `history.back()` when this screen pushed it, otherwise a replace that strips it. */
   close(): void;
   /** Board row / reminder / Vote: close or swap, fast-forward, then scroll to the row's card. */
@@ -194,10 +200,11 @@ export function useChatSheets(tripId: TripId, opts: { onScrollToCard(card: CardK
     pushed.current = true;
   }
 
-  function swap(next: ChatSheet) {
+  function swap(next: ChatSheet, id?: string) {
     writeChatQuery((p) => {
       p.set("sheet", next);
-      p.delete("id");
+      if (id) p.set("id", id);
+      else p.delete("id");
       p.delete("q");
     });
   }

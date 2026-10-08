@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { ArrowRight, FileText } from "@/components/icons/generated";
 import { Button } from "@/components/ui/button";
@@ -6,10 +5,10 @@ import { Card } from "@/components/ui/card";
 import { PRIVATE_COPY } from "@/data/seed/bookings";
 import type { PrivateDetails } from "@/data/types";
 
-type BoardingInfoCardProps = { details: PrivateDetails; ticketHref: string };
+type BoardingInfoCardProps = { details: PrivateDetails; onOpenTicket: () => void };
 
 /** Flight, route, seat / boards / PNR and the ticket link (F-travel.md §1.4). No money. */
-export function BoardingInfoCard({ details, ticketHref }: BoardingInfoCardProps) {
+export function BoardingInfoCard({ details, onOpenTicket }: BoardingInfoCardProps) {
   const cells = [
     { label: PRIVATE_COPY.seat, value: details.seat, className: "" },
     { label: PRIVATE_COPY.boards, value: details.boards, className: "tabular-nums" },
@@ -44,11 +43,9 @@ export function BoardingInfoCard({ details, ticketHref }: BoardingInfoCardProps)
           </div>
         ))}
       </div>
-      <Button asChild variant="secondary" size="sm" className="h-[42px] w-full gap-1.5">
-        <Link href={ticketHref}>
-          <FileText className="size-4" />
-          {PRIVATE_COPY.openTicket}
-        </Link>
+      <Button type="button" variant="secondary" size="sm" className="h-[42px] w-full gap-1.5" onClick={onOpenTicket}>
+        <FileText className="size-4" />
+        {PRIVATE_COPY.openTicket}
       </Button>
     </Card>
   );

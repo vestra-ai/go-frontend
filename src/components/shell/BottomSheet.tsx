@@ -32,6 +32,8 @@ type BottomSheetProps = {
   maxHeight?: number;
   /** false: no drag-to-dismiss, scrim tap or Escape. */
   dismissible?: boolean;
+  /** false: no grab bar and no drag at all (the close button, scrim tap, Escape and Back still dismiss). */
+  draggable?: boolean;
   /**
    * Stacks above another open sheet (time sheet over route sheet, share sheet). Opens one frame after `open`,
    * so it stays on top even when the parent opens in the same commit.
@@ -50,6 +52,7 @@ export function BottomSheet({
   top,
   maxHeight,
   dismissible = true,
+  draggable = true,
   nested = false,
   "aria-label": ariaLabel,
   className,
@@ -73,9 +76,15 @@ export function BottomSheet({
         : undefined;
 
   return (
-    <Drawer open={nested ? open && layered : open} onOpenChange={onOpenChange} dismissible={dismissible}>
+    <Drawer
+      open={nested ? open && layered : open}
+      onOpenChange={onOpenChange}
+      dismissible={dismissible}
+      handleOnly={!draggable}
+    >
       <DrawerContent
         aria-label={ariaLabel}
+        handle={draggable}
         overlayClassName={nested ? "z-40" : undefined}
         className={cn(top === undefined && "max-h-[calc(100%-96px)]", nested && "z-40", className)}
         style={style}

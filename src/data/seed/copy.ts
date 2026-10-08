@@ -254,6 +254,7 @@ export const cityPicker = {
   placeholder: "Search a city, state or country",
   clear: "Clear search", // new
   empty: "No matches. Try a nearby bigger city.",
+  keepTyping: "Keep typing to search all cities.", // new
   topHeading: "TOP CITIES IN INDIA", // new
   loadingTop: "Loading top cities…", // new
   searching: "Searching…", // new

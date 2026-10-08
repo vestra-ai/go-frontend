@@ -425,6 +425,8 @@ export interface RouteOption {
   one: number;
   round: number;
   roundOnly?: boolean;
+  /** Flight whose tag adds nothing ("Same airline"): the row hides it. */
+  quiet?: boolean;
   legs: [RouteLeg, RouteLeg];
 }
 

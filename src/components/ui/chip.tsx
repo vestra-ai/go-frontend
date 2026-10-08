@@ -18,14 +18,14 @@ const chipVariants = cva(
         xl: "h-[42px] gap-2 px-[14px] text-14 font-semibold",
       },
       variant: {
-        // Pressed (`aria-pressed`, or a Radix Toggle's `data-state=on`) swaps outline -> solid.
+        // Pressed (`aria-pressed`, or a Radix Toggle's `data-state=on`) swaps outline -> the green selected tint (same as the time tiles).
         outline:
-          "border-line-2 bg-white text-ink active:shadow-[inset_0_0_0_999px_rgb(11_27_63/0.07)] aria-pressed:border-black aria-pressed:bg-black aria-pressed:text-white aria-pressed:active:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.18)] data-[state=on]:border-black data-[state=on]:bg-black data-[state=on]:text-white data-[state=on]:active:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.18)]",
+          "border-line-2 bg-white text-ink active:shadow-[inset_0_0_0_999px_rgb(11_27_63/0.07)] aria-pressed:border-success aria-pressed:bg-success-tint aria-pressed:text-ink data-[state=on]:border-success data-[state=on]:bg-success-tint data-[state=on]:text-ink",
         solid:
-          "border-black bg-black text-white active:shadow-[inset_0_0_0_999px_rgb(255_255_255/0.18)]",
+          "border-success bg-success-tint text-ink active:shadow-[inset_0_0_0_999px_rgb(11_27_63/0.07)]",
         dashed:
           "border-dashed border-faint bg-white text-ink active:shadow-[inset_0_0_0_999px_rgb(11_27_63/0.07)]",
-        active: "border-black bg-white font-semibold text-ink ring-1 ring-black",
+        active: "border-success bg-success-tint font-semibold text-ink",
         success: "border-success-soft bg-success-soft text-success-ink",
         plain: "cursor-default border-line bg-white text-ink active:scale-100",
       },
@@ -42,7 +42,7 @@ type ChipProps = React.ComponentProps<"button"> &
     asChild?: boolean
     /** Leading emoji: a 14px glyph in a 16px slot, aria-hidden. */
     emoji?: React.ReactNode
-    /** Sets `aria-pressed`; the outline variant renders solid black while pressed. */
+    /** Sets `aria-pressed`; the outline variant renders the green selected tint while pressed. */
     pressed?: boolean
     /** Trailing 16px green check badge (fact chip "set" state). */
     check?: boolean

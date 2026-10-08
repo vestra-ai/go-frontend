@@ -26,6 +26,8 @@ const TOP_LIMIT = 10;
 const TOP_STORAGE_KEY = "go.topCities.v1";
 const TOP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SEARCH_LIMIT = 8;
+/** The API fuzzy-matches only from 3 characters; 2 return exact name matches only (so "mu" finds nothing), 1 nothing. */
+export const MIN_SEARCH_CHARS = 3;
 
 async function request(name: string, count: number, signal?: AbortSignal): Promise<GeoResult[]> {
   const params = new URLSearchParams({ name, count: String(count), language: "en", countryCode: COUNTRY, format: "json" });
@@ -50,7 +52,7 @@ const byPopulation = (a: Ranked, b: Ranked) => b.population - a.population;
 
 const searchCache = new Map<string, CityRef[]>();
 
-/** Live city search: Indian towns and cities matching `query`, biggest first. Needs 2+ characters. */
+/** Live city search: Indian towns and cities matching `query`, biggest first. Needs MIN_SEARCH_CHARS+ characters. */
 export async function searchCitiesOnline(query: string, signal?: AbortSignal): Promise<CityRef[]> {
   const q = query.trim().toLowerCase();
   const cached = searchCache.get(q);
