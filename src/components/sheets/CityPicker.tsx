@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { SearchField } from "@/components/common/SearchField";
 import { EmojiTile } from "@/components/common/EmojiTile";
@@ -59,14 +59,22 @@ export function CityPicker({
   }
 
   /** Slides the strip so a chip is centred, e.g. a city picked from the dropdown that the strip already lists. */
-  function revealChip(id: string) {
+  function revealChip(id: string, behavior: ScrollBehavior = scrollBehavior()) {
     const strip = stripRef.current;
     const chip = strip?.querySelector<HTMLElement>(`[data-city-id="${id}"]`);
     if (!strip || !chip) return;
     const s = strip.getBoundingClientRect();
     const c = chip.getBoundingClientRect();
-    strip.scrollBy({ left: c.left - s.left - (s.width - c.width) / 2, behavior: scrollBehavior() });
+    strip.scrollBy({ left: c.left - s.left - (s.width - c.width) / 2, behavior });
   }
+
+  // The picker mounts each time its sheet opens: if the city already selected is a strip chip, bring it into view
+  // before the first paint, so a selection further along the strip is never hidden off-screen.
+  useLayoutEffect(() => {
+    if (value) revealChip(value.id, "auto");
+    // Mount only; later selections reveal their chip themselves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function pick(city: CityRef) {
     onChange(city);

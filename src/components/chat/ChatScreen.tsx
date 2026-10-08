@@ -123,7 +123,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
   }, [nudgeArmed, stageIndex]);
 
   const chatPill =
-    pill && settled && !pill.inSheet && (pill.ready !== "dates-nudge" || nudgeFor === stageIndex) ? pill : null;
+    pill && settled && pill.inSheet !== sheet && (pill.ready !== "dates-nudge" || nudgeFor === stageIndex) ? pill : null;
 
   // The 3A contract: useLongPress cancels on any scroll, so auto-scroll holds while a press is armed and
   // catches up on release.
@@ -238,17 +238,6 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
 
   const payStayId = messages.flatMap((m) => (m.card?.kind === "pay-ask" ? [m.card.payload.stayId] : []))[0];
   const payStay = STAYS.find((s) => s.id === payStayId);
-
-  const budgetNext =
-    pill?.inSheet === "budget"
-      ? {
-          label: pill.label,
-          onPress: () => {
-            sheets.close();
-            store().advance(tripId, pill.trigger);
-          },
-        }
-      : null;
 
   const closeOnFalse = (open: boolean) => {
     if (!open) sheets.close();
@@ -399,12 +388,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
         hi={chat.budget.hi}
         saved={chat.budget.saved}
         onChange={(lo, hi) => store().setBudget(tripId, lo, hi)}
-        onSave={() => {
-          store().saveBudget(tripId);
-          // G-bali.md §1.3: Bali saves and closes, with no stage change and no pill.
-          if (toastHeader) sheets.close();
-        }}
-        next={budgetNext}
+        onSave={() => store().saveBudget(tripId)}
       />
       <StayDetailsSheet
         open={sheet === "stay"}

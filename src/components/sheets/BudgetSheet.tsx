@@ -1,13 +1,13 @@
 "use client";
 
-import { useCallback } from "react";
-import { NextStepPill } from "@/components/chat/NextStepPill";
+import { useEffect, useRef } from "react";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { InfoNote } from "@/components/common/InfoNote";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { budgetSheet as copy } from "@/data/seed/copy";
+import { SAVED_CLOSE_MS } from "@/data/timing";
 import { kFormat } from "@/lib/format";
 import { BudgetRangeSlider } from "./BudgetRangeSlider";
 
@@ -21,20 +21,25 @@ type BudgetSheetProps = {
   onChange: (lo: number, hi: number) => void;
   /** saveBudget */
   onSave: () => void;
-  /** Non-null once saved: "Saved · see the stays Go found" (the caller closes the sheet, then advances). */
-  next: { label: string; onPress: () => void } | null;
 };
 
-/** E7 private min–max budget sheet with the in-sheet next-step pill (E-deciding.md §1.3). */
-export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSave, next }: BudgetSheetProps) {
-  // The pill would sit under the footer gradient: when it mounts (after saving, or when the sheet opens saved),
-  // scroll the body (its wrapper's parent) to the end. Stable, so re-renders don't scroll again.
-  const revealPill = useCallback((wrapper: HTMLDivElement | null) => {
-    const body = wrapper?.parentElement;
-    if (!body) return;
-    const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    body.scrollTo({ top: body.scrollHeight, behavior: reduce ? "auto" : "smooth" });
-  }, []);
+/**
+ * E7 private min–max budget sheet (E-deciding.md §1.3). Save shows "Saved privately ✓" for SAVED_CLOSE_MS, then the
+ * sheet closes itself; the "Saved · see the stays Go found" pill then waits in the chat.
+ */
+export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSave }: BudgetSheetProps) {
+  const closeTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(closeTimer.current), []);
+  // Moving the slider again (saved → false) or closing the sheet by hand cancels the pending auto-close.
+  useEffect(() => {
+    if (!saved || !open) window.clearTimeout(closeTimer.current);
+  }, [saved, open]);
+
+  function save() {
+    onSave();
+    window.clearTimeout(closeTimer.current);
+    closeTimer.current = window.setTimeout(() => onOpenChange(false), SAVED_CLOSE_MS);
+  }
 
   return (
     // Design height 458 (top 454 on the 912 frame); BottomSheet clamps it to frame − 96.
@@ -53,12 +58,6 @@ export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSav
         </Card>
 
         <InfoNote>{copy.note}</InfoNote>
-
-        {next && (
-          <div ref={revealPill} className="flex flex-col">
-            <NextStepPill label={next.label} onPress={next.onPress} />
-          </div>
-        )}
       </SheetBody>
 
       <SheetFooter>
@@ -68,7 +67,7 @@ export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSav
             {copy.saved}
           </Button>
         ) : (
-          <Button type="button" variant="primary" size="xl" className="w-full" onClick={onSave}>
+          <Button type="button" variant="primary" size="xl" className="w-full" onClick={save}>
             {copy.save}
           </Button>
         )}

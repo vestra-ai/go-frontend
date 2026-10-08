@@ -3,6 +3,7 @@
 export const TOAST_MS = 2200;
 export const GO_REPLY_MS = 1200; // Go's "Got it 👍 …" auto-reply after a composer send
 export const SCROLL_DELAY_MS = 60;
+export const SAVED_CLOSE_MS = 900; // how long "Saved privately ✓" shows before the budget sheet closes itself
 export const GO_TYPING_MS = 600; // delay before Go-posted stage entries append
 export const LONG_PRESS_MS = 500;
 export const RAHUL_CLAIMS_MS = 6000; // cleared while the pay sheet is open, re-armed on close

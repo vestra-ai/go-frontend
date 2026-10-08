@@ -221,7 +221,7 @@ export const quickStart = {
     { id: "city", label: "🏙️ City" },
     { id: "any", label: "🤷 Surprise us" },
   ],
-  spendLabel: "SPEND EACH?",
+  spendLabel: "YOUR BUDGET?",
   spends: [
     { id: "lt15", label: "Under ₹15k" },
     { id: "15to25", label: "₹15–25k" },
