@@ -162,6 +162,8 @@
   --animate-fade-away: fadeAway 200ms ease-out forwards;
   --animate-fade-in: fadeIn 200ms ease-out forwards;
   --animate-page-in: pageIn 320ms var(--ease-out) both;
+  --animate-nav-bar-in: navBarIn 150ms ease-out 100ms forwards;
+  --animate-nav-progress: navProgress 6s cubic-bezier(0.1, 0.6, 0.3, 1) 100ms both;
 }
 
 /* keyframes referenced by --animate-* */
@@ -174,6 +176,16 @@
 @keyframes fadeAway { to { opacity: 0; transform: scale(0.97); } }
 @keyframes fadeIn   { to { opacity: 1; } }
 @keyframes pageIn   { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes navBarIn { to { opacity: 1; } }
+@keyframes navProgress { from { transform: scaleX(0.06); } to { transform: scaleX(0.92); } }
+@keyframes navDim   { to { opacity: 0.7; } }
+
+/* A tap that changes page (NavFeedback): the outgoing page dims after a beat, so a fast navigation never flashes. */
+html[data-navigating] main { animation: navDim 200ms ease-out 100ms forwards; }
+
+/* PageTransition holds the incoming page's slide-up back until its first frame has painted (data-phase="pre"), so a
+   heavy first render cannot eat the animation. Only the animated parts hide; the rest of the page paints at once. */
+[data-phase="pre"][class*="animate-page-in"], [data-phase="pre"] [class*="animate-page-in"] { animation: none; opacity: 0; }
 
 /* base resets */
 @layer base {

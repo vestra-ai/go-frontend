@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { Figtree } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { AppFrame } from "@/components/shell/AppFrame";
+import { NavFeedback } from "@/components/shell/NavFeedback";
 import { PageTransition } from "@/components/shell/PageTransition";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -39,7 +40,14 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             @serwist/window's register() throws (unhandled) when register() yields no registration (SW-blocking harness). */}
         <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV !== "production"}>
           <TooltipProvider>
-            <AppFrame overlay={<Toaster />}>
+            <AppFrame
+              overlay={
+                <>
+                  <Toaster />
+                  <NavFeedback />
+                </>
+              }
+            >
               <PageTransition>{children}</PageTransition>
             </AppFrame>
           </TooltipProvider>

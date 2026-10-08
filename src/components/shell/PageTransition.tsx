@@ -1,7 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 // The four trip tabs (home / itinerary / bookings / expenses) are separate routes that share one hero + tab bar.
 const TRIP_TAB = /^\/trips\/([^/]+)(?:\/(?:itinerary|bookings|expenses))?$/;
@@ -20,15 +20,35 @@ const keyOf = (pathname: string) => {
  * tab bar stay put; the wrapper then marks itself `data-switch="tab"` and TripShell animates just its content.
  * The chat and the transactions history mark it `data-own` instead: their sticky headers hold still while the body
  * and bottom bar slide up.
+ * The slide-up starts only once the new page has painted: after a page change the wrapper is `data-phase="pre"` (the
+ * animated parts hold at opacity 0, see globals.css) for two frames. A heavy first render (iOS) otherwise burns the
+ * animation's clock before the first frame shows, and the page just snaps in. The first load stays `go`, so the
+ * server HTML animates without waiting for hydration.
  * (A root `template.tsx` would not do: it only remounts when the top-level segment changes.)
  */
 export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const [state, setState] = useState({ pathname, key: keyOf(pathname), tabSwitch: false });
+  const [state, setState] = useState({ pathname, key: keyOf(pathname), tabSwitch: false, ready: true });
   if (state.pathname !== pathname) {
     const key = keyOf(pathname);
-    setState({ pathname, key, tabSwitch: key === state.key });
+    setState({ pathname, key, tabSwitch: key === state.key, ready: false });
   }
+
+  useEffect(() => {
+    if (state.ready) return;
+    const go = () => setState((s) => ({ ...s, ready: true }));
+    let second = 0;
+    const first = requestAnimationFrame(() => {
+      second = requestAnimationFrame(go);
+    });
+    // Backstop: never leave the page held at opacity 0 if frames stall.
+    const backstop = setTimeout(go, 250);
+    return () => {
+      cancelAnimationFrame(first);
+      cancelAnimationFrame(second);
+      clearTimeout(backstop);
+    };
+  }, [state.ready, state.pathname]);
 
   const own = OWN_TRANSITION.test(state.pathname);
 
@@ -37,6 +57,7 @@ export function PageTransition({ children }: { children: ReactNode }) {
       key={state.key}
       data-switch={state.tabSwitch ? "tab" : undefined}
       data-own={own ? "" : undefined}
+      data-phase={state.ready ? undefined : "pre"}
       className={state.tabSwitch || own ? undefined : "animate-page-in"}
     >
       {children}

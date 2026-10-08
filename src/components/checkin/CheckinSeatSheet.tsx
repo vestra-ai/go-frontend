@@ -7,6 +7,7 @@ import { StepIndicator } from "@/components/common/StepIndicator";
 import { SeatLegend } from "@/components/checkin/SeatLegend";
 import { SeatMap } from "@/components/checkin/SeatMap";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
+import { announceNavigation } from "@/components/shell/NavFeedback";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CHECKIN, CHECKIN_COPY } from "@/data/seed/checkin";
@@ -42,6 +43,7 @@ export function CheckinSeatSheet({ tripId, open, onBack }: CheckinSeatSheetProps
   const checkIn = () => {
     setLeaving(true);
     completeCheckin(tripId);
+    announceNavigation();
     router.push(`/trips/${tripId}/checkin/pass`);
   };
 
