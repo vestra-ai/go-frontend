@@ -113,7 +113,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
         <div className="flex gap-2">
           <Button
             type="button"
-            variant={takenOver ? "success-ink" : "secondary"}
+            variant={takenOver ? "success-ink" : "primary"}
             size="lg"
             className="flex-1 text-15 font-semibold"
             aria-pressed={takenOver}

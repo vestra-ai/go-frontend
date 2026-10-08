@@ -17,6 +17,7 @@ export function TranscriptRow({ t, speaker, name, text, current, className, ...p
   return (
     <div
       data-slot="transcript-row"
+      data-current={current || undefined}
       className={cn("flex gap-2.5 py-2", current && "-mx-2.5 rounded-xl bg-go-note px-2.5", className)}
       {...props}
     >

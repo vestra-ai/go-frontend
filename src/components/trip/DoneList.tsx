@@ -6,11 +6,12 @@ import { ListCard } from "@/components/common/ListCard";
 import { ListRow } from "@/components/common/ListRow";
 import { CALL_CHIPS, CALL_COPY } from "@/data/seed/calls";
 import { CHECKIN_COPY } from "@/data/seed/checkin";
-import type { VendorId } from "@/data/types";
+import type { LastCall, VendorId } from "@/data/types";
 import type { DoneRow, LiveCall } from "@/store/selectors";
 import type { OpenRow } from "@/store/state";
 import { CallOptionsPanel } from "./CallOptionsPanel";
 import { CheckinPreviewLink } from "./CheckinPreviewLink";
+import { LastCallRow } from "./LastCallRow";
 import { ExpandableBookingRow } from "./ExpandableBookingRow";
 import { VendorLivePanel } from "./VendorLivePanel";
 
@@ -38,6 +39,10 @@ type DoneListProps = Omit<React.ComponentProps<typeof ListCard>, "children" | "o
   onCall(vendor: VendorId, key: BookingRow): void;
   onListen(vendor: VendorId): void;
   onEnd(vendor: VendorId): void;
+  /** The latest finished call: its row (with the Recording button) shows in that vendor's card. */
+  pastCall: LastCall;
+  /** Recording button → `?sheet=recording&call={vendor}`. */
+  onRecording(vendor: VendorId): void;
   /** Flights "Preview" → `previewCheckin()` + `toggleRow(null)` + scroll to top. */
   onPreviewCheckin(): void;
 };
@@ -55,6 +60,8 @@ export function DoneList({
   onCall,
   onListen,
   onEnd,
+  pastCall,
+  onRecording,
   onPreviewCheckin,
   ...props
 }: DoneListProps) {
@@ -106,6 +113,9 @@ export function DoneList({
                 onDraft={(text) => onDraft(key, text)}
                 onCall={() => onCall(vendor, key)}
               />
+            )}
+            {pastCall.vendor === vendor && (
+              <LastCallRow lastCall={pastCall} className="px-1" onRecording={() => onRecording(vendor)} />
             )}
             {key === "fly" && <CheckinPreviewLink {...CHECKIN_COPY.preview} onPreview={onPreviewCheckin} />}
           </ExpandableBookingRow>

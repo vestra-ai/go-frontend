@@ -1,14 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect } from "react";
+import { useCallback, useEffect } from "react";
 import { toastGo } from "@/lib/toast";
 import { Download } from "@/components/icons/generated";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Eyebrow } from "@/components/common/Eyebrow";
-import { CALL_COPY, RECORDING_RATES, VENDOR_CALLS, recordingFor } from "@/data/seed/calls";
+import { CALL_COPY, MOCK_LAST_CALL, RECORDING_RATES, VENDOR_CALLS, recordingFor } from "@/data/seed/calls";
 import { toasts } from "@/data/seed/copy";
 import type { TripId, VendorId } from "@/data/types";
 import { useHydrated, useStore } from "@/store";
@@ -29,24 +29,31 @@ type RecordingSheetProps = {
 /** J7 "Call with {who}": outcome, static player, transcript, share / save (J-triphome-calls.md §1.4). */
 export function RecordingSheet({ callId, open, onOpenChange, tripId = "goa" }: RecordingSheetProps) {
   const hydrated = useHydrated();
-  const lastCall = useStore((s) => s.home[tripId].lastCall);
+  const lastCall = useStore((s) => s.home[tripId].lastCall) ?? MOCK_LAST_CALL;
   const { playing, rate } = useStore((s) => s.home[tripId].recording);
   const setRecording = useStore((s) => s.setRecording);
 
-  const matches = lastCall?.vendor === callId;
+  const matches = lastCall.vendor === callId;
 
   // Not the last call: close ourselves.
   useEffect(() => {
     if (open && hydrated && !matches) onOpenChange(false);
   }, [open, hydrated, matches, onOpenChange]);
 
-  if (!lastCall || !matches) return null;
+  // Opens with the line being played in view (the transcript is the only scroll region). Stable, so it runs on mount only.
+  const scrollToCurrent = useCallback((el: HTMLDivElement | null) => {
+    const current = el?.querySelector<HTMLElement>("[data-current]");
+    if (el && current) el.scrollTop = Math.max(0, current.offsetTop - 12);
+  }, []);
+
+  if (!matches) return null;
   const who = VENDOR_CALLS[callId].who;
   const rec = recordingFor(callId, lastCall.asking);
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} top={110} aria-label={rec.title}>
-      <SheetBody>
+    <BottomSheet open={open} onOpenChange={onOpenChange} top={0} minTop={48} aria-label={rec.title}>
+      {/* No page scroll: the transcript takes the leftover height and is the only thing that scrolls. */}
+      <SheetBody className="overflow-hidden pb-[96px] [@media(max-height:720px)]:gap-2">
         <SheetHeader title={rec.title} subtitle={rec.meta} />
         <OutcomeBanner headline={rec.outcome.headline} body={rec.outcome.body} />
         <RecordingPlayer
@@ -60,20 +67,25 @@ export function RecordingSheet({ callId, open, onOpenChange, tripId = "goa" }: R
             setRecording(tripId, { rate: next });
           }}
         />
-        <Card variant="outline" radius="2xl" className="flex flex-col px-4 py-2">
-          <Eyebrow tone="muted" className="py-1.5">
+        <Card variant="outline" radius="2xl" className="flex min-h-[120px] flex-1 shrink! flex-col px-4 py-2">
+          <Eyebrow tone="muted" className="shrink-0 py-1.5">
             {copy.transcript}
           </Eyebrow>
-          {rec.transcript.map((line) => (
-            <TranscriptRow
-              key={line.t}
-              t={line.t}
-              speaker={line.speaker}
-              name={line.speaker === "go" ? CALL_COPY.listen.goName : who}
-              text={line.text}
-              current={line.current}
-            />
-          ))}
+          <div
+            ref={scrollToCurrent}
+            className="relative -mx-2.5 flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-2.5 scrollbar-none"
+          >
+            {rec.transcript.map((line) => (
+              <TranscriptRow
+                key={line.t}
+                t={line.t}
+                speaker={line.speaker}
+                name={line.speaker === "go" ? CALL_COPY.listen.goName : who}
+                text={line.text}
+                current={line.current}
+              />
+            ))}
+          </div>
         </Card>
       </SheetBody>
       <SheetFooter>

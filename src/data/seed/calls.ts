@@ -1,4 +1,4 @@
-import type { AskKey, CallRecording, ChipOption, TranscriptLine, VendorCall, VendorId } from "@/data/types";
+import type { AskKey, CallRecording, ChipOption, LastCall, TranscriptLine, VendorCall, VendorId } from "@/data/types";
 
 // Go's live vendor calls (J-triphome-calls.md §1.6). Villa content is the design seed verbatim;
 // indigo/cab transcripts and recordings are templates filled from the call's `asking` (see below).
@@ -77,6 +77,9 @@ export function liveTranscriptFor(vendor: VendorId, asking: string): TranscriptL
     { speaker: "vendor", text: unquote(call.line) },
   ];
 }
+
+/** Mock "last call" shown in the Stay done card until real call history exists; the recording sheet falls back to it. */
+export const MOCK_LAST_CALL: LastCall = { vendor: "villa", asking: "Late check-in around 11 pm, Fri 6 Nov", endedAt: 0 };
 
 export function recordingFor(vendor: VendorId, asking: string): CallRecording {
   const call = VENDOR_CALLS[vendor];

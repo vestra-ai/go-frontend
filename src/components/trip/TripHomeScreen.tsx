@@ -5,7 +5,7 @@ import { useRef } from "react";
 import { CheckinDetailsSheet } from "@/components/checkin/CheckinDetailsSheet";
 import { CheckinSeatSheet } from "@/components/checkin/CheckinSeatSheet";
 import { SectionHeader } from "@/components/common/SectionHeader";
-import { Card } from "@/components/ui/card";
+import { MOCK_LAST_CALL } from "@/data/seed/calls";
 import { CHECKIN } from "@/data/seed/checkin";
 import { tripHome as copy } from "@/data/seed/copy";
 import type { TripId } from "@/data/types";
@@ -14,7 +14,6 @@ import { AllSetCard } from "./AllSetCard";
 import { CheckinCard } from "./CheckinCard";
 import { DoneList } from "./DoneList";
 import { TripHomeZero } from "./empty/TripHomeZero";
-import { LastCallRow } from "./LastCallRow";
 import { ListenSheet } from "./ListenSheet";
 import { PendingCard } from "./PendingCard";
 import { RecordingSheet } from "./RecordingSheet";
@@ -37,7 +36,8 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
   const calls = useLiveCalls(tripId);
   const openRow = useStore((s) => s.home[tripId].openRow);
   const askForm = useStore((s) => s.home[tripId].askForm);
-  const lastCall = useStore((s) => s.home[tripId].lastCall);
+  // Mock call history until real history exists: the Stay card always has a recording to open.
+  const pastCall = useStore((s) => s.home[tripId].lastCall) ?? MOCK_LAST_CALL;
   const users = useStore((s) => s.trips.members);
   const userId = useStore((s) => s.session.userId);
   // The You→X settlement drives the settle-up row's avatar (Rahul).
@@ -72,16 +72,6 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
               </>
             )}
 
-            {lastCall && (
-              <Card radius="2xl" className="p-4">
-                <LastCallRow
-                  lastCall={lastCall}
-                  className="border-t-0 pt-0"
-                  onRecording={() => sheets.openRecording(lastCall.vendor)}
-                />
-              </Card>
-            )}
-
             <SectionHeader
               ref={doneRef}
               data-anchor="done"
@@ -101,6 +91,8 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
               onCall={(vendor, key) => startCall(tripId, vendor, key)}
               onListen={sheets.openListen}
               onEnd={(vendor) => endCall(tripId, vendor)}
+              pastCall={pastCall}
+              onRecording={sheets.openRecording}
               onPreviewCheckin={onPreviewCheckin}
             />
           </>
