@@ -10,6 +10,7 @@ import { SuggestionsPlaceholder } from "@/components/home/SuggestionsPlaceholder
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { ArrowLeft, MessageCircle } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
+import { StickyDock } from "@/components/shell/StickyDock";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { Button } from "@/components/ui/button";
@@ -38,7 +39,7 @@ function WhosComing() {
     if (instantJoin) simulateJoins({ instant: true });
   }, [hydrated, instantJoin, createDraftGoa, simulateJoins]);
 
-  if (!hydrated || !trip) return <Screen scroll="none">{null}</Screen>;
+  if (!hydrated || !trip) return <Screen>{null}</Screen>;
 
   const organizer = users[trip.organizerId];
   const joined = trip.memberIds.filter((id) => id !== trip.organizerId);
@@ -62,18 +63,20 @@ function WhosComing() {
   }
 
   return (
-    <Screen scroll="none">
-      <div className="mt-[max(52px,env(safe-area-inset-top))] flex h-11 shrink-0 items-center gap-3 pr-6 pl-[18px]">
-        <Button variant="ghost" size="icon" className="-ml-1.5" aria-label={copy.back} onClick={goBack}>
-          <ArrowLeft className="size-[22px] text-ink" strokeWidth={2} />
-        </Button>
-        <div className="flex-1" />
-        <Button asChild variant="link" size="sm" className="-mr-1.5 h-9 px-3 text-15">
-          <Link href={chatHref}>{copy.skip}</Link>
-        </Button>
+    <Screen>
+      <div className="sticky top-0 z-30 shrink-0 bg-canvas pt-safe">
+        <div className="flex h-11 items-center gap-3 pr-6 pl-[18px]">
+          <Button variant="ghost" size="icon" className="-ml-1.5" aria-label={copy.back} onClick={goBack}>
+            <ArrowLeft className="size-[22px] text-ink" strokeWidth={2} />
+          </Button>
+          <div className="flex-1" />
+          <Button asChild variant="link" size="sm" className="-mr-1.5 h-9 px-3 text-15">
+            <Link href={chatHref}>{copy.skip}</Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="scrollbar-none min-h-0 flex-1 overflow-y-auto px-4 pb-[200px]">
+      <div className="px-4 pb-[200px]">
         <h1 className="mx-1 mt-2 text-34 leading-[1.12] font-semibold tracking-title">
           {copy.title(trip.destination ?? trip.name)}
         </h1>
@@ -136,12 +139,14 @@ function WhosComing() {
         )}
       </div>
 
-      <FadeDock variant="blur" className={hasJoined ? "gap-3 px-4 pt-[70px]" : "gap-2.5 px-4 pt-[70px]"}>
-        <Button asChild variant="primary" size="xl" className="w-full">
-          <Link href={chatHref}>{hasJoined ? copy.nextJoined : copy.next}</Link>
-        </Button>
-        {!hasJoined && <p className="text-center text-13 text-muted">{copy.helper}</p>}
-      </FadeDock>
+      <StickyDock>
+        <FadeDock variant="blur" className={hasJoined ? "gap-3 px-4 pt-[70px]" : "gap-2.5 px-4 pt-[70px]"}>
+          <Button asChild variant="primary" size="xl" className="w-full">
+            <Link href={chatHref}>{hasJoined ? copy.nextJoined : copy.next}</Link>
+          </Button>
+          {!hasJoined && <p className="text-center text-13 text-muted">{copy.helper}</p>}
+        </FadeDock>
+      </StickyDock>
 
       <ShareInviteSheet
         trip={trip}
@@ -155,7 +160,7 @@ function WhosComing() {
 
 export default function NewTripPage() {
   return (
-    <Suspense fallback={<Screen scroll="none">{null}</Screen>}>
+    <Suspense fallback={<Screen>{null}</Screen>}>
       <WhosComing />
     </Suspense>
   );

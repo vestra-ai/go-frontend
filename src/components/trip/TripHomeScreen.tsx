@@ -26,14 +26,6 @@ import { TripShell } from "./TripShell";
 import { useTripHomeSheets } from "./useTripHomeSheets";
 import { useTripShellProps } from "./useTripShellProps";
 
-/** Nearest scrolling ancestor (TripShell's scroller), for "Preview" → back to the top. */
-function scrollParent(el: HTMLElement | null): HTMLElement | null {
-  for (let p = el?.parentElement; p; p = p.parentElement) {
-    if (/(auto|scroll)/.test(getComputedStyle(p).overflowY)) return p;
-  }
-  return null;
-}
-
 /**
  * Trip home (`/trips/[tripId]`): I1 zero state, or the populated J1–J7 / K1 page with Go’s live calls, the ask form,
  * the Done accordion and the Listen / Recording / check-in sheets (J-triphome-calls.md §1.2, K-checkin.md §1.1).
@@ -66,7 +58,7 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
   const onPreviewCheckin = () => {
     previewCheckin(tripId);
     sheets.toggleRow(null);
-    scrollParent(doneRef.current)?.scrollTo({ top: 0 });
+    window.scrollTo({ top: 0 });
   };
 
   return (
@@ -131,7 +123,7 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
             <SectionHeader
               ref={doneRef}
               data-anchor="done"
-              className="mt-2 scroll-mt-[160px]"
+              className="mt-2 scroll-mt-[calc(env(safe-area-inset-top,0px)+120px)]"
               title={copy.doneTitle}
               meta={copy.doneLabel(done.length, allSet)}
             />

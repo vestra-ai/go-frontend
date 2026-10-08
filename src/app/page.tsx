@@ -23,22 +23,22 @@ export default function WelcomePage() {
 
   if (!hydrated || signedIn) {
     return (
-      <Screen bg="surface" scroll="none">
+      <Screen bg="surface">
         <div className="flex-1 bg-white" />
       </Screen>
     );
   }
 
   return (
-    <Screen scroll="none">
-      <div className="relative flex h-full flex-col overflow-hidden bg-linear-to-b from-[#FFFBFA] from-0% via-[#FFFDFC] via-30% to-white to-55% px-6 pb-safe">
+    <Screen>
+      <div className="relative flex flex-1 flex-col bg-linear-to-b from-[#FFFBFA] from-0% via-[#FFFDFC] via-30% to-white to-55% px-6 pt-4 pb-safe">
         <WelcomeOrbit items={[...copy.orbit]} mascot={copy.mascot} pills={copy.pills} />
-        <div className="relative mt-auto flex flex-col items-center gap-2.5 text-center">
+        <div className="relative mt-4 flex flex-col items-center gap-2.5 text-center">
           <h1 className="text-34 leading-[1.15] font-semibold tracking-title text-balance text-ink">{copy.headlines[0]}</h1>
           <p className="max-w-[350px] text-16 leading-[1.45] tracking-body text-pretty text-muted">{copy.subline}</p>
         </div>
         <FeatureTrio items={[...copy.features]} />
-        <div className="relative mt-[22px] flex flex-col gap-2.5">
+        <div className="relative mt-auto flex flex-col gap-2.5 pt-[22px]">
           <GoogleButton
             onSignedIn={() => {
               signIn();

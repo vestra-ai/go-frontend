@@ -13,10 +13,10 @@ export default function TicketPage() {
   const hydrated = useHydrated();
   const ticket = useStore((s) => selectTicket(s, tripId, bookingId));
 
-  if (!hydrated) return <Screen bg="viewer" scroll="none">{null}</Screen>;
+  if (!hydrated) return <Screen bg="viewer">{null}</Screen>;
   if (!ticket) notFound();
   return (
-    <Screen bg="viewer" scroll="none">
+    <Screen bg="viewer">
       <PdfViewer tripId={tripId} ticket={ticket} />
     </Screen>
   );

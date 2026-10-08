@@ -248,11 +248,16 @@ export const fromSheet = {
 export const cityPicker = {
   other: "Other city",
   pickedPrefix: "📍 ",
+  changeLabel: (name: string) => `${name}, change city`, // new
+  clearLabel: "Clear city", // new
   searchLabel: "Search a city",
   placeholder: "Search a city, state or country",
   clear: "Clear search", // new
   empty: "No matches. Try a nearby bigger city.",
-  source: "Places from OpenStreetMap",
+  topHeading: "TOP CITIES IN INDIA", // new
+  loadingTop: "Loading top cities…", // new
+  searching: "Searching…", // new
+  offline: "Can’t reach city search right now. Showing saved cities.", // new
   cancel: "Cancel", // new
 } as const;
 

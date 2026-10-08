@@ -26,7 +26,7 @@ export default function ProfilePage() {
   }, [hydrated, signedIn, router]);
 
   if (!hydrated || !signedIn) {
-    return <Screen scroll="none">{null}</Screen>;
+    return <Screen>{null}</Screen>;
   }
 
   const rows: SettingsRow[] = [
@@ -60,28 +60,27 @@ export default function ProfilePage() {
   ];
 
   return (
-    <Screen scroll="none">
+    <Screen>
       <TopBar
+        sticky
         title={copy.title}
         onBack={() => (window.history.length > 1 ? router.back() : router.push("/home"))}
       />
-      <div className="min-h-0 flex-1 overflow-y-auto scrollbar-none">
-        <div className="flex flex-col gap-3 px-4 pt-2 pb-10">
-          <IdentityCard user={user} providerLabel={copy.provider} />
-          <SettingsList rows={rows} />
-          <Button
-            variant="danger-outline"
-            size="lg"
-            className="w-full tracking-normal"
-            onClick={() => {
-              signOut();
-              router.replace("/");
-            }}
-          >
-            {copy.signOut}
-          </Button>
-          <PrototypeControls />
-        </div>
+      <div className="flex flex-col gap-3 px-4 pt-2 pb-10">
+        <IdentityCard user={user} providerLabel={copy.provider} />
+        <SettingsList rows={rows} />
+        <Button
+          variant="danger-outline"
+          size="lg"
+          className="w-full tracking-normal"
+          onClick={() => {
+            signOut();
+            router.replace("/");
+          }}
+        >
+          {copy.signOut}
+        </Button>
+        <PrototypeControls />
       </div>
     </Screen>
   );

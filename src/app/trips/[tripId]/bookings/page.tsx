@@ -38,9 +38,9 @@ function BookingsView({ tripId }: { tripId: TripId }) {
 export default function BookingsPage() {
   const { tripId } = useParams<{ tripId: TripId }>();
   const hydrated = useHydrated();
-  if (!hydrated) return <Screen scroll="none">{null}</Screen>;
+  if (!hydrated) return <Screen>{null}</Screen>;
   return (
-    <Suspense fallback={<Screen scroll="none">{null}</Screen>}>
+    <Suspense fallback={<Screen>{null}</Screen>}>
       <BookingsView tripId={tripId} />
     </Suspense>
   );

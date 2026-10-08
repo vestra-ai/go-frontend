@@ -5,11 +5,11 @@ import { Drawer as DrawerPrimitive } from "vaul"
 import { cn } from "@/lib/utils"
 import { useFrame } from "@/components/shell/FrameContext"
 
-// Every drawer portals into #app-frame (FrameContext), never document.body, so the
+// Every drawer portals into the overlay layer (FrameContext), never document.body, so the
 // overlay and the sheet stay inside the 450px column. Overlay and content are
-// `absolute` against the frame (which is `relative`), so containment does not rely
-// on the frame's transform. `noBodyStyles`: the page never scrolls (globals), and
-// vaul's iOS `position:fixed` body hack would collapse the h-full frame.
+// `absolute` against that fixed, viewport-tall layer. `noBodyStyles`: Radix's scroll lock
+// already freezes the body scroll while a sheet is open, and vaul's iOS `position:fixed`
+// body hack would jump the page back to the top on close.
 function Drawer({
   container,
   noBodyStyles = true,

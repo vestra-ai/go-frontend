@@ -13,7 +13,7 @@ import { Bubble } from "./Bubble";
 
 type LongPressOverlayProps = {
   message: { id: string; name: string; text: string; avatar: AvatarSpec; maxWidth?: BubbleMaxWidth };
-  /** Rect of the pressed bubble row, relative to #app-frame. */
+  /** Rect of the pressed bubble row, relative to #app-frame's top-left (page coordinates). */
   anchorRect: FrameRect;
   onReact(emoji: string): void;
   /** "More reactions"; the overlay stays open. */
@@ -32,7 +32,7 @@ const BAR_OFFSET = 60; // reaction bar 50 + gap 10, so the lifted bubble lands o
 /**
  * D1 message actions: blurred scrim, reaction bar, the lifted bubble at its real position, Reply / Ask Go / Copy.
  * DESIGN-ASSUMPTION (PLAN §12.1 #10): anchored to the pressed bubble instead of the design's fixed top 300.
- * Render inside the chat Screen (positioned, frame-sized). No enter animation (as designed).
+ * Render inside the chat Screen (positioned, page-sized: it scrolls with the thread). No enter animation (as designed).
  */
 export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply, onAskGo, onCopy, onClose }: LongPressOverlayProps) {
   const columnRef = useRef<HTMLDivElement>(null);
@@ -73,14 +73,14 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
       <button
         type="button"
         aria-label={copy.longPress.close}
-        className="absolute inset-0 z-[5] cursor-default bg-scrim-strong backdrop-blur-[6px]"
+        className="absolute inset-0 z-40 cursor-default bg-scrim-strong backdrop-blur-[6px]"
         onClick={onClose}
       />
       <div
         ref={columnRef}
         role="dialog"
         aria-label={copy.longPress.dialogLabel}
-        className="absolute inset-x-4 z-[6] flex flex-col gap-2.5"
+        className="absolute inset-x-4 z-[41] flex flex-col gap-2.5"
         style={{ top: Math.max(EDGE, top) }}
       >
         <div className="ml-[30px] flex gap-0.5 self-start rounded-full bg-white px-1.5 py-1 shadow-menu">

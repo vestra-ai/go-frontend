@@ -43,7 +43,7 @@ type BottomSheetProps = {
   children: ReactNode;
 };
 
-// vaul drawer inside #app-frame: scrim + sheet are portaled into the frame by ui/drawer.
+// vaul drawer in the overlay layer: scrim + sheet are portaled into the 450px column by ui/drawer.
 export function BottomSheet({
   open,
   onOpenChange,

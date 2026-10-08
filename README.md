@@ -72,7 +72,7 @@ Icons that depend on state (animated or data-driven, such as `AudioBars`, `Spinn
 ### Source folders
 
 - `src/components/ui`: atoms (button, chip, input, switch, tabs, ...), built first.
-- `src/components/shell`: `AppFrame`, `Screen`, `TopBar`, `BottomSheet`, `FadeDock`, share and sign-in pieces.
+- `src/components/shell`: `AppFrame`, `Screen`, `TopBar`, `BottomSheet`, `FadeDock`, `StickyDock`, share and sign-in pieces.
 - `src/components/common`: shared composites used across screens.
 - `src/components/chat`, `sheets`, `trip`, `home`, `plan`, `money`, `checkin`, `board`: per-feature sections.
 - `src/components/icons`: `generated/` (svgr output) and `custom/` (hand-written).
@@ -85,7 +85,7 @@ Icons that depend on state (animated or data-driven, such as `AudioBars`, `Spinn
 - Atoms first: build in `src/components/ui` with `cva` variants, then compose.
 - Tailwind only. No inline style objects or CSS modules for look and feel.
 - `src/app/globals.css` holds tokens (`@theme`), base resets and a few global utilities only. No component styling.
-- Mobile only. The app lives in `#app-frame`, max 450px wide and full height. The frame has a transform, so fixed headers, sheets and toasts stay inside it. Use `h-full` / `w-full`, not `100vw` / `100dvh`. At 451px and wider the frame is centered with a shadow and hairline borders on the `frame-bg` background.
+- Mobile only. The app lives in `#app-frame`, max 450px wide, at least one viewport tall, and it grows with its content: the document (body) is the only page scroller. Headers are `sticky top-0` (z-30); bottom docks (`FadeDock`, FABs, action bars) go in a `StickyDock`, a zero-height `sticky bottom-0` rail at the end of the `Screen`. Only a long list of cards may own a scroll (a horizontal rail, a sheet body), and a rail bleeds through the page padding (`-mx-4 px-4`). Sheets, menus, tooltips and toasts portal into `#overlay-layer`, a fixed 450px column whose transform contains them. Top insets use `pt-safe` / `pt-safe-hero` (safe-area inset + a small gap), never a fixed 46–60px. Use `min-h-dvh`, not `h-full`. At 451px and wider the frame is centered with a shadow and hairline borders on the `frame-bg` background.
 
 ## Demo presets
 

@@ -148,7 +148,9 @@ function Avatar({
           onError={(e) => settle(e.currentTarget)}
           className={cn(
             "absolute inset-0 m-auto",
-            kind === "trip" ? "size-[91%] object-contain" : "size-full rounded-full object-cover"
+            // The trip art is a square SVG: it takes the root's radius (rounded-xl tile, or the circle shape) so its
+            // corners can never poke out of the avatar.
+            kind === "trip" ? "size-[91%] rounded-[inherit] object-contain" : "size-full rounded-full object-cover"
           )}
         />
       )}

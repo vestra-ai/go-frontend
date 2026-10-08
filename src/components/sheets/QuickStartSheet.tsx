@@ -20,10 +20,6 @@ type QuickStartSheetProps = {
   onDismiss: () => void;
 };
 
-// Sheet tops on the 912px design artboard: collapsed 384 (h 528), search open 96.
-const TOP_COLLAPSED = 384;
-const TOP_SEARCH = 96;
-
 export function QuickStartSheet({ open, initial, initialQuery, onDone, onDismiss }: QuickStartSheetProps) {
   const [vibe, setVibe] = useState<Vibe | null>(initial.answers.vibe);
   const [spend, setSpend] = useState<Spend | null>(initial.answers.spend);
@@ -50,10 +46,10 @@ export function QuickStartSheet({ open, initial, initialQuery, onDone, onDismiss
       onOpenChange={(o) => {
         if (!o) onDismiss();
       }}
-      top={searchOpen ? TOP_SEARCH : TOP_COLLAPSED}
       aria-label={copy.label}
     >
-      <SheetBody className="pb-[150px]">
+      {/* Content-height sheet: it only scrolls once the content outgrows the room the sheet has. */}
+      <SheetBody className="gap-5 pb-[174px]">
         <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel={copy.close} />
         <ChoiceChipGroup
           label={copy.vibeLabel}

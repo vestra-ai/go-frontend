@@ -95,13 +95,13 @@ export interface Invite {
 // ---------------------------------------------------------------------------
 
 export type AvatarSpec = { kind: "go" } | { kind: "user"; src?: string; initials: string; tone: User["tone"] };
-export type FrameRect = { top: number; left: number; width: number; height: number }; // px, relative to #app-frame
+export type FrameRect = { top: number; left: number; width: number; height: number }; // px, relative to #app-frame (page coordinates)
 export type AttachItem = "photo" | "pdf" | "location" | "poll";
 export type ComposerMode = null | "longpress" | "reply" | "askGo";
 export type BubbleMaxWidth = 64 | 70 | 72 | 76 | 78 | 80;
 
 export interface CityRef {
-  id: string; // CIT ids (blr…); searched cities: id = name.toLowerCase()
+  id: string; // CIT ids (blr…); searched cities: lower-cased name (+ "|state" from the live search)
   name: string;
   region?: string;
 }

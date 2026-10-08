@@ -2,6 +2,7 @@
 
 import { Plus } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
+import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { chat as copy } from "@/data/seed/copy";
@@ -33,34 +34,36 @@ export function Composer({ value, onChange, onSend, recording, onMic, attachOpen
   }
 
   return (
-    <FadeDock variant="gradient">
-      <div className="relative flex items-center gap-2.5 px-4 pt-6">
-        <AttachMenu open={attachOpen} onOpenChange={onAttachOpenChange} onPick={onAttach}>
-          <Button type="button" variant="white" size="icon-lg" aria-label={copy.composer.add} aria-expanded={attachOpen}>
-            <Plus className="size-5" />
-          </Button>
-        </AttachMenu>
-        <label htmlFor="msg" className="min-w-0 flex-1">
-          <span className="sr-only">{copy.composer.srLabel}</span>
-          <Input
-            id="msg"
-            type="text"
-            shape="pill"
-            autoComplete="off"
-            enterKeyHint="send"
-            placeholder={copy.composer.placeholder}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-              e.preventDefault();
-              if (draft) onSend(draft);
-            }}
-          />
-        </label>
-        <MicSendButton hasDraft={draft.length > 0} recording={recording} onPress={press} />
-        {recording && <RecordingPill />}
-      </div>
-    </FadeDock>
+    <StickyDock>
+      <FadeDock variant="gradient">
+        <div className="relative flex items-center gap-2.5 px-4 pt-6">
+          <AttachMenu open={attachOpen} onOpenChange={onAttachOpenChange} onPick={onAttach}>
+            <Button type="button" variant="white" size="icon-lg" aria-label={copy.composer.add} aria-expanded={attachOpen}>
+              <Plus className="size-5" />
+            </Button>
+          </AttachMenu>
+          <label htmlFor="msg" className="min-w-0 flex-1">
+            <span className="sr-only">{copy.composer.srLabel}</span>
+            <Input
+              id="msg"
+              type="text"
+              shape="pill"
+              autoComplete="off"
+              enterKeyHint="send"
+              placeholder={copy.composer.placeholder}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                if (draft) onSend(draft);
+              }}
+            />
+          </label>
+          <MicSendButton hasDraft={draft.length > 0} recording={recording} onPress={press} />
+          {recording && <RecordingPill />}
+        </div>
+      </FadeDock>
+    </StickyDock>
   );
 }

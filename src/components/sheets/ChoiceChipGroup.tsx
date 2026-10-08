@@ -13,7 +13,7 @@ type ChoiceChipGroupProps<T extends string> = {
   allowDeselect?: boolean;
 };
 
-/** Single-select wrapping chip group under an eyebrow (Quick start vibe / spend). */
+/** Single-select chip row under an eyebrow (Quick start vibe / spend). One line: it scrolls sideways, edge to edge, like the city strip. */
 export function ChoiceChipGroup<T extends string>({
   label,
   options,
@@ -24,7 +24,7 @@ export function ChoiceChipGroup<T extends string>({
   return (
     <div role="group" aria-label={label} className="flex flex-col gap-2">
       <Eyebrow className="px-1">{label}</Eyebrow>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="-mx-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 scrollbar-none">
         {options.map((o) => {
           const on = value === o.id;
           return (
@@ -33,7 +33,7 @@ export function ChoiceChipGroup<T extends string>({
               size="lg"
               pressed={on}
               onClick={() => onChange(on && allowDeselect ? null : o.id)}
-              className="transition-colors duration-160"
+              className="shrink-0 transition-colors duration-160"
             >
               {o.label}
             </Chip>

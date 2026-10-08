@@ -182,9 +182,9 @@ export default function ItineraryPage() {
   const { tripId } = useParams<{ tripId: string }>();
   const hydrated = useHydrated();
   if (!TRIP_IDS.includes(tripId as TripId)) notFound();
-  if (!hydrated) return <Screen scroll="none">{null}</Screen>;
+  if (!hydrated) return <Screen>{null}</Screen>;
   return (
-    <Suspense fallback={<Screen scroll="none">{null}</Screen>}>
+    <Suspense fallback={<Screen>{null}</Screen>}>
       <ItineraryView tripId={tripId as TripId} />
     </Suspense>
   );

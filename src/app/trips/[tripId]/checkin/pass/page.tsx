@@ -8,6 +8,7 @@ import { StepIndicator } from "@/components/common/StepIndicator";
 import { BoardingPassCard } from "@/components/checkin/BoardingPassCard";
 import { Share } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
+import { StickyDock } from "@/components/shell/StickyDock";
 import { Screen } from "@/components/shell/Screen";
 import { TopBar } from "@/components/shell/TopBar";
 import { Note } from "@/components/ui/alert";
@@ -67,14 +68,16 @@ export default function BoardingPassPage() {
           {copy.goNote}
         </GoNote>
       </div>
-      <FadeDock variant="gradient" className="flex-row gap-2 px-4 pt-[30px]">
-        <Button variant="primary" size="xl" className="flex-1 text-17" onClick={() => toastGo(copy.walletToast)}>
-          {copy.wallet}
-        </Button>
-        <Button variant="secondary" size="xl" asChild className="flex-1 px-3.5 text-16 tracking-sm">
-          <Link href={`/trips/${tripId}/bookings/${FLIGHT_BOOKING_ID}/ticket`}>{copy.download}</Link>
-        </Button>
-      </FadeDock>
+      <StickyDock>
+        <FadeDock variant="gradient" className="flex-row gap-2 px-4 pt-[30px]">
+          <Button variant="primary" size="xl" className="flex-1 text-17" onClick={() => toastGo(copy.walletToast)}>
+            {copy.wallet}
+          </Button>
+          <Button variant="secondary" size="xl" asChild className="flex-1 px-3.5 text-16 tracking-sm">
+            <Link href={`/trips/${tripId}/bookings/${FLIGHT_BOOKING_ID}/ticket`}>{copy.download}</Link>
+          </Button>
+        </FadeDock>
+      </StickyDock>
     </Screen>
   );
 }

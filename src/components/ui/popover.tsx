@@ -17,7 +17,7 @@ function PopoverTrigger({
   return <PopoverPrimitive.Trigger data-slot="popover-trigger" {...props} />
 }
 
-// Portaled into #app-frame and kept inside the column (collision boundary = frame).
+// Portaled into the overlay layer and kept inside the column (collision boundary = layer).
 function PopoverContent({
   className,
   align = "center",

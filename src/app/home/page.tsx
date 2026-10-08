@@ -34,12 +34,12 @@ export default function HomePage() {
   }, [hydrated, signedIn, router]);
 
   if (!hydrated || !signedIn) {
-    return <Screen scroll="none">{null}</Screen>;
+    return <Screen>{null}</Screen>;
   }
 
   return (
-    <Screen scroll="none">
-      <div className={`flex shrink-0 items-center justify-between gap-3 px-5 ${hasTrips ? "pt-safe pb-2" : "pt-[max(60px,env(safe-area-inset-top))]"}`}>
+    <Screen>
+      <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-3 bg-canvas px-5 pt-safe pb-2">
         <ScreenTitle
           className="flex-1"
           eyebrow={hasTrips ? copy.eyebrowBack : copy.eyebrowZero}

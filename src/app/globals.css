@@ -175,11 +175,12 @@
 
 /* base resets */
 @layer base {
-  html, body { height: 100%; }
-  html { background: var(--color-frame-bg); -webkit-text-size-adjust: 100%; }
-  body { margin: 0; font-family: var(--font-sans); color: var(--color-ink); font-kerning: normal;
+  /* The document is the only page scroller: screens grow with their content, headers/docks are `sticky`. */
+  html { background: var(--color-frame-bg); -webkit-text-size-adjust: 100%; scrollbar-width: none; }
+  html::-webkit-scrollbar { display: none; }
+  body { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: var(--color-ink); font-kerning: normal;
          font-feature-settings: "kern" 1; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
-         overflow: hidden; overscroll-behavior: none; }
+         overscroll-behavior-y: none; }
   a, button { -webkit-tap-highlight-color: transparent; touch-action: manipulation; -webkit-touch-callout: none; }
   input::placeholder, textarea::placeholder { color: var(--color-muted); }
   input, button, textarea { font: inherit; color: inherit; }
@@ -192,9 +193,11 @@
 /* scroll + safe-area utilities (global-level only) */
 @utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
 @utility pb-safe { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
-@utility pt-safe { padding-top: max(56px, env(safe-area-inset-top)); }  /* design header top padding */
-@utility pt-safe-hero { padding-top: max(46px, env(safe-area-inset-top)); }  /* trip hero / collapsed header / viewer toolbars */
-@utility top-safe-hero { top: max(46px, env(safe-area-inset-top)); }        /* glass buttons on heroes */
+/* Top inset = the device's real safe area (notch / status bar in standalone PWAs, 0 in a browser tab) plus a small
+   natural gap. The design artboards' faux 46–56px status bar is not reproduced. */
+@utility pt-safe { padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }        /* page headers */
+@utility pt-safe-hero { padding-top: calc(env(safe-area-inset-top, 0px) + 12px); }   /* collapsed trip header / viewer toolbars */
+@utility top-safe-hero { top: calc(env(safe-area-inset-top, 0px) + 12px); }          /* glass buttons on heroes */
 @utility mask-scallop { mask: radial-gradient(circle 6px at 50% 0, transparent 97%, #000) 50% 0 / 16px 51% repeat-x,
                                radial-gradient(circle 6px at 50% 100%, transparent 97%, #000) 50% 100% / 16px 51% repeat-x; }
 

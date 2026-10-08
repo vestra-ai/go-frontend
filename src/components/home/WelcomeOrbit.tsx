@@ -19,10 +19,26 @@ const POSITIONS = [
   "left-10 top-[191px]",
 ] as const;
 
-/** Welcome hero cluster: dashed ring, glow, six city illustrations around Go, two glass status pills. */
+// The artboard's first 80px are empty (the topmost city starts at 116), so the wrapper crops them: it is
+// (504 − 80) × scale tall and the artboard is lifted by 80 × scale.
+/**
+ * Welcome hero cluster: dashed ring, glow, six city illustrations around Go, two glass status pills.
+ * The 420×504 artboard is scaled down on short screens, and its wrapper reserves the scaled height in the page flow
+ * (a transform alone would leave the unscaled 504px behind), so the copy below can never ride up over the graphic.
+ */
 export function WelcomeOrbit({ items, mascot, pills }: WelcomeOrbitProps) {
   return (
-    <div className="absolute top-0 left-1/2 h-[504px] w-[420px] origin-top -translate-x-1/2 [@media(max-height:779px)]:scale-[0.74] [@media(max-height:879px)]:scale-[0.88]">
+    <div
+      className="relative -mx-6 h-[424px] shrink-0 overflow-hidden [@media(min-height:780px)_and_(max-height:879px)]:h-[373px] [@media(min-height:720px)_and_(max-height:779px)]:h-[324px] [@media(max-height:719px)]:h-[280px]"
+    >
+      <OrbitArtboard items={items} mascot={mascot} pills={pills} />
+    </div>
+  );
+}
+
+function OrbitArtboard({ items, mascot, pills }: WelcomeOrbitProps) {
+  return (
+    <div className="absolute top-[-80px] left-1/2 h-[504px] w-[420px] origin-top -translate-x-1/2 [@media(min-height:780px)_and_(max-height:879px)]:top-[-70px] [@media(min-height:780px)_and_(max-height:879px)]:scale-[0.88] [@media(min-height:720px)_and_(max-height:779px)]:top-[-61px] [@media(min-height:720px)_and_(max-height:779px)]:scale-[0.764] [@media(max-height:719px)]:top-[-53px] [@media(max-height:719px)]:scale-[0.66]">
       <span aria-hidden className="absolute top-[150px] left-[60px] size-[300px] rounded-full border-[1.5px] border-dashed border-go-ring" />
       <span
         aria-hidden

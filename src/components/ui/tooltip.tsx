@@ -30,7 +30,7 @@ function TooltipTrigger({
   return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />
 }
 
-// Icon-button labels on hover (fine pointers; Radix skips touch). Portaled into #app-frame,
+// Icon-button labels on hover (fine pointers; Radix skips touch). Portaled into the overlay layer,
 // collision boundary = frame.
 function TooltipContent({
   className,

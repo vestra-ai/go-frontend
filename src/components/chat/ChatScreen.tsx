@@ -10,7 +10,6 @@ import { MessageList } from "@/components/chat/MessageList";
 import { NextStepPill } from "@/components/chat/NextStepPill";
 import { useLongPress } from "@/components/chat/useLongPress";
 import { useScrollToEnd } from "@/components/chat/useScrollToEnd";
-import { useFrame } from "@/components/shell/FrameContext";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { BoardSheet } from "@/components/sheets/BoardSheet";
@@ -44,10 +43,10 @@ import { useComposerModes } from "./useComposerModes";
 // G-bali.md §1.3 / §1.7 #6: the Bali header, board and settled chips toast and Back goes home, as designed.
 const TOAST_HEADER_TRIPS: ReadonlySet<TripId> = new Set<TripId>(["bali"]);
 
-/** Bubble-row rect relative to #app-frame (the long-press overlay is positioned inside the frame). */
-function frameRect(el: HTMLElement, frame: HTMLElement | null): FrameRect {
+/** Bubble-row rect relative to #app-frame's top-left, i.e. in page coordinates (the long-press overlay is absolute inside the page). */
+function frameRect(el: HTMLElement): FrameRect {
   const r = el.getBoundingClientRect();
-  const f = frame?.getBoundingClientRect();
+  const f = document.getElementById("app-frame")?.getBoundingClientRect();
   return { top: r.top - (f?.top ?? 0), left: r.left - (f?.left ?? 0), width: r.width, height: r.height };
 }
 
@@ -57,7 +56,6 @@ function frameRect(el: HTMLElement, frame: HTMLElement | null): FrameRect {
  * Mount it after the store has hydrated: first-render messages count as history (no rise-in).
  */
 export function ChatScreen({ tripId }: { tripId: TripId }) {
-  const frame = useFrame();
   const anchorRef = useRef<HTMLSpanElement>(null);
 
   const storedTrip = useStore((s) => s.trips.trips[tripId]);
@@ -140,7 +138,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     const id = row?.dataset.msgId;
     if (!row || !id) return;
     setHeldScrollKey(null); // the overlay now covers the bubble, so its release never reaches the row
-    setAnchor({ id, rect: frameRect(row, frame) });
+    setAnchor({ id, rect: frameRect(row) });
     modes.setMode("longpress", id);
   });
 
@@ -151,10 +149,10 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     if (!measureId) return;
     const raf = requestAnimationFrame(() => {
       const row = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(measureId)}"]`);
-      if (row) setAnchor({ id: measureId, rect: frameRect(row, frame) });
+      if (row) setAnchor({ id: measureId, rect: frameRect(row) });
     });
     return () => cancelAnimationFrame(raf);
-  }, [measureId, frame]);
+  }, [measureId]);
 
   const store = () => useStore.getState();
 
@@ -263,7 +261,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
 
   return (
     <>
-      <Screen scroll="none">
+      <Screen>
         <ChatHeader
           trip={{ name: trip.name, avatar: trip.illustration, tint: trip.tint }}
           subtitle={header.subtitle}

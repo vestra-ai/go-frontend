@@ -26,8 +26,8 @@ export function TripHomeSkeleton({ tripId, city, dateShort, joinedCount, members
           <img src={hero.src} alt={hero.alt} className="absolute inset-0 size-full object-cover" />
         )}
         <span className="absolute inset-0 bg-[linear-gradient(180deg,rgb(11_27_63/0.22)_0%,rgb(11_27_63/0)_26%,rgb(11_27_63/0.08)_42%,rgb(11_27_63/0.4)_62%,rgb(11_27_63/0.72)_100%)]" />
-        <GlassIconButton label={tripShell.back} icon={<ArrowLeft className="size-[22px]" />} className="absolute top-[46px] left-3.5" />
-        <GlassIconButton label={tripShell.share} icon={<Share className="size-5" />} className="absolute top-[46px] right-3.5" />
+        <GlassIconButton label={tripShell.back} icon={<ArrowLeft className="size-[22px]" />} className="absolute top-safe-hero left-3.5" />
+        <GlassIconButton label={tripShell.share} icon={<Share className="size-5" />} className="absolute top-safe-hero right-3.5" />
         <div className="absolute inset-x-5 bottom-11 flex items-end justify-between gap-3 text-white">
           <div className="flex min-w-0 flex-col">
             <h1 className="flex items-center gap-1 text-44 leading-none font-bold tracking-display">

@@ -38,10 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             @serwist/window's register() throws (unhandled) when register() yields no registration (SW-blocking harness). */}
         <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV !== "production"}>
           <TooltipProvider>
-            <AppFrame>
-              {children}
-              <Toaster />
-            </AppFrame>
+            <AppFrame overlay={<Toaster />}>{children}</AppFrame>
           </TooltipProvider>
         </SerwistProvider>
       </body>

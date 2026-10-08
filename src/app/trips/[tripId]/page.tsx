@@ -13,10 +13,10 @@ export default function TripHomePage() {
   const { tripId } = useParams<{ tripId: string }>();
   const hydrated = useHydrated();
   if (!TRIP_IDS.includes(tripId as TripId)) notFound();
-  if (!hydrated) return <Screen scroll="none">{null}</Screen>;
+  if (!hydrated) return <Screen>{null}</Screen>;
   return (
     // useSearchParams needs a Suspense boundary for static prerendering.
-    <Suspense fallback={<Screen scroll="none">{null}</Screen>}>
+    <Suspense fallback={<Screen>{null}</Screen>}>
       <TripHomeScreen tripId={tripId as TripId} />
     </Suspense>
   );

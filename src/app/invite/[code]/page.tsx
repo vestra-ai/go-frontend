@@ -21,7 +21,7 @@ export default function InvitePage() {
   const users = useStore((s) => s.trips.members);
   const acceptInvite = useStore((s) => s.acceptInvite);
 
-  if (!hydrated) return <Screen scroll="none">{null}</Screen>;
+  if (!hydrated) return <Screen>{null}</Screen>;
   if (!invite) notFound();
 
   // Invites stay readable before the trip exists in the store (Bali), so fall back to the seed trip.
@@ -38,7 +38,7 @@ export default function InvitePage() {
   const landing = invite.tripId === "bali" ? LANDING.bali : LANDING.goa;
 
   return (
-    <Screen scroll="none">
+    <Screen>
       <TripHomeSkeleton
         tripId={trip.id}
         city={trip.destination ?? trip.name}

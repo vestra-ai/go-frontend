@@ -15,8 +15,10 @@ type TopBarProps = {
   /** 1–2 icon buttons on the right. */
   trailing?: ReactNode;
   tone?: "white" | "transparent";
-  /** `safe` = 56px (pt-safe), `hero` = 46px (pt-safe-hero). */
+  /** `safe` = pt-safe (inset + 16px), `hero` = pt-safe-hero (inset + 12px). */
   padTop?: "safe" | "hero";
+  /** Pin to the top while the page scrolls (`sticky`, so it needs an opaque tone). */
+  sticky?: boolean;
   className?: string;
   /** Optional row under the title (filter chips). */
   children?: ReactNode;
@@ -31,6 +33,7 @@ export function TopBar({
   trailing,
   tone = "transparent",
   padTop = "safe",
+  sticky = false,
   className,
   children,
 }: TopBarProps) {
@@ -42,6 +45,8 @@ export function TopBar({
         "flex shrink-0 flex-col px-3 pb-2",
         padTop === "safe" ? "pt-safe" : "pt-safe-hero",
         tone === "white" && "bg-white",
+        sticky && "sticky top-0 z-30",
+        sticky && tone === "transparent" && "bg-canvas",
         className,
       )}
     >

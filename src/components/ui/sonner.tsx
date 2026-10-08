@@ -2,7 +2,7 @@
 
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-// Rendered inside #app-frame, so sonner's position:fixed is relative to the frame.
+// Rendered inside the overlay layer (see AppFrame), so sonner's position:fixed is relative to the 450px column.
 // Offsets are objects: a bare number would also set left/right to 108px on mobile.
 const Toaster = ({ ...props }: ToasterProps) => {
   return (

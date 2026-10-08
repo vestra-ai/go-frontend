@@ -4,6 +4,7 @@ import { useState } from "react";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
+import { StickyDock } from "@/components/shell/StickyDock";
 import type { Trip, User } from "@/data/types";
 import { ChatFab, type ChatPreview } from "./ChatFab";
 import { CollapsingTripHeader } from "./CollapsingTripHeader";
@@ -45,7 +46,7 @@ export function TripShell({
   forceCollapsed = false,
   children,
 }: TripShellProps) {
-  const { hp: scrollHp, onScroll } = useCollapsingHeader();
+  const scrollHp = useCollapsingHeader();
   const [innerOpen, setInnerOpen] = useState(false);
   const open = shareOpen ?? innerOpen;
   const setOpen = onShareOpenChange ?? setInnerOpen;
@@ -53,19 +54,19 @@ export function TripShell({
   const share = onShare ?? (() => setOpen(true));
 
   return (
-    <Screen scroll="none">
-      <div onScroll={onScroll} className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-none">
-        {forceCollapsed ? null : (
-          <>
-            <TripHero hero={hero} title={title} titleEmoji={titleEmoji} meta={meta} members={members} onShare={share} />
-            <TripTabs tripId={trip.id} active={active} variant="hero" className="relative z-[2] mx-4 -mt-[26px]" />
-          </>
-        )}
-        <div className={`flex flex-col gap-2.5 px-4 pb-[120px] ${forceCollapsed ? "pt-[148px]" : "pt-4"}`}>{children}</div>
-      </div>
+    <Screen>
       <CollapsingTripHeader hp={hp} tripId={trip.id} active={active} title={title} sub={collapsedSub} onShare={share} />
-      <FadeDock variant="fade" aria-hidden className="h-[120px]" />
-      <ChatFab tripId={trip.id} avatars={chatPreview.avatars} preview={chatPreview.text} unread={chatPreview.unread} />
+      {forceCollapsed ? null : (
+        <>
+          <TripHero hero={hero} title={title} titleEmoji={titleEmoji} meta={meta} members={members} onShare={share} />
+          <TripTabs tripId={trip.id} active={active} variant="hero" className="relative z-[2] mx-4 -mt-[26px]" />
+        </>
+      )}
+      <div className={`flex flex-col gap-2.5 px-4 pb-[120px] ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}>{children}</div>
+      <StickyDock>
+        <FadeDock variant="fade" aria-hidden className="h-[120px]" />
+        <ChatFab tripId={trip.id} avatars={chatPreview.avatars} preview={chatPreview.text} unread={chatPreview.unread} />
+      </StickyDock>
       <ShareInviteSheet trip={trip} open={open} onOpenChange={setOpen} />
     </Screen>
   );

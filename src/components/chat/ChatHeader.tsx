@@ -32,14 +32,14 @@ function stackAvatar(spec: AvatarSpec) {
 }
 
 /**
- * Chat header, standardised at 170px = 56 safe top + 52 row + 14 + 36 chips + 12
+ * Chat header: safe-area top (+16) + 52 row + 14 + 36 chips + 12, pinned with `sticky top-0`
  * (DESIGN-ASSUMPTION PLAN §12.1 #8: C2's 178px variant is dropped).
  */
 export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, onBoard, onShare, children }: ChatHeaderProps) {
   const title = (
     <>
       {/* DESIGN-ASSUMPTION: the design's trip avatar is a circle; Avatar kind=trip defaults to rounded-xl. */}
-      <Avatar kind="trip" shape="circle" size={44} tone={trip.tint} src={trip.avatar} />
+      <Avatar kind="trip" shape="circle" size={36} tone={trip.tint} src={trip.avatar} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-16 leading-[1.25] font-semibold tracking-body">{trip.name}</span>
         <span className="flex min-w-0 items-center gap-1.5">
@@ -53,11 +53,11 @@ export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, on
   );
 
   return (
-    <header className="relative z-[2] shrink-0 bg-white pt-safe pb-3 shadow-header">
+    <header className="sticky top-0 z-30 shrink-0 bg-white pt-safe pb-3 shadow-header">
       {/* The visible title is a button/link (avatar + name + crew line), so the page heading is announced separately. */}
       <h1 className="sr-only">{trip.name}</h1>
-      <div className="flex items-center gap-1 pr-2 pl-3">
-        <Button asChild variant="ghost" size="icon" className="text-black">
+      <div className="flex items-center gap-1 pr-1 pl-3">
+        <Button asChild variant="ghost" size="icon-xs" className="text-black">
           <Link href={backHref} aria-label={copy.header.back}>
             <ArrowLeft className="size-[22px]" strokeWidth={2} />
           </Link>
@@ -71,12 +71,15 @@ export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, on
             {title}
           </Link>
         )}
-        <Button type="button" variant="ghost" size="icon" className="text-black" aria-label={copy.header.board} onClick={onBoard}>
-          <Board className="size-5" />
-        </Button>
-        <Button type="button" variant="ghost" size="icon" className="text-black" aria-label={copy.header.share} onClick={onShare}>
-          <Share className="size-5" />
-        </Button>
+        {/* 36px targets, touching: the icons sit close together and the last one lines up with the 16px page inset. */}
+        <div className="flex shrink-0">
+          <Button type="button" variant="ghost" size="icon-xs" className="text-black" aria-label={copy.header.board} onClick={onBoard}>
+            <Board className="size-5" />
+          </Button>
+          <Button type="button" variant="ghost" size="icon-xs" className="text-black" aria-label={copy.header.share} onClick={onShare}>
+            <Share className="size-5" />
+          </Button>
+        </div>
       </div>
       {children}
     </header>

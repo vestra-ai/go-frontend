@@ -20,9 +20,8 @@ type FromCitySheetProps = {
   onClose: () => void;
 };
 
-// Sheet tops on the 912px design artboard: collapsed 447 (h 465), search open 96.
-const TOP_COLLAPSED = 447;
-const TOP_SEARCH = 96;
+// Sheet top on the 912px design artboard: 447 (h 465). Search results float above the field, so it never grows.
+const SHEET_TOP = 447;
 
 export function FromCitySheet({ open, initialCity, initialQuery, onSave, onClose }: FromCitySheetProps) {
   const [city, setCity] = useState<CityRef>(initialCity);
@@ -46,7 +45,7 @@ export function FromCitySheet({ open, initialCity, initialQuery, onSave, onClose
       onOpenChange={(o) => {
         if (!o) onClose();
       }}
-      top={searchOpen ? TOP_SEARCH : TOP_COLLAPSED}
+      top={SHEET_TOP}
       aria-label={copy.label}
     >
       <SheetBody className="pb-[120px]">

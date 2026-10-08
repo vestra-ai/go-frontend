@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 import { ArrowRight, X } from "@/components/icons/generated";
+import { StickyDock } from "@/components/shell/StickyDock";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
@@ -40,65 +41,67 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
   const send = () => onSend(value.trim());
 
   return (
-    <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 rounded-t-6xl bg-white px-4 pt-2.5 pb-safe shadow-tray">
-      <div
-        className={cn(
-          "flex items-center gap-2.5 rounded-2xl border-l-[3px] bg-surface-2 py-2 pr-2 pl-3",
-          banner.accent === "go" ? "border-go" : "border-ink",
+    <StickyDock>
+      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 rounded-t-6xl bg-white px-4 pt-2.5 pb-safe shadow-tray">
+        <div
+          className={cn(
+            "flex items-center gap-2.5 rounded-2xl border-l-[3px] bg-surface-2 py-2 pr-2 pl-3",
+            banner.accent === "go" ? "border-go" : "border-ink",
+          )}
+        >
+          <div className="flex min-w-0 flex-1 flex-col gap-px">
+            <span
+              className={cn(
+                "text-13 font-bold",
+                banner.accent === "go" ? "text-go" : "text-ink",
+                mode === "askGo" && "inline-flex items-center gap-1.5",
+              )}
+            >
+              {mode === "askGo" && <Avatar kind="go" size={18} src={assets.goAvatar.src} />}
+              {banner.title}
+            </span>
+            <span className="truncate text-14 text-muted">{banner.snippet}</span>
+          </div>
+          <Button type="button" variant="ghost" size="icon-2xs" className="text-muted" aria-label={copy.tray.cancel} onClick={onCancel}>
+            <X className="size-3.5" />
+          </Button>
+        </div>
+
+        {mode === "askGo" && suggestions && suggestions.length > 0 && (
+          <div className="-mx-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 scrollbar-none">
+            {suggestions.map((s) => (
+              <Chip key={s} type="button" size="xs" variant="outline" className="shrink-0" onClick={() => onChange(s)}>
+                {s}
+              </Chip>
+            ))}
+          </div>
         )}
-      >
-        <div className="flex min-w-0 flex-1 flex-col gap-px">
-          <span
-            className={cn(
-              "text-13 font-bold",
-              banner.accent === "go" ? "text-go" : "text-ink",
-              mode === "askGo" && "inline-flex items-center gap-1.5",
-            )}
-          >
-            {mode === "askGo" && <Avatar kind="go" size={18} src={assets.goAvatar.src} />}
-            {banner.title}
-          </span>
-          <span className="truncate text-14 text-muted">{banner.snippet}</span>
-        </div>
-        <Button type="button" variant="ghost" size="icon-2xs" className="text-muted" aria-label={copy.tray.cancel} onClick={onCancel}>
-          <X className="size-3.5" />
-        </Button>
-      </div>
 
-      {mode === "askGo" && suggestions && suggestions.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto overscroll-x-contain scrollbar-none">
-          {suggestions.map((s) => (
-            <Chip key={s} type="button" size="xs" variant="outline" className="shrink-0" onClick={() => onChange(s)}>
-              {s}
-            </Chip>
-          ))}
+        <div className="flex items-center gap-2.5">
+          <label htmlFor={inputId} className="min-w-0 flex-1">
+            <span className="sr-only">{placeholder}</span>
+            <Input
+              ref={inputRef}
+              id={inputId}
+              type="text"
+              shape="pill-grey"
+              autoComplete="off"
+              enterKeyHint="send"
+              placeholder={placeholder}
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+                e.preventDefault();
+                send();
+              }}
+            />
+          </label>
+          <Button type="button" variant="primary" size="icon-lg" aria-label={copy.composer.send} onClick={send}>
+            <ArrowRight className="size-5" />
+          </Button>
         </div>
-      )}
-
-      <div className="flex items-center gap-2.5">
-        <label htmlFor={inputId} className="min-w-0 flex-1">
-          <span className="sr-only">{placeholder}</span>
-          <Input
-            ref={inputRef}
-            id={inputId}
-            type="text"
-            shape="pill-grey"
-            autoComplete="off"
-            enterKeyHint="send"
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-              e.preventDefault();
-              send();
-            }}
-          />
-        </label>
-        <Button type="button" variant="primary" size="icon-lg" aria-label={copy.composer.send} onClick={send}>
-          <ArrowRight className="size-5" />
-        </Button>
       </div>
-    </div>
+    </StickyDock>
   );
 }

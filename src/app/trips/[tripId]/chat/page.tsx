@@ -17,7 +17,7 @@ export default function ChatPage() {
   if (!isTripId(tripId)) notFound();
 
   // Canvas-coloured shell until the persisted store is read, so server and first client render agree.
-  const shell = <Screen scroll="none">{null}</Screen>;
+  const shell = <Screen>{null}</Screen>;
   if (!hydrated) return shell;
 
   return (

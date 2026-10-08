@@ -43,7 +43,7 @@ function DropdownMenuTrigger({
   )
 }
 
-// Portaled into #app-frame and kept inside the column (collision boundary = frame).
+// Portaled into the overlay layer and kept inside the column (collision boundary = layer).
 function DropdownMenuContent({
   className,
   align = "start",

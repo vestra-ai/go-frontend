@@ -21,7 +21,7 @@ export function FilterChips({ value, onChange, count }: FilterChipsProps) {
     { value: "mine", label: T.filters.mine },
   ];
   return (
-    <div role="group" aria-label={T.filterLabel} className="flex gap-1.5 overflow-x-auto px-1 scrollbar-none">
+    <div role="group" aria-label={T.filterLabel} className="flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 scrollbar-none">
       {options.map((o) => (
         <Chip
           key={o.value}
