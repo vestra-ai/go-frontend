@@ -83,9 +83,9 @@ interface PanZoomLayerProps {
 }
 
 /**
- * Drag to pan, pinch / double-tap / Ctrl-or-⌘ + wheel / the +/− buttons to zoom (up to 3×). The layer claims every touch
- * (`touch-action: none`) so a pinch is never cancelled by the browser; at the resting view a one-finger vertical swipe scrolls the
- * page by hand (with momentum), so the map never traps the scroll. The layer is clipped by its parent.
+ * Drag to pan, pinch / double-tap / Ctrl-or-⌘ + wheel / the +/− buttons to zoom (up to 3×). Zoomed in, the layer claims
+ * every touch (`touch-action: none`); at the resting view (nothing to pan) it leaves vertical swipes to the browser
+ * (`pan-y`), so the page scrolls natively and the map never traps or fights it. The layer is clipped by its parent.
  */
 export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoomOutLabel, onBackgroundTap, className }: PanZoomLayerProps) {
   const surface = useRef<HTMLDivElement>(null);
@@ -101,8 +101,6 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
   const panning = useRef(false);
   const moved = useRef(false);
   const lastTap = useRef({ time: 0, x: 0, y: 0 });
-  // One-finger page scroll at 1×: finger velocity (px/ms) for the momentum that continues after the lift.
-  const flick = useRef({ v: 0, t: 0, raf: 0 });
 
   const size = useCallback(() => {
     const r = surface.current?.getBoundingClientRect();
@@ -113,8 +111,6 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
     tRef.current = next;
     setT(next);
   }, []);
-
-  useEffect(() => () => cancelAnimationFrame(flick.current.raf), []);
 
   // Centre on mount, whenever the map changes (`homeKey`), and when the card is resized.
   useLayoutEffect(() => {
@@ -151,7 +147,6 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
   }, [apply, size, home, bleed]);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    cancelAnimationFrame(flick.current.raf); // a touch stops any running momentum scroll
     if (pointers.current.size === 0) {
       moved.current = false;
       panning.current = false;
@@ -159,7 +154,6 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
     }
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
     if (pointers.current.size === 2) moved.current = true; // a pinch never ends in a pin tap
-    flick.current = { ...flick.current, v: 0, t: e.timeStamp };
   };
 
   // The +/− buttons zoom about the centre of the view.
@@ -194,14 +188,8 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
         setGliding(false);
         const { s, x, y } = tRef.current;
         apply(constrain({ s, x: x + cur.x - prev.x, y: y + cur.y - prev.y }, w, h, home, bleed));
-      } else if (e.pointerType !== "mouse") {
-        // Nothing to pan at the resting view: the swipe belongs to the page.
-        const dy = cur.y - prev.y;
-        const dt = Math.max(1, e.timeStamp - flick.current.t);
-        flick.current.v = 0.8 * (dy / dt) + 0.2 * flick.current.v;
-        flick.current.t = e.timeStamp;
-        window.scrollBy(0, -dy);
       }
+      // At the resting view there is nothing to pan: a vertical swipe is the browser's (touch-action: pan-y below).
       return;
     }
 
@@ -228,21 +216,6 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
     }
     if (pointers.current.size > 0) return;
 
-    if (!cancelled && panning.current && isHome(tRef.current, home) && e.pointerType !== "mouse") {
-      // Hand the swipe back to the page with the momentum it had when the finger lifted.
-      let v = e.timeStamp - flick.current.t < 80 ? flick.current.v : 0;
-      let last = performance.now();
-      const step = (now: number) => {
-        const dt = now - last;
-        last = now;
-        const before = window.scrollY;
-        window.scrollBy(0, -v * dt);
-        v *= Math.pow(0.95, dt / 16);
-        if (Math.abs(v) > 0.02 && window.scrollY !== before) flick.current.raf = requestAnimationFrame(step);
-      };
-      if (Math.abs(v) > 0.05) flick.current.raf = requestAnimationFrame(step);
-    }
-
     // A still press that is not a pan / pinch: two in quick succession toggle zoom around the tap.
     if (cancelled || moved.current) return;
     const now = e.timeStamp;
@@ -268,8 +241,10 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
       ref={surface}
       data-slot="pan-zoom-layer"
       className={cn("absolute inset-0 overflow-hidden", className)}
-      // The map owns every touch; see the component doc for how page scrolling is kept.
-      style={{ touchAction: "none" }}
+      // Zoomed in, the map owns every touch (pan, pinch). At the resting view there is nothing to pan, so the browser
+      // keeps vertical swipes (native scroll and momentum, no fight with the map); pinch and horizontal moves still
+      // reach the map. The value is read when a touch starts, so it takes effect from the next gesture.
+      style={{ touchAction: zoomed ? "none" : "pan-y" }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={(e) => endPointer(e, false)}
