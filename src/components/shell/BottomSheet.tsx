@@ -28,6 +28,8 @@ type BottomSheetProps = {
    * content-height sheet.
    */
   top?: number;
+  /** Pins the sheet's top edge this many px below the top of the screen (height: 100% − inset), whatever the frame height. Replaces `top`. */
+  inset?: number;
   /** Content-height sheets only: an extra cap in px (Preferred times = 760). */
   maxHeight?: number;
   /** Screen left above a `top` sheet, in px (default 96). Dense sheets lower it to win height on short phones. */
@@ -52,6 +54,7 @@ export function BottomSheet({
   open,
   onOpenChange,
   top,
+  inset,
   maxHeight,
   minTop = MIN_TOP,
   dismissible = true,
@@ -72,7 +75,9 @@ export function BottomSheet({
   }, [nested, open]);
 
   const style =
-    top !== undefined
+    inset !== undefined
+      ? { height: `calc(100% - ${inset}px)` }
+      : top !== undefined
       ? { height: `min(${DESIGN_FRAME_HEIGHT - top}px, 100% - ${minTop}px)` }
       : maxHeight !== undefined
         ? { maxHeight: `min(${maxHeight}px, 100% - ${MIN_TOP}px)` }
@@ -89,7 +94,7 @@ export function BottomSheet({
         aria-label={ariaLabel}
         handle={draggable}
         overlayClassName={nested ? "z-40" : undefined}
-        className={cn(top === undefined && "max-h-[calc(100%-96px)]", nested && "z-40", className)}
+        className={cn(top === undefined && inset === undefined && "max-h-[calc(100%-96px)]", nested && "z-40", className)}
         style={style}
       >
         {children}
@@ -142,7 +147,8 @@ export function SheetBody({ className, ...props }: ComponentProps<"div">) {
   return (
     <div
       className={cn(
-        "flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pt-2 pb-[120px] scrollbar-none *:shrink-0",
+        // isolate: z-indexes inside the content (avatar stacks) must not climb above the footer dock.
+        "isolate flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pt-2 pb-[120px] scrollbar-none *:shrink-0",
         className,
       )}
       {...props}

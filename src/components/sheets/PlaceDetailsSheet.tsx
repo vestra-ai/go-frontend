@@ -41,7 +41,7 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }:
   const rich = details.layout === "rich";
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} top={rich ? 96 : 200} aria-label={shown.name}>
+    <BottomSheet open={open} onOpenChange={onOpenChange} inset={rich ? 48 : undefined} top={rich ? undefined : 200} aria-label={shown.name}>
       <SheetBody className={rich ? "pb-[150px]" : "pb-[120px]"}>
         <SheetHeader title={shown.name} subtitle={details.subtitle} />
 

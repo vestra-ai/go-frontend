@@ -22,7 +22,7 @@ type StayDetailsSheetProps = {
   onVote: (id: Stay["id"]) => void;
 };
 
-/** E9–E11 stay details sheet (top 96): hero, name + rating, amenities, facts, "Vote for {name}". */
+/** E9–E11 stay details sheet (48px below the top of the screen): hero, name + rating, amenities, facts, "Vote for {name}". */
 export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, onVote }: StayDetailsSheetProps) {
   // Keep the last stay on screen while the sheet animates closed (the parent clears `stay` with the query).
   const [lastStay, setLastStay] = useState(stay);
@@ -31,7 +31,7 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
   if (!shown) return null;
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} top={96} aria-label={shown.name}>
+    <BottomSheet open={open} onOpenChange={onOpenChange} inset={48} aria-label={shown.name}>
       <SheetBody className="gap-3 pb-[120px]">
         <SheetHeader title={shown.name} subtitle={subtitle} />
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
