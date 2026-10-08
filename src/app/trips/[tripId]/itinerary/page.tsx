@@ -40,16 +40,17 @@ const isSpotKey = (value: string | null): value is SpotKey => value !== null && 
 // Both map areas share the same geography, so one set of spots serves "Getting there" and "Coming back".
 const visibleSpots = (scope: Scope) => MAP_SPOTS.filter((s) => s.audience === "both" || s.audience === scope);
 
-// Each scope opens on its artboard's initial state: Everyone = L1 (trip map, blr card), Just me = L2 (list, no card).
+// Each scope opens on its artboard's initial state: Everyone = the trip map, Just me = the list. Nothing starts selected:
+// only a tap (or an explicit `?sel=` link, e.g. the demo presets) makes a route active.
 const SCOPE_START: Record<Scope, PlanState> = {
-  everyone: { scope: "everyone", view: "map", area: "trip", sel: "blr" },
+  everyone: { scope: "everyone", view: "map", area: "trip", sel: null },
   me: { scope: "me", view: "list", area: "trip", sel: null },
 };
 
-/** Missing → blr on the everyone/trip map, else none; a key with no visible spot → none. */
-function parseSel(sel: string | null, area: MapArea, scope: Scope): SpotKey | null {
+/** Missing → none; a key with no visible spot → none. */
+function parseSel(sel: string | null, scope: Scope): SpotKey | null {
   if (sel === "none") return null;
-  if (!isSpotKey(sel)) return scope === "everyone" && area === "trip" ? "blr" : null;
+  if (!isSpotKey(sel)) return null;
   return visibleSpots(scope).some((s) => s.key === sel) ? sel : null;
 }
 
@@ -62,7 +63,7 @@ function parsePlanState(params: URLSearchParams): PlanState {
     scope,
     view: view === "map" || view === "list" ? view : SCOPE_START[scope].view,
     area,
-    sel: parseSel(params.get("sel"), area, scope),
+    sel: parseSel(params.get("sel"), scope),
   };
 }
 
@@ -95,7 +96,7 @@ function ItineraryPlan({ tripId }: { tripId: TripId }) {
   const card = sel ? resolveCard((area === "back" ? MAP_BACK_CARDS : MAP_CARDS)[sel], scope) : null;
 
   const onAction = () => {
-    if (card?.action.kind === "back") setState((s) => ({ ...s, area: "back", sel: "blr" }));
+    if (card?.action.kind === "back") setState((s) => ({ ...s, area: "back", sel: null }));
     else if (card?.action.kind === "toast") toastGo(card.action.text);
   };
 
@@ -106,8 +107,7 @@ function ItineraryPlan({ tripId }: { tripId: TripId }) {
         <ScopeToggle
           className="flex-1"
           value={scope}
-          // The map / list choice carries over, and switching tabs never selects a route for you (only a first visit
-          // opens on the Bengaluru card).
+          // The map / list choice carries over, and switching tabs never selects a route for you.
           onValueChange={(next) => setState((s) => ({ ...SCOPE_START[next], view: s.view, sel: null }))}
         />
         <ViewToggle value={view} onValueChange={(next) => setState((s) => ({ ...s, view: next }))} />
