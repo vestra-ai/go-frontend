@@ -272,7 +272,7 @@ export const PRESETS: Preset[] = [
   // L · Itinerary & map (L-itinerary-map.md §1.1)
   preset("L1", "Itinerary · everyone · full-height map, route tapped", `${HOME}/itinerary?scope=everyone&view=map&area=trip&sel=blr`, PLANNED),
   preset("L2", "Itinerary · just me · list, same map on toggle", `${HOME}/itinerary?scope=me&view=list&area=trip&sel=none`, PLANNED),
-  preset("L3", "Itinerary map · In Goa · Villa Sol tapped", `${HOME}/itinerary?scope=everyone&view=map&area=goa&sel=villa`, PLANNED),
+  preset("L3", "Itinerary map · Coming back · flight home tapped", `${HOME}/itinerary?scope=everyone&view=map&area=back&sel=blr`, PLANNED),
 
   // M · Bookings & expenses (M-bookings-money.md §1.1)
   preset("M1", "Bookings · booked only", `${HOME}/bookings`, M_STATE),

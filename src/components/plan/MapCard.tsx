@@ -6,7 +6,9 @@ import type { MapSpot, SpotKey } from "@/data/types";
 import { MapDetailCard, type ResolvedMapCard } from "./MapDetailCard";
 import { MapHintPill } from "./MapHintPill";
 import { MapScopeSwitch } from "./MapScopeSwitch";
+import { MAP_BLEED, MAP_HOME } from "@/data/seed/map";
 import { MapSpotButton } from "./MapSpotButton";
+import { PanZoomLayer } from "./PanZoomLayer";
 
 export interface MapCardProps {
   area: MapArea;
@@ -23,19 +25,25 @@ export interface MapCardProps {
 
 /** Itinerary map: SVG art, tappable spots, area switch, then the hint pill or the selected spot's card. */
 export function MapCard({ area, audience, sel, spots, card, onArea, onSelect, onClose, onAction }: MapCardProps) {
+  // Selected avatar spots ring their photo in the art, so a photo behind another keeps its ring behind it too.
+  const ringed = new Set(spots.flatMap((s) => (s.photo && s.key === sel ? [s.photo] : [])));
   return (
     <Card variant="shadow" radius="2xl" className="relative isolate aspect-[388/480] w-full overflow-hidden bg-map-land">
-      <GoaMap area={area} audience={audience} className="absolute inset-0" />
-      {spots.map((spot, i) => (
-        <MapSpotButton
-          key={`${spot.key}-${i}`}
-          x={spot.x}
-          y={spot.y}
-          label={spot.label}
-          selected={spot.key === sel}
-          onPress={() => onSelect(spot.key)}
-        />
-      ))}
+      {/* Art and pins share one layer, so they pan and zoom together; the switch and cards stay put above it. */}
+      <PanZoomLayer home={MAP_HOME[audience]} bleed={MAP_BLEED} homeKey={`${area}-${audience}`} zoomInLabel={MAP_COPY.zoomIn} zoomOutLabel={MAP_COPY.zoomOut} onBackgroundTap={onClose}>
+        <GoaMap area={area} audience={audience} ringed={ringed} onRouteSelect={onSelect} className="absolute inset-0" />
+        {spots.map((spot, i) => (
+          <MapSpotButton
+            key={`${spot.key}-${i}`}
+            x={spot.x}
+            y={spot.y}
+            label={spot.label}
+            selected={spot.key === sel}
+            ringless={spot.photo !== undefined}
+            onPress={() => onSelect(spot.key)}
+          />
+        ))}
+      </PanZoomLayer>
       <MapScopeSwitch value={area} onChange={onArea} />
       {card ? <MapDetailCard card={card} onClose={onClose} onAction={onAction} /> : <MapHintPill text={MAP_COPY.hint} />}
     </Card>

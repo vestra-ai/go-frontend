@@ -12,7 +12,7 @@ import { DATE_OPTIONS } from "@/data/seed/dates";
 import { IDEAS } from "@/data/seed/ideas";
 import { INVITES } from "@/data/seed/invites";
 import { ITINERARY } from "@/data/seed/itinerary";
-import { MAP_CARDS, MAP_SPOTS } from "@/data/seed/map";
+import { MAP_BACK_CARDS, MAP_CARDS, MAP_SPOTS } from "@/data/seed/map";
 import { SETTLEMENTS, SPEND, TRANSACTIONS } from "@/data/seed/money";
 import { PAST_TRIPS } from "@/data/seed/pastTrips";
 import { PLACES } from "@/data/seed/places";
@@ -101,10 +101,11 @@ check("everyone rows per day 3/3/1/5", perDay(ITINERARY) === "3/3/1/5");
 const justMe = ITINERARY.filter((i) => i.mine !== null);
 count("just-me rows", justMe.length, 8);
 check("just-me rows per day 3/1/1/3", perDay(justMe) === "3/1/1/3");
-count("map spots", MAP_SPOTS.length, 19);
-const visible = (area: string, scope: string) => MAP_SPOTS.filter((s) => s.area === area && (s.audience === "both" || s.audience === scope)).length;
-check("visible spots trip/everyone 7 · trip/me 3 · goa/everyone 11 · goa/me 7", [visible("trip", "everyone"), visible("trip", "me"), visible("goa", "everyone"), visible("goa", "me")].join(" ") === "7 3 11 7");
-count("map cards", Object.keys(MAP_CARDS).length, 10);
+count("map spots", MAP_SPOTS.length, 9);
+const visible = (scope: string) => MAP_SPOTS.filter((s) => s.audience === "both" || s.audience === scope).length;
+check("visible spots everyone 8 · me 3 (shared by Getting there and Coming back)", [visible("everyone"), visible("me")].join(" ") === "8 3");
+count("map cards", Object.keys(MAP_CARDS).length, 4);
+count("map back cards", Object.keys(MAP_BACK_CARDS).length, 4);
 
 // Scenario --------------------------------------------------------------------
 count("goa stages", SCENARIOS.goa.length, 12);

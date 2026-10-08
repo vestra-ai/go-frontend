@@ -1,6 +1,7 @@
 import { useId } from "react";
 
-import { MAP_ART, type MapArea, type MapAudience, type MapEl, type MapImg, type MapTone } from "@/data/seed/mapArt";
+import type { SpotKey } from "@/data/types";
+import { BLEED_X, BLEED_Y, MAP_ART, type MapArea, type MapAudience, type MapEl, type MapImg, type MapTone } from "@/data/seed/mapArt";
 import { assets } from "@/lib/assets";
 import { cn } from "@/lib/utils";
 
@@ -8,6 +9,10 @@ export interface GoaMapProps {
   area: MapArea;
   audience: MapAudience;
   className?: string;
+  /** Photo ids drawn with the selected ring, in the photo's own layer (a photo behind another keeps its ring behind it). */
+  ringed?: ReadonlySet<string>;
+  /** Makes each dotted route tappable (a wide invisible stroke along it) and selects that route. */
+  onRouteSelect?: (key: SpotKey) => void;
   /** Extra SVG nodes painted last, inside the <svg>. */
   children?: React.ReactNode;
 }
@@ -63,10 +68,17 @@ function Badge({ cx, cy, ty, r, emoji }: { cx: number; cy: number; ty: number; r
   );
 }
 
-function renderEl(el: MapEl, key: number, uid: string) {
+function renderEl(
+  el: MapEl,
+  key: number,
+  uid: string,
+  ringed?: ReadonlySet<string>,
+  onRouteSelect?: (key: SpotKey) => void,
+) {
   switch (el.t) {
     case "rect":
-      return <rect key={key} width={388} height={480} className={FILL[el.tone]} />;
+      // Painted well past the viewBox: the art bleeds so the map can be shifted (centred) without showing an edge.
+      return <rect key={key} x={-BLEED_X} y={-BLEED_Y} width={388 + 2 * BLEED_X} height={480 + 2 * BLEED_Y} className={FILL[el.tone]} />;
     case "shape":
       return <path key={key} d={el.d} className={FILL[el.tone]} />;
     case "road":
@@ -82,6 +94,23 @@ function renderEl(el: MapEl, key: number, uid: string) {
             strokeDasharray="0.1 7"
             fill="none"
           />
+          {onRouteSelect && (
+            // The dots are too thin to hit: an invisible stroke along the same path takes the tap. The route's badge
+            // button is the keyboard / screen-reader way in, so this one is hidden from AT.
+            <path
+              d={el.d}
+              aria-hidden
+              fill="none"
+              stroke="transparent"
+              strokeWidth={26}
+              pointerEvents="stroke"
+              className="cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation(); // a route tap is not a tap on the bare map
+                onRouteSelect(el.key);
+              }}
+            />
+          )}
           <Badge cx={el.badge.cx} cy={el.badge.cy} ty={el.badge.ty} r={13} emoji={el.badge.emoji} />
         </g>
       );
@@ -104,6 +133,9 @@ function renderEl(el: MapEl, key: number, uid: string) {
             preserveAspectRatio="xMidYMid slice"
             clipPath={`url(#${cid})`}
           />
+          {ringed?.has(el.id) && (
+            <circle cx={el.cx} cy={el.cy} r={el.r + 1.5} fill="none" strokeWidth={3} className="stroke-go" />
+          )}
         </g>
       );
     }
@@ -127,7 +159,7 @@ function renderEl(el: MapEl, key: number, uid: string) {
   }
 }
 
-export function GoaMap({ area, audience, className, children }: GoaMapProps) {
+export function GoaMap({ area, audience, ringed, onRouteSelect, className, children }: GoaMapProps) {
   const uid = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const art = MAP_ART[area];
   return (
@@ -135,9 +167,9 @@ export function GoaMap({ area, audience, className, children }: GoaMapProps) {
       viewBox="0 0 388 480"
       role="img"
       aria-label={art.ariaLabel}
-      className={cn("block size-full font-sans", className)}
+      className={cn("block size-full overflow-visible font-sans", className)}
     >
-      {art.els.filter((e) => e.aud === "both" || e.aud === audience).map((e, i) => renderEl(e, i, uid))}
+      {art.els.filter((e) => e.aud === "both" || e.aud === audience).map((e, i) => renderEl(e, i, uid, ringed, onRouteSelect))}
       {children}
     </svg>
   );

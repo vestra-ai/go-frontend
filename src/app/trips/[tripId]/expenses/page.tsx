@@ -19,7 +19,7 @@ import { MONEY_COPY } from "@/data/seed/money";
 import { SESSION_USER_ID } from "@/data/seed/users";
 import { TRIP_IDS } from "@/data/seed/trips";
 import type { TripId } from "@/data/types";
-import { useHydrated, useMoney, useStore, useTripMembers } from "@/store";
+import { useHydrated, useMoney } from "@/store";
 
 const parseScope = (v: string | null): ScopeValue => (v === "me" ? "me" : "everyone");
 
@@ -53,8 +53,6 @@ function Expenses({ tripId }: { tripId: TripId }) {
   }
 
   const shell = useTripShellProps(tripId, "expenses");
-  const members = useTripMembers(tripId);
-  const allMembers = useStore((s) => s.trips.members);
   const money = useMoney(tripId, scope);
   if (!shell) notFound();
 
@@ -76,20 +74,18 @@ function Expenses({ tripId }: { tripId: TripId }) {
     syncUrl({ sheet: open ? "record" : null });
   };
 
-  const me = allMembers[SESSION_USER_ID];
-  const others = members.filter((u) => u.id !== SESSION_USER_ID);
   // Zero until the first transaction exists (PLAN §12.1 #23).
   const zero = money.transactions.length === 0;
 
   const toggle = (
-    <ScopeToggle aria-label={MONEY_COPY.scopeLabel} value={scope} onValueChange={changeScope} others={others} me={me} />
+    <ScopeToggle aria-label={MONEY_COPY.scopeLabel} value={scope} onValueChange={changeScope} />
   );
 
   return (
     <>
       <TripShell {...shell}>
         {zero ? (
-          <ExpensesZero tripId={tripId} scope={scope} onScopeChange={changeScope} me={me} others={others} />
+          <ExpensesZero tripId={tripId} scope={scope} onScopeChange={changeScope} />
         ) : (
           <>
             {toggle}

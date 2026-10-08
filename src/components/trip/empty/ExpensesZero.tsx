@@ -5,7 +5,7 @@ import { ZeroAmount } from "@/components/trip/ZeroAmount";
 import { ScopeToggle, type ScopeValue } from "@/components/common/ScopeToggle";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { planZero } from "@/data/seed/copy";
-import type { TripId, User } from "@/data/types";
+import type { TripId } from "@/data/types";
 
 // DESIGN-ASSUMPTION (I-plan-empty.md §1.6 #13): `college` has no chat scenario, so its links go to the bare chat route.
 const chatHref = (tripId: TripId, query?: string) =>
@@ -17,16 +17,14 @@ type ExpensesZeroProps = {
   tripId: TripId;
   scope: ScopeValue;
   onScopeChange: (scope: ScopeValue) => void;
-  me: User;
-  others: User[];
 };
 
 /** Expenses tab with no spend: scope toggle, zero headline, category tiles, empty settle-up and transactions. */
-export function ExpensesZero({ tripId, scope, onScopeChange, me, others }: ExpensesZeroProps) {
+export function ExpensesZero({ tripId, scope, onScopeChange }: ExpensesZeroProps) {
   const everyone = scope === "everyone";
   return (
     <>
-      <ScopeToggle aria-label="Whose view" value={scope} onValueChange={onScopeChange} others={others} me={me} />
+      <ScopeToggle aria-label="Whose view" value={scope} onValueChange={onScopeChange} />
       <div className="flex flex-col gap-2.5">
         <ZeroAmount amount={copy.zero} caption={everyone ? copy.everyoneCaption : copy.meCaption} />
         <div className="grid grid-cols-2 gap-2.5">

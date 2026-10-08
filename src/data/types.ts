@@ -524,18 +524,19 @@ export interface ItineraryItem {
   mine?: { time?: string; emoji?: string; title: string; sub: string } | null; // omitted = same text; null = hidden in "Just me"
 }
 
-export type SpotKey = "blr" | "bom" | "pnq" | "goa" | "villa" | "chapora" | "grande" | "mopa" | "thivim" | "mapusa";
+export type SpotKey = "blr" | "bom" | "pnq" | "goa";
 
 export interface MapSpot {
   key: SpotKey;
   x: number;
   y: number;
-  area: "trip" | "goa";
   audience: "everyone" | "me" | "both";
   label: string;
+  /** Avatar spots: id of the map-art photo this target sits on. Its selected ring is drawn in the art, in the photo's own layer. */
+  photo?: string;
 }
 
-export type MapCardAction = { kind: "href"; href: string } | { kind: "toast"; text: string } | { kind: "goa" };
+export type MapCardAction = { kind: "href"; href: string } | { kind: "toast"; text: string } | { kind: "back" };
 
 export interface MapCard {
   icon: string;

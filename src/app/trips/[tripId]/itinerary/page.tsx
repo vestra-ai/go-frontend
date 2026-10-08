@@ -14,12 +14,12 @@ import { Screen } from "@/components/shell/Screen";
 import { ItineraryZero } from "@/components/trip/empty/ItineraryZero";
 import { TripShell } from "@/components/trip/TripShell";
 import { useTripShellProps } from "@/components/trip/useTripShellProps";
-import { MAP_CARDS, MAP_SPOTS } from "@/data/seed/map";
+import { MAP_BACK_CARDS, MAP_CARDS, MAP_SPOTS } from "@/data/seed/map";
 import type { MapArea } from "@/data/seed/mapArt";
 import { TRIP_IDS } from "@/data/seed/trips";
 import type { MapCard as MapCardData, SpotKey, TripId, User } from "@/data/types";
 import { toastGo } from "@/lib/toast";
-import { useItinerary, useTripHomeMode, useTripMembers } from "@/store/hooks";
+import { useItinerary, useTripHomeMode } from "@/store/hooks";
 import type { Scope } from "@/store/selectors";
 import { useStore } from "@/store/store";
 import { useHydrated } from "@/store/useHydrated";
@@ -37,8 +37,8 @@ interface PlanState {
 
 const isSpotKey = (value: string | null): value is SpotKey => value !== null && value in MAP_CARDS;
 
-const visibleSpots = (area: MapArea, scope: Scope) =>
-  MAP_SPOTS.filter((s) => s.area === area && (s.audience === "both" || s.audience === scope));
+// Both map areas share the same geography, so one set of spots serves "Getting there" and "Coming back".
+const visibleSpots = (scope: Scope) => MAP_SPOTS.filter((s) => s.audience === "both" || s.audience === scope);
 
 // Each scope opens on its artboard's initial state: Everyone = L1 (trip map, blr card), Just me = L2 (list, no card).
 const SCOPE_START: Record<Scope, PlanState> = {
@@ -50,15 +50,14 @@ const SCOPE_START: Record<Scope, PlanState> = {
 function parseSel(sel: string | null, area: MapArea, scope: Scope): SpotKey | null {
   if (sel === "none") return null;
   if (!isSpotKey(sel)) return scope === "everyone" && area === "trip" ? "blr" : null;
-  // DESIGN-ASSUMPTION (L-itinerary-map.md §1.6 #3): goa-area spots carry no `goa` key, so `area=goa&sel=goa` → none.
-  return visibleSpots(area, scope).some((s) => s.key === sel) ? sel : null;
+  return visibleSpots(scope).some((s) => s.key === sel) ? sel : null;
 }
 
 /** Missing/invalid params fall back to the §1.1 defaults. */
 function parsePlanState(params: URLSearchParams): PlanState {
   const scope: Scope = params.get("scope") === "me" ? "me" : "everyone";
   const view = params.get("view");
-  const area: MapArea = params.get("area") === "goa" ? "goa" : "trip";
+  const area: MapArea = params.get("area") === "back" ? "back" : "trip";
   return {
     scope,
     view: view === "map" || view === "list" ? view : SCOPE_START[scope].view,
@@ -79,7 +78,7 @@ const stackOf = (users: User[]) => users.map((u) => ({ name: u.name, src: u.avat
 // Populated plan (L1–L3)
 // ---------------------------------------------------------------------------
 
-function ItineraryPlan({ tripId, me, others }: { tripId: TripId; me: User; others: User[] }) {
+function ItineraryPlan({ tripId }: { tripId: TripId }) {
   const params = useSearchParams();
   // Parsed once on mount; later changes write all four params back (PLAN §12.1 #19).
   const [state, setState] = useState(() => parsePlanState(params));
@@ -93,10 +92,10 @@ function ItineraryPlan({ tripId, me, others }: { tripId: TripId; me: User; other
   }, [state]);
 
   const { scope, view, area, sel } = state;
-  const card = sel ? resolveCard(MAP_CARDS[sel], scope) : null;
+  const card = sel ? resolveCard((area === "back" ? MAP_BACK_CARDS : MAP_CARDS)[sel], scope) : null;
 
   const onAction = () => {
-    if (card?.action.kind === "goa") setState((s) => ({ ...s, area: "goa", sel: "villa" }));
+    if (card?.action.kind === "back") setState((s) => ({ ...s, area: "back", sel: "blr" }));
     else if (card?.action.kind === "toast") toastGo(card.action.text);
   };
 
@@ -107,9 +106,9 @@ function ItineraryPlan({ tripId, me, others }: { tripId: TripId; me: User; other
         <ScopeToggle
           className="flex-1"
           value={scope}
-          onValueChange={(next) => setState(SCOPE_START[next])}
-          others={others}
-          me={me}
+          // The map / list choice carries over, and switching tabs never selects a route for you (only a first visit
+          // opens on the Bengaluru card).
+          onValueChange={(next) => setState((s) => ({ ...SCOPE_START[next], view: s.view, sel: null }))}
         />
         <ViewToggle value={view} onValueChange={(next) => setState((s) => ({ ...s, view: next }))} />
       </div>
@@ -118,7 +117,7 @@ function ItineraryPlan({ tripId, me, others }: { tripId: TripId; me: User; other
           area={area}
           audience={scope}
           sel={sel}
-          spots={visibleSpots(area, scope)}
+          spots={visibleSpots(scope)}
           card={card}
           onArea={(next) => setState((s) => ({ ...s, area: next, sel: null }))}
           onSelect={(key) => setState((s) => ({ ...s, sel: key }))}
@@ -159,17 +158,12 @@ function ItineraryPlan({ tripId, me, others }: { tripId: TripId; me: User; other
 function ItineraryView({ tripId }: { tripId: TripId }) {
   const shell = useTripShellProps(tripId, "itinerary");
   const populated = useTripHomeMode(tripId) === "populated";
-  const userId = useStore((s) => s.session.userId);
-  const users = useStore((s) => s.trips.members);
-  const members = useTripMembers(tripId);
   if (!shell) notFound();
-
-  const others = members.filter((u) => u.id !== userId);
 
   return (
     <TripShell {...shell}>
       {populated ? (
-        <ItineraryPlan tripId={tripId} me={users[userId]} others={others} />
+        <ItineraryPlan tripId={tripId} />
       ) : (
         // I2: ?scope/?view/?area/?sel are ignored in the zero state.
         <ItineraryZero tripId={tripId} />
