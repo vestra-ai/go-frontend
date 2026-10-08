@@ -40,16 +40,18 @@ export function VendorLivePanel({ who, asking, onListen, onEnd }: VendorLivePane
           <span className="text-13 text-success-ink">{copy.asking(asking)}</span>
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      {/* Wraps on the narrowest phones (the open row is indented): the buttons then drop under the bars. */}
+      <div className="flex flex-wrap items-center gap-2">
         <AudioBars className="h-[26px] shrink-0" />
-        <span className="flex-1" />
-        <Button variant="success-ink" size="38" weight="semibold" className="gap-1" onClick={onListen}>
-          <span aria-hidden>{listen.emoji}</span>
-          {listen.label}
-        </Button>
-        <Button variant="white" size="38" className="text-danger shadow-none" onClick={onEnd}>
-          {CALL_COPY.card.end}
-        </Button>
+        <div className="ml-auto flex items-center gap-2">
+          <Button variant="success-ink" size="38" weight="semibold" className="gap-1" onClick={onListen}>
+            <span aria-hidden>{listen.emoji}</span>
+            {listen.label}
+          </Button>
+          <Button variant="white" size="38" className="text-danger shadow-none" onClick={onEnd}>
+            {CALL_COPY.card.end}
+          </Button>
+        </div>
       </div>
     </div>
   );

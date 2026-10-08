@@ -12,14 +12,14 @@ type LastCallRowProps = {
   className?: string;
 };
 
-/** "Last call · Villa Sol · late check-in confirmed for 11 pm" + Recording pill, below the pending card on trip home (§1.2 D.4). */
+/** "Last call · Villa Sol · late check-in confirmed for 11 pm" + Recording pill, as a soft card inside the open Stay / Flights row. */
 export function LastCallRow({ lastCall, onRecording, className }: LastCallRowProps) {
   const who = VENDOR_CALLS[lastCall.vendor].who;
   const headline = recordingFor(lastCall.vendor, lastCall.asking).outcome.headline;
   const outcome = headline.charAt(0).toLowerCase() + headline.slice(1);
 
   return (
-    <div data-slot="last-call-row" className={cn("flex items-center gap-2.5 border-t border-line pt-2.5", className)}>
+    <div data-slot="last-call-row" className={cn("flex items-center gap-2.5 rounded-2xl bg-canvas p-3", className)}>
       <CheckBadge size={22} />
       <p className="flex-1 text-14 leading-[1.35]">
         <strong className="font-semibold">{CALL_COPY.lastCall.prefix(who)}</strong> · {outcome}

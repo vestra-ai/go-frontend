@@ -115,7 +115,7 @@ export function DoneList({
               />
             )}
             {pastCall.vendor === vendor && (
-              <LastCallRow lastCall={pastCall} className="px-1" onRecording={() => onRecording(vendor)} />
+              <LastCallRow lastCall={pastCall} onRecording={() => onRecording(vendor)} />
             )}
             {key === "fly" && <CheckinPreviewLink {...CHECKIN_COPY.preview} onPreview={onPreviewCheckin} />}
           </ExpandableBookingRow>
