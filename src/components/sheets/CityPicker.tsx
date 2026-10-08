@@ -1,6 +1,6 @@
 "use client";
 
-import { useLayoutEffect, useRef } from "react";
+import { useEffect, useLayoutEffect, useRef } from "react";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { SearchField } from "@/components/common/SearchField";
 import { EmojiTile } from "@/components/common/EmojiTile";
@@ -18,6 +18,8 @@ import { useCityResults } from "./useCityResults";
 
 /** How close to the strip's edge a chip may sit before it counts as clipped (px). */
 const EDGE = 8;
+/** Length of the slide that brings a chip into view (ms). */
+const REVEAL_MS = 320;
 
 type CityPickerProps = {
   value: CityRef | null;
@@ -48,6 +50,7 @@ export function CityPicker({
 }: CityPickerProps) {
   const slotRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
+  const revealFrame = useRef(0);
   const valueIsOther = value !== null && !CIT.some((c) => c.id === value.id);
   // Live results (top Indian cities for an empty query). The query is cleared on open rather than on close, so the
   // list keeps its rows while the popover fades out.
@@ -62,14 +65,43 @@ export function CityPicker({
     onSearchOpenChange(false);
   }
 
-  /** Slides the strip so a chip is centred, e.g. a city picked from the dropdown that the strip already lists. */
+  function cancelReveal() {
+    cancelAnimationFrame(revealFrame.current);
+  }
+  // Never leave a frame running after the picker (its sheet) unmounts.
+  useEffect(() => cancelReveal, []);
+
+  /**
+   * Slides the strip so a chip is centred, e.g. a city picked from the dropdown that the strip already lists.
+   * Animated by hand rather than with a native smooth `scrollBy`: picking from the dropdown closes the search field
+   * (and the iOS keyboard) in the same moment, and WebKit drops a native smooth scroll when the layout moves under
+   * it, so the chip sometimes stayed off-screen. Here the target is re-read every frame and the last frame always
+   * lands on it; a touch on the strip hands control back to the user.
+   */
   function revealChip(id: string, behavior: ScrollBehavior = scrollBehavior()) {
     const strip = stripRef.current;
     const chip = strip?.querySelector<HTMLElement>(`[data-city-id="${id}"]`);
     if (!strip || !chip) return;
-    const s = strip.getBoundingClientRect();
-    const c = chip.getBoundingClientRect();
-    strip.scrollBy({ left: c.left - s.left - (s.width - c.width) / 2, behavior });
+    const target = () => {
+      const s = strip.getBoundingClientRect();
+      const c = chip.getBoundingClientRect();
+      const left = strip.scrollLeft + c.left - s.left - (s.width - c.width) / 2;
+      return Math.min(Math.max(left, 0), strip.scrollWidth - strip.clientWidth);
+    };
+    cancelReveal();
+    if (behavior !== "smooth") {
+      strip.scrollLeft = target();
+      return;
+    }
+    const from = strip.scrollLeft;
+    let start: number | undefined;
+    const step = (now: number) => {
+      start ??= now;
+      const t = Math.min((now - start) / REVEAL_MS, 1);
+      strip.scrollLeft = from + (target() - from) * (1 - (1 - t) ** 3);
+      if (t < 1) revealFrame.current = requestAnimationFrame(step);
+    };
+    revealFrame.current = requestAnimationFrame(step);
   }
 
   /** A tapped chip that is clipped by the strip's edge slides into view; one that is fully visible stays put. */
@@ -98,7 +130,12 @@ export function CityPicker({
 
   return (
     <div className="flex flex-col gap-2.5">
-      <div ref={stripRef} className="-mx-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 scrollbar-none">
+      <div
+        ref={stripRef}
+        onTouchStart={cancelReveal}
+        onWheel={cancelReveal}
+        className="-mx-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 scrollbar-none"
+      >
         {CIT.map((c) => {
           const on = value?.id === c.id;
           return (
