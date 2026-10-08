@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GoaMap } from "@/components/icons/custom/GoaMap";
 import { Card } from "@/components/ui/card";
 import type { MapArea, MapAudience } from "@/data/seed/mapArt";
@@ -12,6 +12,9 @@ import { MapScopeSwitch } from "./MapScopeSwitch";
 import { MAP_BLEED, MAP_HOME } from "@/data/seed/map";
 import { MapSpotButton } from "./MapSpotButton";
 import { PanZoomLayer } from "./PanZoomLayer";
+
+/** How long the detail card stays mounted after it is closed: its exit transition plus a margin. */
+const EXIT_MS = 320;
 
 export interface MapCardProps {
   area: MapArea;
@@ -36,6 +39,17 @@ export function MapCard({ area, audience, sel, spots, card, onArea, onSelect, on
     setTaps((n) => n + 1);
     onSelect(key);
   };
+  // The detail card outlives `card` (null once closed) while it animates out, then unmounts. It is keyed by the
+  // spot: its content only changes with a new selection (area and audience changes clear the selection first).
+  const [kept, setKept] = useState(card && sel ? { sel, card } : null);
+  if (card && sel && kept?.sel !== sel) setKept({ sel, card });
+  const open = card !== null;
+  useEffect(() => {
+    if (open) return;
+    const unmount = setTimeout(() => setKept(null), EXIT_MS);
+    return () => clearTimeout(unmount);
+  }, [open]);
+
   const ringed = new Set(spots.flatMap((s) => (s.photo && s.key === sel ? [s.photo] : [])));
   return (
     <Card variant="shadow" radius="2xl" className="relative isolate aspect-[388/480] w-full overflow-hidden bg-map-land">
@@ -55,7 +69,8 @@ export function MapCard({ area, audience, sel, spots, card, onArea, onSelect, on
         ))}
       </PanZoomLayer>
       <MapScopeSwitch value={area} onChange={onArea} />
-      {card ? <MapDetailCard card={card} revealKey={taps} onClose={onClose} onAction={onAction} /> : <MapHintPill text={MAP_COPY.hint} />}
+      {kept && <MapDetailCard card={kept.card} open={open} revealKey={taps} onClose={onClose} onAction={onAction} />}
+      {!open && <MapHintPill text={MAP_COPY.hint} />}
     </Card>
   );
 }
