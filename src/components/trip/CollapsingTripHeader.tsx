@@ -5,8 +5,10 @@ import type { TripId } from "@/data/types";
 import { TripTabs, type TripTab } from "./TripTabs";
 
 type CollapsingTripHeaderProps = {
-  /** 0..1, stepped by useCollapsingHeader. */
-  hp: number;
+  /** The hero has scrolled away (useCollapsingHeader). */
+  collapsed: boolean;
+  /** Slide between the two states; false for the state the page opened in. */
+  animate: boolean;
   tripId: TripId;
   active: TripTab;
   title: string;
@@ -15,17 +17,16 @@ type CollapsingTripHeaderProps = {
 };
 
 /**
- * Compact header that fades in once the hero has scrolled away. `sticky top-0` on a zero-height rail at the start of
- * the page: the header floats over the hero (and then the content) without taking any space in the flow.
+ * Compact header that slides in, opaque, once the hero has scrolled off the top. `sticky top-0` on a zero-height rail
+ * at the start of the page: the header floats over the content without taking any space in the flow. Hidden it sits
+ * fully above the screen (its shadow included) and is `invisible`, so it takes no focus and shows nothing.
  */
-export function CollapsingTripHeader({ hp, tripId, active, title, sub, onShare }: CollapsingTripHeaderProps) {
-  const interactive = hp > 0.6;
+export function CollapsingTripHeader({ collapsed, animate, tripId, active, title, sub, onShare }: CollapsingTripHeaderProps) {
   return (
     <div className="sticky top-0 z-30 h-0 w-full shrink-0">
       <div
-        inert={!interactive}
-        style={{ opacity: hp, transform: `translateY(${(1 - hp) * -14}px)` }}
-        className={`absolute inset-x-0 top-0 flex flex-col gap-2 bg-white px-3 pb-2.5 pt-safe-hero shadow-header-2 transition-[opacity,transform] duration-[140ms] ease-out will-change-[opacity,transform] ${interactive ? "pointer-events-auto" : "pointer-events-none"}`}
+        inert={!collapsed}
+        className={`absolute inset-x-0 top-0 flex flex-col gap-2 bg-white px-3 pb-2.5 pt-safe-hero shadow-header-2 ease-out ${animate ? "transition-[transform,visibility] duration-[220ms]" : ""} ${collapsed ? "translate-y-0" : "invisible -translate-y-[calc(100%+24px)]"}`}
       >
         <div className="flex items-center gap-1.5">
           <Button asChild variant="ghost" size="icon-sm" className="text-ink">

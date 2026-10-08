@@ -25,7 +25,7 @@ export interface TripShellProps {
   onShare?: () => void;
   shareOpen?: boolean;
   onShareOpenChange?: (open: boolean) => void;
-  /** M2 preset: no hero or big tabs, compact header static at hp=1. */
+  /** M2 preset: no hero or big tabs, compact header always shown. */
   forceCollapsed?: boolean;
   children: React.ReactNode;
 }
@@ -46,19 +46,21 @@ export function TripShell({
   forceCollapsed = false,
   children,
 }: TripShellProps) {
-  const scrollHp = useCollapsingHeader();
+  const { sentinelRef, collapsed: scrolledPast, animate } = useCollapsingHeader();
   const [innerOpen, setInnerOpen] = useState(false);
   const open = shareOpen ?? innerOpen;
   const setOpen = onShareOpenChange ?? setInnerOpen;
-  const hp = forceCollapsed ? 1 : scrollHp;
+  const collapsed = forceCollapsed || scrolledPast;
   const share = onShare ?? (() => setOpen(true));
 
   return (
     <Screen>
-      <CollapsingTripHeader hp={hp} tripId={trip.id} active={active} title={title} sub={collapsedSub} onShare={share} />
+      <CollapsingTripHeader collapsed={collapsed} animate={animate} tripId={trip.id} active={active} title={title} sub={collapsedSub} onShare={share} />
       {forceCollapsed ? null : (
         <>
           <TripHero hero={hero} title={title} titleEmoji={titleEmoji} meta={meta} members={members} onShare={share} />
+          {/* The compact header slides in when this (the hero's bottom edge) leaves the top of the screen. */}
+          <span ref={sentinelRef} aria-hidden className="-mb-px block h-px" />
           <TripTabs tripId={trip.id} active={active} variant="hero" className="relative z-[2] mx-4 -mt-[26px]" />
         </>
       )}
