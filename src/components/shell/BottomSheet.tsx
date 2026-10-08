@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 
 /** Height of the design artboards; sheet `top` values are measured on it. */
 const DESIGN_FRAME_HEIGHT = 912;
-/** Every sheet leaves at least this much of the screen above it (PLAN §4). */
+/** Every sheet leaves at least this much of the screen above it (PLAN §4), unless it asks for less via `minTop`. */
 const MIN_TOP = 96;
 
 type BottomSheetProps = {
@@ -30,6 +30,8 @@ type BottomSheetProps = {
   top?: number;
   /** Content-height sheets only: an extra cap in px (Preferred times = 760). */
   maxHeight?: number;
+  /** Screen left above a `top` sheet, in px (default 96). Dense sheets lower it to win height on short phones. */
+  minTop?: number;
   /** false: no drag-to-dismiss, scrim tap or Escape. */
   dismissible?: boolean;
   /** false: no grab bar and no drag at all (the close button, scrim tap, Escape and Back still dismiss). */
@@ -51,6 +53,7 @@ export function BottomSheet({
   onOpenChange,
   top,
   maxHeight,
+  minTop = MIN_TOP,
   dismissible = true,
   draggable = true,
   nested = false,
@@ -70,7 +73,7 @@ export function BottomSheet({
 
   const style =
     top !== undefined
-      ? { height: `min(${DESIGN_FRAME_HEIGHT - top}px, 100% - ${MIN_TOP}px)` }
+      ? { height: `min(${DESIGN_FRAME_HEIGHT - top}px, 100% - ${minTop}px)` }
       : maxHeight !== undefined
         ? { maxHeight: `min(${maxHeight}px, 100% - ${MIN_TOP}px)` }
         : undefined;

@@ -11,8 +11,6 @@ import { DetailsList } from "./DetailsList";
 const copy = CALL_COPY.listen;
 
 type BookingDetailsAccordionProps = Omit<React.ComponentProps<typeof Card>, "children" | "title"> & {
-  /** 40px leading media (villa photo or IndiGo tile). */
-  media: React.ReactNode;
   /** Vendor name: "Booking details · {who}". */
   who: string;
   rows: DetailRow[];
@@ -20,8 +18,11 @@ type BookingDetailsAccordionProps = Omit<React.ComponentProps<typeof Card>, "chi
   onToggle(): void;
 };
 
-/** "Booking details · {who}" accordion of the Listen sheet; the body is a DetailsList (§1.4). */
-export function BookingDetailsAccordion({ media, who, rows, open, onToggle, className, ...props }: BookingDetailsAccordionProps) {
+/**
+ * "Booking details · {who}" accordion of the Listen sheet; the body is a DetailsList (§1.4). One compact line: the
+ * sheet opens it downward over the call card and transcript, so the chevron points down while closed and up once open.
+ */
+export function BookingDetailsAccordion({ who, rows, open, onToggle, className, ...props }: BookingDetailsAccordionProps) {
   const bodyId = useId();
   return (
     <Card
@@ -36,13 +37,9 @@ export function BookingDetailsAccordion({ media, who, rows, open, onToggle, clas
         aria-expanded={open}
         aria-controls={open ? bodyId : undefined}
         onClick={onToggle}
-        className="flex w-full cursor-pointer items-center gap-3 px-4 py-3.5 text-left"
+        className="flex w-full cursor-pointer items-center gap-3 px-4 py-3 text-left [@media(max-height:720px)]:py-2.5"
       >
-        {media}
-        <span className="flex min-w-0 flex-1 flex-col gap-px">
-          <span className="text-15 font-semibold">{copy.details(who)}</span>
-          <span className="text-13 text-muted">{copy.detailsSub}</span>
-        </span>
+        <span className="min-w-0 flex-1 truncate text-15 font-semibold">{copy.details(who)}</span>
         <ChevronDown
           className={cn("size-[18px] shrink-0 text-muted transition-transform duration-200", open && "rotate-180")}
           strokeWidth={2.4}

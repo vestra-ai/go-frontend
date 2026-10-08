@@ -7,8 +7,8 @@ import { Button } from "@/components/ui/button";
 import { CALL_COPY, liveTranscriptFor } from "@/data/seed/calls";
 import { FLIGHT_DETAILS, STAY_DETAILS } from "@/data/seed/bookings";
 import type { TripId, VendorId } from "@/data/types";
-import { assets } from "@/lib/assets";
 import { splitEmoji } from "@/lib/emoji";
+import { cn } from "@/lib/utils";
 import { useHydrated, useLiveCalls, useStore } from "@/store";
 import type { LiveCall } from "@/store/selectors";
 import { BookingDetailsAccordion } from "./BookingDetailsAccordion";
@@ -17,7 +17,7 @@ import { LiveTranscript } from "./LiveTranscript";
 
 const copy = CALL_COPY.listen;
 
-// "🔇 Mute" → aria-hidden emoji + label, as LiveCallCard does for "🎧 Listen in".
+// "🔇 Mute" → aria-hidden emoji + label.
 function EmojiLabel({ text }: { text: string }) {
   const { emoji, label } = splitEmoji(text);
   return (
@@ -27,6 +27,14 @@ function EmojiLabel({ text }: { text: string }) {
   );
 }
 
+// The mute toggle is an icon button in the hero card: emoji glyph + accessible label from the copy.
+const muteLabel = {
+  mute: splitEmoji(copy.mute).label,
+  muteEmoji: splitEmoji(copy.mute).emoji,
+  unmute: splitEmoji(copy.unmute).label,
+  unmuteEmoji: splitEmoji(copy.unmute).emoji,
+};
+
 type ListenSheetProps = {
   callId: VendorId;
   open: boolean;
@@ -35,7 +43,7 @@ type ListenSheetProps = {
   tripId?: TripId;
 };
 
-/** J5 "Listening in": hero, live transcript, booking details, mute / take over / stop / end (J-triphome-calls.md §1.4). */
+/** J5 "Listening in": hero (with mute), live transcript, booking details, take over / end (J-triphome-calls.md §1.4). */
 export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: ListenSheetProps) {
   const hydrated = useHydrated();
   const live = useLiveCalls(tripId).find((c) => c.id === callId);
@@ -63,43 +71,46 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
   const details = call.id === "villa" ? STAY_DETAILS : call.id === "indigo" ? FLIGHT_DETAILS : null;
 
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} top={96} aria-label={copy.title}>
-      <SheetBody className="pb-[250px]">
+    <BottomSheet open={open} onOpenChange={onOpenChange} top={0} minTop={48} aria-label={copy.title}>
+      {/* No page scroll: the transcript takes the leftover height and is the only thing that scrolls. */}
+      <SheetBody className="gap-3 overflow-hidden pb-[112px] [@media(max-height:720px)]:gap-2">
         <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel={copy.close} />
-        <CallHeroCard who={who} emoji={call.emoji} tint={call.bg} startedAt={call.startedAt} />
-        <LiveTranscript lines={liveTranscriptFor(call.id, call.asking)} who={who} />
         {details && (
-          <BookingDetailsAccordion
-            who={who}
-            media={
-              call.id === "villa" ? (
-                // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover
-                <img src={assets.photos.villaSol.src} alt="" className="size-10 shrink-0 rounded-xl object-cover" />
-              ) : (
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-indigo">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- brand SVG wordmark */}
-                  <img src={assets.indigo.src} alt="" width={assets.indigo.width} height={assets.indigo.height} className="w-7" />
-                </span>
-              )
-            }
-            rows={details}
-            open={detailsOpen}
-            onToggle={() => setListen(tripId, { detailsOpen: !detailsOpen })}
-          />
+          // Reserves the collapsed height; the expanded card grows downward over the call card and transcript instead of squeezing them.
+          <div className="relative h-[46px] [@media(max-height:720px)]:h-[42px]">
+            <BookingDetailsAccordion
+              className={cn("absolute inset-x-0 top-0 z-10", detailsOpen && "shadow-sheet")}
+              who={who}
+              rows={details}
+              open={detailsOpen}
+              onToggle={() => setListen(tripId, { detailsOpen: !detailsOpen })}
+            />
+          </div>
         )}
+        <CallHeroCard
+          who={who}
+          emoji={call.emoji}
+          tint={call.bg}
+          startedAt={call.startedAt}
+          action={
+            <button
+              type="button"
+              aria-pressed={muted}
+              aria-label={muted ? muteLabel.unmute : muteLabel.mute}
+              onClick={() => setListen(tripId, { muted: !muted })}
+              className={cn(
+                "grid size-9 cursor-pointer place-items-center rounded-full text-16 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white",
+                muted ? "bg-white/90" : "bg-white/15 hover:bg-white/25",
+              )}
+            >
+              <span aria-hidden>{muted ? muteLabel.unmuteEmoji : muteLabel.muteEmoji}</span>
+            </button>
+          }
+        />
+        <LiveTranscript lines={liveTranscriptFor(call.id, call.asking)} who={who} className="min-h-[120px] flex-1 shrink!" />
       </SheetBody>
       <SheetFooter>
         <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            size="lg"
-            className="flex-1 text-15 font-semibold"
-            aria-pressed={muted}
-            onClick={() => setListen(tripId, { muted: !muted })}
-          >
-            <EmojiLabel text={muted ? copy.unmute : copy.mute} />
-          </Button>
           <Button
             type="button"
             variant={takenOver ? "success-ink" : "secondary"}
@@ -109,11 +120,6 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
             onClick={() => setListen(tripId, { takenOver: !takenOver })}
           >
             <EmojiLabel text={takenOver ? copy.handBack : copy.takeOver} />
-          </Button>
-        </div>
-        <div className="flex gap-2">
-          <Button type="button" variant="outline" size="lg" className="flex-1 font-semibold" onClick={() => onOpenChange(false)}>
-            {copy.stop}
           </Button>
           <Button
             type="button"
@@ -130,7 +136,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
           </Button>
         </div>
         <p className="text-center text-13 leading-[1.35] text-muted">
-          {takenOver ? copy.noteTakenOver(who) : muted ? copy.noteMuted(who) : copy.noteDefault(who)}
+          {takenOver ? copy.noteTakenOver(who) : muted ? copy.noteMuted(who) : copy.noteDefault()}
         </p>
       </SheetFooter>
     </BottomSheet>

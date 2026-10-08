@@ -4,7 +4,6 @@ import { CheckBadge } from "@/components/common/CheckBadge";
 import { EmojiTile } from "@/components/common/EmojiTile";
 import { ListCard } from "@/components/common/ListCard";
 import { ListRow } from "@/components/common/ListRow";
-import { FLIGHT_DETAILS, STAY_DETAILS } from "@/data/seed/bookings";
 import { CALL_CHIPS, CALL_COPY } from "@/data/seed/calls";
 import { CHECKIN_COPY } from "@/data/seed/checkin";
 import type { VendorId } from "@/data/types";
@@ -12,16 +11,15 @@ import type { DoneRow, LiveCall } from "@/store/selectors";
 import type { OpenRow } from "@/store/state";
 import { CallOptionsPanel } from "./CallOptionsPanel";
 import { CheckinPreviewLink } from "./CheckinPreviewLink";
-import { DetailsList } from "./DetailsList";
 import { ExpandableBookingRow } from "./ExpandableBookingRow";
 import { VendorLivePanel } from "./VendorLivePanel";
 
 type BookingRow = Exclude<OpenRow, null>;
 
-// Which vendor each expandable row calls, and the strings/details its body shows (§1.2 E.1, §1.6).
+// Which vendor each expandable row calls, and the strings its body shows (§1.2 E.1). The booking details live in the Listen sheet.
 const BOOKING_ROWS = {
-  stay: { vendor: "villa", options: CALL_COPY.options.stay, details: STAY_DETAILS },
-  fly: { vendor: "indigo", options: CALL_COPY.options.fly, details: FLIGHT_DETAILS },
+  stay: { vendor: "villa", options: CALL_COPY.options.stay },
+  fly: { vendor: "indigo", options: CALL_COPY.options.fly },
 } as const;
 
 type DoneListProps = Omit<React.ComponentProps<typeof ListCard>, "children" | "onToggle"> & {
@@ -77,7 +75,7 @@ export function DoneList({
           );
         }
         const key = row.expandable;
-        const { vendor, options, details } = BOOKING_ROWS[key];
+        const { vendor, options } = BOOKING_ROWS[key];
         const live = calls.find((c) => c.id === vendor);
         return (
           <ExpandableBookingRow
@@ -110,7 +108,6 @@ export function DoneList({
               />
             )}
             {key === "fly" && <CheckinPreviewLink {...CHECKIN_COPY.preview} onPreview={onPreviewCheckin} />}
-            <DetailsList rows={details} />
           </ExpandableBookingRow>
         );
       })}
