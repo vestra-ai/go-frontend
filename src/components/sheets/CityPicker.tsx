@@ -16,6 +16,9 @@ import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
 import { useCityResults } from "./useCityResults";
 
+/** How close to the strip's edge a chip may sit before it counts as clipped (px). */
+const EDGE = 8;
+
 type CityPickerProps = {
   value: CityRef | null;
   onChange: (city: CityRef | null) => void;
@@ -69,6 +72,16 @@ export function CityPicker({
     strip.scrollBy({ left: c.left - s.left - (s.width - c.width) / 2, behavior });
   }
 
+  /** A tapped chip that is clipped by the strip's edge slides into view; one that is fully visible stays put. */
+  function ensureVisible(id: string) {
+    const strip = stripRef.current;
+    const chip = strip?.querySelector<HTMLElement>(`[data-city-id="${id}"]`);
+    if (!strip || !chip) return;
+    const s = strip.getBoundingClientRect();
+    const c = chip.getBoundingClientRect();
+    if (c.left < s.left + EDGE || c.right > s.right - EDGE) revealChip(id);
+  }
+
   // The picker mounts each time its sheet opens: if the city already selected is a strip chip, bring it into view
   // before the first paint, so a selection further along the strip is never hidden off-screen.
   useLayoutEffect(() => {
@@ -97,6 +110,7 @@ export function CityPicker({
               onClick={() => {
                 if (searchOpen) closeSearch();
                 onChange(on && allowDeselect ? null : c);
+                if (!on) ensureVisible(c.id);
               }}
               className="shrink-0 transition-colors duration-160"
             >
