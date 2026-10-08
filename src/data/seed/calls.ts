@@ -151,7 +151,7 @@ export const CALL_COPY = {
     fly: {
       eyebrow: "ASK GO TO CALL INDIGO",
       srLabel: "What should Go ask IndiGo?",
-      placeholder: "e.g. add 15 kg to my Friday flight",
+      placeholder: "e.g. add 15 kg to my flight",
     },
     call: "📞 Call",
   },
