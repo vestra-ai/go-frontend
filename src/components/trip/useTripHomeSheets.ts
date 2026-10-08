@@ -50,9 +50,10 @@ export interface TripHomeSheets {
   openCheckin(): void;
   /** K2 "Continue to seats" → step seat. */
   continueCheckin(): void;
-  /** K3 close paths → back to step details (K-checkin.md §1.6). */
-  backCheckin(): void;
-  /** Closes the open sheet: `history.back()` when this screen pushed it, otherwise a replace that strips it. */
+  /**
+   * Closes the open sheet: unwinds every history entry this screen pushed for it (`history.go(-n)`; two for the seat
+   * step, which is pushed over details), otherwise a replace that strips it.
+   */
   close(): void;
   /** Accordion row toggle; mirrors the open row into `?open=` with `replaceState` (other params kept). */
   toggleRow(row: OpenRow): void;
@@ -122,12 +123,6 @@ export function useTripHomeSheets(
     depth.current += 1;
   }
 
-  function back() {
-    depth.current -= 1;
-    pendingBacks.current += 1;
-    window.history.back();
-  }
-
   function openSheet(next: TripHomeSheet, extra?: Record<string, string>) {
     push((p) => {
       stripSheet(p);
@@ -139,15 +134,12 @@ export function useTripHomeSheets(
   function close() {
     if (pendingBacks.current > 0) return; // a close is already on its way (e.g. End call + the sheet's self-close)
     if (!new URLSearchParams(window.location.search).has("sheet")) return;
-    if (depth.current > 0) back();
-    else writeQuery(stripSheet);
-  }
-
-  function backCheckin() {
-    if (pendingBacks.current > 0) return;
-    // The seat step is only ever pushed over the details step, so popping it lands on details.
-    if (depth.current > 0) back();
-    else writeQuery((p) => p.set("step", "details"));
+    if (depth.current > 0) {
+      const n = depth.current;
+      depth.current = 0;
+      pendingBacks.current += 1; // one popstate, however many entries it skips
+      window.history.go(-n);
+    } else writeQuery(stripSheet);
   }
 
   function toggleRow(next: OpenRow) {
@@ -166,7 +158,6 @@ export function useTripHomeSheets(
     openRecording: (id) => openSheet("recording", { call: id }),
     openCheckin: () => openSheet("checkin", { step: "details" }),
     continueCheckin: () => openSheet("checkin", { step: "seat" }),
-    backCheckin,
     close,
     toggleRow,
   };

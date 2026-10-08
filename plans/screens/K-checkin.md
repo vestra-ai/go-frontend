@@ -67,7 +67,7 @@ Close paths: X, scrim tap, drag-down and browser Back all call `onClose` → K1 
 - File `src/components/checkin/CheckinSeatSheet.tsx`.
 - Props `{ tripId: TripId; open: boolean; onBack: () => void }`.
 - Reads `checkin.seat` and seed `seats` / `friendSeat` / `nextToFriend`; writes `setSeat` and `completeCheckin`; navigates with `useRouter`.
-- Same `BottomSheet top={96}`. `onOpenChange(false)` → `onBack`, which returns to **step details** (K2), not to home.
+- The same single `BottomSheet` as step 1 (`inset={48}`): moving between steps swaps the content in place. Any dismissal (X / scrim / drag / Esc) closes the whole check-in; browser Back steps seat → details.
 
 Body, top→bottom:
 1. **`SheetHeader`**: title "Pick your seat"; sub "6E 5313 · Bengaluru → Goa · Fri 8:40 pm"; close → `onBack`.
@@ -198,7 +198,8 @@ Seed `src/data/seed/checkin.ts` (P2-1), typed `CheckIn` (§9.1; add any fields i
 | K3 | already-selected seat | — | no-op |
 | K3 | taken seat | — | toast "{id} is taken. Pick a free seat." |
 | K3 | 14B (Arjun) | — | not interactive |
-| K3 | X / scrim / drag-down / Back | — | step → `details` (K2); check-in state kept |
+| K3 | X / scrim / drag-down | — | closes the check-in (history unwound); check-in state kept |
+| K3 | browser Back | — | step → `details` (K2) |
 | K3 | "Check in with seat {sel} · ₹450" / "· free" | `completeCheckin()` | push `/trips/goa/checkin/pass` |
 | K4 | Back arrow | — | `/trips/goa` |
 | K4 | Share (top bar) | — | toast "Boarding pass shared to Goa crew" |
@@ -274,8 +275,8 @@ History follows PLAN §8: a close calls `router.back()` when the step was pushed
   - Must also own `checkin/RouteRow.tsx` (`size` sm|lg) and `checkin/PassField.tsx` (`label`, `value`, `align`), because PLAN requires one component per file and these are missing from its §10 OWNS list.
   - Props-driven: `SeatMap({ seats, selected, friendSeat, onPick })`, `SeatCell({ seat, selected, onPick })`, `BoardingPassCard({ checkin, seat })`.
 - **P3-17**:
-  - Mounts both sheets in `TripHomeScreen` as separate `BottomSheet` instances with mutually exclusive `open`. A step change animates one sheet down and the other up; this is accepted.
-  - `useTripHomeSheets` maps `?sheet=checkin&step=` to `open`. It implements `onClose` / `onContinue` / `onBack` per §1.6 and PLAN §8, and drops the params when `status!=='open'`.
+  - Mounts ONE `CheckinSheet` in `TripHomeScreen` that hosts both steps (`CheckinDetailsStep` / `CheckinSeatStep`); a step change swaps the content inside the open sheet, so the sheet never closes and reopens.
+  - `useTripHomeSheets` maps `?sheet=checkin&step=` to `open`. It implements `onClose` / `onContinue` per §1.6 and PLAN §8 (close unwinds every history entry the sheet pushed), and drops the params when `status!=='open'`.
   - Places P3-10's `CheckinCard` per K1.
 - **P1-6**: `QrBitmap({ rows: string[]; size?: number; className?: string })` renders `<svg viewBox="-1 -1 27 27" width={size} height={size} role="img" aria-label="Boarding pass QR code" shape-rendering="crispEdges" className="block bg-white">` with `<g className="fill-ink">` and one 1×1 `<rect>` per `#` (299 for the seed).
 - **P2-1**: `seed/checkin.ts` (§1.5), the toast strings in `copy.ts`, and preset ids `K1`–`K4` in `presets.ts`.

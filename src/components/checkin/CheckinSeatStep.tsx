@@ -1,12 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { GoNote } from "@/components/common/GoNote";
 import { StepIndicator } from "@/components/common/StepIndicator";
 import { SeatLegend } from "@/components/checkin/SeatLegend";
 import { SeatMap } from "@/components/checkin/SeatMap";
-import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
+import { SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { announceNavigation } from "@/components/shell/NavFeedback";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -17,22 +16,22 @@ import { useStore } from "@/store";
 
 const copy = CHECKIN_COPY.seat;
 
-type CheckinSeatSheetProps = {
+type CheckinSeatStepProps = {
   tripId: TripId;
-  open: boolean;
-  onBack: () => void;
+  /** Check-in is done and the pass page is on its way: the sheet must stay up until the route replaces it. */
+  onLeave: () => void;
+  /** The step replaced another inside the open sheet: its content slides in. */
+  swapped: boolean;
 };
 
-/** K3 web check-in step 2: seat map, selection drives the note and the CTA. */
-export function CheckinSeatSheet({ tripId, open, onBack }: CheckinSeatSheetProps) {
+/** K3 web check-in step 2: seat map, selection drives the note and the CTA. Content only (see CheckinDetailsStep). */
+export function CheckinSeatStep({ tripId, onLeave, swapped }: CheckinSeatStepProps) {
   const router = useRouter();
   const sel = useStore((s) => s.home[tripId].checkin.seat);
   const setSeat = useStore((s) => s.setSeat);
   const completeCheckin = useStore((s) => s.completeCheckin);
   const { seats, friendSeat, friendId, nextToFriend } = CHECKIN;
   const paid = seats.find((s) => s.id === sel)?.state === "paid";
-  // completeCheckin() closes the check-in guard on the trip home; keep the sheet up until the pass route replaces it.
-  const [leaving, setLeaving] = useState(false);
 
   const pick = (id: string) => {
     if (id === sel) return;
@@ -41,15 +40,15 @@ export function CheckinSeatSheet({ tripId, open, onBack }: CheckinSeatSheetProps
   };
 
   const checkIn = () => {
-    setLeaving(true);
+    onLeave(); // completeCheckin() closes the check-in guard on the trip home
     completeCheckin(tripId);
     announceNavigation();
     router.push(`/trips/${tripId}/checkin/pass`);
   };
 
   return (
-    <BottomSheet top={96} open={open || leaving} onOpenChange={(o) => !o && !leaving && onBack()}>
-      <SheetBody>
+    <>
+      <SheetBody className={swapped ? "animate-page-in" : undefined}>
         <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel="Close" />
         <StepIndicator step={2} labels={CHECKIN_COPY.steps} />
         <GoNote variant="green">
@@ -76,6 +75,6 @@ export function CheckinSeatSheet({ tripId, open, onBack }: CheckinSeatSheetProps
           {copy.cta(sel, paid)}
         </Button>
       </SheetFooter>
-    </BottomSheet>
+    </>
   );
 }

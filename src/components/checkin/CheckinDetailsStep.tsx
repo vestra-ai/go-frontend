@@ -7,7 +7,7 @@ import { KVRow } from "@/components/common/KVRow";
 import { ListRow } from "@/components/common/ListRow";
 import { StepIndicator } from "@/components/common/StepIndicator";
 import { RouteRow } from "@/components/checkin/RouteRow";
-import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
+import { SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -19,15 +19,18 @@ import { useStore } from "@/store";
 
 const copy = CHECKIN_COPY.details;
 
-type CheckinDetailsSheetProps = {
+type CheckinDetailsStepProps = {
   tripId: TripId;
-  open: boolean;
-  onClose: () => void;
   onContinue: () => void;
+  /** The step replaced another inside the open sheet: its content slides in. */
+  swapped: boolean;
 };
 
-/** K2 web check-in step 1: read-only passenger details, DigiYatra switch and the restricted-items declaration. */
-export function CheckinDetailsSheet({ tripId, open, onClose, onContinue }: CheckinDetailsSheetProps) {
+/**
+ * K2 web check-in step 1: read-only passenger details, DigiYatra switch and the restricted-items declaration.
+ * Content only: CheckinSheet owns the sheet, so moving between steps never closes and reopens it.
+ */
+export function CheckinDetailsStep({ tripId, onContinue, swapped }: CheckinDetailsStepProps) {
   const digiYatra = useStore((s) => s.home[tripId].checkin.digiYatra);
   const declaration = useStore((s) => s.home[tripId].checkin.declaration);
   const setDigiYatra = useStore((s) => s.setDigiYatra);
@@ -36,8 +39,8 @@ export function CheckinDetailsSheet({ tripId, open, onClose, onContinue }: Check
   const me = USERS[SESSION_USER_ID];
 
   return (
-    <BottomSheet top={96} open={open} onOpenChange={(o) => !o && onClose()}>
-      <SheetBody>
+    <>
+      <SheetBody className={swapped ? "animate-page-in" : undefined}>
         <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel={copy.close} />
         <StepIndicator step={1} labels={CHECKIN_COPY.steps} />
         <Card variant="outline" radius="lg" className="p-[12px_14px]">
@@ -89,6 +92,6 @@ export function CheckinDetailsSheet({ tripId, open, onClose, onContinue }: Check
           {copy.cta}
         </Button>
       </SheetFooter>
-    </BottomSheet>
+    </>
   );
 }

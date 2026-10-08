@@ -2,8 +2,7 @@
 
 import { notFound } from "next/navigation";
 import { useRef } from "react";
-import { CheckinDetailsSheet } from "@/components/checkin/CheckinDetailsSheet";
-import { CheckinSeatSheet } from "@/components/checkin/CheckinSeatSheet";
+import { CheckinSheet } from "@/components/checkin/CheckinSheet";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { MOCK_LAST_CALL } from "@/data/seed/calls";
 import { CHECKIN } from "@/data/seed/checkin";
@@ -117,13 +116,12 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
               />
             </>
           )}
-          <CheckinDetailsSheet
+          <CheckinSheet
             tripId={tripId}
-            open={sheets.checkinStep === "details"}
+            step={sheets.checkinStep}
             onClose={sheets.close}
             onContinue={sheets.continueCheckin}
           />
-          <CheckinSeatSheet tripId={tripId} open={sheets.checkinStep === "seat"} onBack={sheets.backCheckin} />
         </>
       )}
     </>
