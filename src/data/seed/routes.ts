@@ -92,13 +92,11 @@ export const ROUTE_OPTIONS: Record<RouteMode, RouteOption[]> = {
 
 export const ALL_ROUTES: RouteOption[] = [...ROUTE_OPTIONS.flight, ...ROUTE_OPTIONS.train, ...ROUTE_OPTIONS.bus];
 
-// `mix` is hidden for one-way trips (filtersFor in lib/routes.ts).
 export const ROUTE_FILTERS: Record<RouteMode, RouteFilter[]> = {
   flight: [
     { id: "all", label: "All" },
     { id: "nonstop", label: "Nonstop" },
     { id: "cheapest", label: "Cheapest" },
-    { id: "mix", label: "Mix airlines" },
   ],
   train: [
     { id: "all", label: "All" },

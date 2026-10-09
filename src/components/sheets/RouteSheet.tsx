@@ -85,7 +85,7 @@ export function RouteSheet({ tripId, open, onOpenChange }: RouteSheetProps) {
             mode="pressed"
             aria-label={ROUTE_COPY.filterLabel}
             className="min-w-0 flex-1 [mask-image:linear-gradient(to_right,black_calc(100%-20px),transparent)]"
-            options={filtersFor(mode, trip).map((f) => ({ value: f.id, label: f.label }))}
+            options={filtersFor(mode).map((f) => ({ value: f.id, label: f.label }))}
             value={filt}
             onValueChange={(v) => useStore.getState().setRouteFilter(tripId, v)}
           />

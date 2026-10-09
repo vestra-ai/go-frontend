@@ -148,7 +148,8 @@ export function SheetBody({ className, ...props }: ComponentProps<"div">) {
     <div
       className={cn(
         // isolate: z-indexes inside the content (avatar stacks) must not climb above the footer dock.
-        "isolate flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pt-2 pb-[120px] scrollbar-none *:shrink-0",
+        // overflow-x-hidden: with overflow-y:auto the x axis computes to auto, so a sub-pixel overflow gives iOS a sideways scroll.
+        "isolate flex min-h-0 flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto overscroll-contain px-4 pt-2 pb-[120px] scrollbar-none *:shrink-0",
         className,
       )}
       {...props}

@@ -195,7 +195,6 @@ export const createChatSlice: SliceCreator<ChatActions> = (set, get) => ({
     set((s) => {
       const route = s.chat[tripId].route;
       route.trip = trip;
-      if (trip === "oneway" && route.filt === "mix") route.filt = "all"; // Mix airlines is round-trip only
     }),
   setRouteMode: (tripId, mode) =>
     set((s) => {

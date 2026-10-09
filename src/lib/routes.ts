@@ -18,9 +18,9 @@ export function legCodes(mode: RouteMode): [string, string] {
   return LEG_CODES[mode];
 }
 
-/** The mode's filter chips; "Mix airlines" is round-trip only. */
-export function filtersFor(mode: RouteMode, trip: TripType): RouteFilter[] {
-  return ROUTE_FILTERS[mode].filter((f) => trip === "round" || f.id !== "mix");
+/** The mode's filter chips. */
+export function filtersFor(mode: RouteMode): RouteFilter[] {
+  return ROUTE_FILTERS[mode];
 }
 
 /** No slots = any time; otherwise the hour falls in a selected half-open slot [from, to). */
@@ -36,8 +36,7 @@ function okFilt(o: RouteOption, mode: RouteMode, filt: string): boolean {
   if (filt === "all" || !ROUTE_FILTERS[mode].some((f) => f.id === filt)) return true;
   if (mode !== "flight") return o.kind === filt;
   if (filt === "nonstop") return o.kind !== "stop"; // the mixed-airline f1 counts as nonstop (as designed)
-  if (filt === "cheapest") return true; // narrowed and re-ordered by price in visibleRoutes
-  return o.kind === filt; // mix
+  return true; // cheapest: narrowed and re-ordered by price in visibleRoutes
 }
 
 export function matchRoute(o: RouteOption, q: RouteQuery): boolean {
