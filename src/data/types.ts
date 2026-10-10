@@ -70,7 +70,10 @@ export interface Idea {
   travelEmoji: string;
   travel: string;
   tintClass: string;
+  /** The illustration for this place, drawn small on the tint. */
   img: string;
+  /** The destination's own photo (an http(s) link the Server sent): fills the card's top instead of `img`. */
+  photo?: string;
 }
 
 export interface PastTrip {

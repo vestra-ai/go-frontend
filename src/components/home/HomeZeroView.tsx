@@ -1,15 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import type { Idea as ApiIdea } from "@/api/contract";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { AskGoRow } from "@/components/home/AskGoRow";
 import { HeroCard } from "@/components/home/HeroCard";
-import { IdeasCarousel } from "@/components/home/IdeasCarousel";
+import { IdeasCarousel, IdeasCarouselPlaceholder } from "@/components/home/IdeasCarousel";
 import { home as copy } from "@/data/seed/copy";
 import type { Idea } from "@/data/types";
 import { assets } from "@/lib/assets";
 import { loadIdeas, useGo } from "@/state";
+import { httpUrl } from "@/state/bookingView";
 import { illustrationFor } from "@/state/view";
 
 const NEW_TRIP = "/trips/new";
@@ -37,18 +38,23 @@ function toIdea(idea: ApiIdea, index: number): Idea {
     travelEmoji: travel.emoji,
     travel: `${duration(idea.travel.duration_minutes)} ${travel.word}`,
     tintClass: TINTS[index % TINTS.length],
-    // `image_url` may be absent (CONTRACT-APP §4.2): fall back to an illustration.
-    img: idea.image_url ?? illustrationFor(idea.idea_id, idea.name),
+    // `image_url` may be absent (CONTRACT-APP §4.2): the illustration is the fallback, and also what shows if the photo fails.
+    img: illustrationFor(idea.idea_id, idea.name),
+    ...(httpUrl(idea.image_url) ? { photo: httpUrl(idea.image_url) } : {}),
   };
 }
 
 /** First-run Home body (no trips yet). Ideas come from `GET /discover/ideas`; tapping one starts a trip with its hint. */
 export function HomeZeroView({ city }: { city: string | null }) {
   const ideas = useGo((s) => s.ideas);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    void loadIdeas().catch(() => {});
+    void loadIdeas().catch(() => setFailed(true));
   }, []);
+
+  // Until the ideas are in (or the read has failed), their slot holds placeholder cards.
+  const loading = ideas === null && !failed;
 
   const from = ideas?.fromCity ?? city;
   const hints = new Map((ideas?.items ?? []).map((idea) => [idea.idea_id, idea.destination_hint]));
@@ -62,13 +68,17 @@ export function HomeZeroView({ city }: { city: string | null }) {
         ctaHref={NEW_TRIP}
         mascot={{ src: assets.goMascot.src, alt: assets.goMascot.alt }}
       />
-      {ideas && ideas.items.length > 0 && (
+      {(loading || (ideas && ideas.items.length > 0)) && (
         <>
           <SectionHeader title={copy.ideasTitle} meta={from ? copy.ideasMeta(from) : undefined} className="mt-3.5" />
-          <IdeasCarousel
-            ideas={ideas.items.map(toIdea)}
-            hrefFor={(idea) => `${NEW_TRIP}?hint=${encodeURIComponent(hints.get(idea.id) ?? idea.name)}`}
-          />
+          {ideas ? (
+            <IdeasCarousel
+              ideas={ideas.items.map(toIdea)}
+              hrefFor={(idea) => `${NEW_TRIP}?hint=${encodeURIComponent(hints.get(idea.id) ?? idea.name)}`}
+            />
+          ) : (
+            <IdeasCarouselPlaceholder />
+          )}
         </>
       )}
       <AskGoRow title={copy.askGo.title} sub={copy.askGo.sub} href={NEW_TRIP} />
