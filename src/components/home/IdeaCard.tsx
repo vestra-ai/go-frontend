@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { Card } from "@/components/ui/card";
 import type { Idea } from "@/data/types";
+import { SKELETON_BAR, SKELETON_FILL } from "@/lib/skeleton";
 import { cn } from "@/lib/utils";
 
 /** Row-press classes shared with TripCard. */
@@ -54,10 +55,10 @@ export function IdeaCard({ idea, href }: { idea: Idea; href: string }) {
  * real ones arrive.
  */
 export function IdeaCardPlaceholder() {
-  const bar = "rounded-md bg-surface-2 text-transparent select-none";
+  const bar = SKELETON_BAR;
   return (
     <Card variant="shadow" radius="xl" aria-hidden className="flex w-[150px] shrink-0 snap-start flex-col overflow-hidden">
-      <span className="flex h-[104px] items-center justify-center bg-surface-2">
+      <span className={cn("flex h-[104px] items-center justify-center", SKELETON_FILL)}>
         <span className="size-[76px] rounded-3xl bg-white/50" />
       </span>
       <span className="flex flex-col gap-0.5 px-3 pt-2.5 pb-3">

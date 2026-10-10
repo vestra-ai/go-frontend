@@ -10,6 +10,9 @@ const TRIP_TAB = /^\/trips\/([^/]+)(?:\/(?:itinerary|bookings|expenses))?$/;
 // Pages that keep a pinned header still and animate their own body instead (they mark it with `[[data-own]_&]:animate-page-in`).
 const OWN_TRANSITION = /^\/trips\/[^/]+\/(?:chat|expenses\/transactions)$/;
 
+// Pages that draw a skeleton of their own while the session is read: the skeleton is the shell, so it shows at once.
+const OWN_SKELETON = /^\/home$/;
+
 const keyOf = (pathname: string) => {
   const trip = TRIP_TAB.exec(pathname);
   return trip ? `trip:${trip[1]}` : pathname;
@@ -25,7 +28,8 @@ const keyOf = (pathname: string) => {
  * animated parts hold at opacity 0, see globals.css) for two frames. A heavy first render (iOS) otherwise burns the
  * animation's clock before the first frame shows, and the page just snaps in. On a first load or refresh the pages
  * render an empty shell until the session has been read (client only), so the wrapper stays `pre` until then:
- * the slide-up plays on the real content instead of on the empty shell.
+ * the slide-up plays on the real content instead of on the empty shell. (A page with its own skeleton, `OWN_SKELETON`,
+ * is not held: its skeleton is what shows first.)
  * (A root `template.tsx` would not do: it only remounts when the top-level segment changes.)
  */
 export function PageTransition({ children }: { children: ReactNode }) {
@@ -55,13 +59,14 @@ export function PageTransition({ children }: { children: ReactNode }) {
   }, [state.ready, state.pathname]);
 
   const own = OWN_TRANSITION.test(state.pathname);
+  const skeleton = OWN_SKELETON.test(state.pathname);
 
   return (
     <div
       key={state.key}
       data-switch={state.tabSwitch ? "tab" : undefined}
       data-own={own ? "" : undefined}
-      data-phase={state.ready && hydrated ? undefined : "pre"}
+      data-phase={state.ready && (hydrated || skeleton) ? undefined : "pre"}
       className={state.tabSwitch || own ? undefined : "animate-page-in"}
     >
       {children}

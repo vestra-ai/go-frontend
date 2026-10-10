@@ -7,6 +7,7 @@ import { ListRow } from "@/components/common/ListRow";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { StickyDock } from "@/components/shell/StickyDock";
+import { homeBodyClass } from "@/components/home/HomeHeader";
 import { PastTripRow } from "@/components/home/PastTripRow";
 import { TripCard } from "@/components/home/TripCard";
 import { Plus } from "@/components/icons/generated";
@@ -60,7 +61,7 @@ export function AppHomeView({ home }: { home: Home }) {
 
   return (
     <>
-      <div className="flex flex-col gap-2.5 px-4 pt-2.5 pb-[130px]">
+      <div className={homeBodyClass}>
         {home.owes.length > 0 && (
           <>
             <SectionHeader title={copy.owesTitle} />

@@ -52,6 +52,7 @@ export const home = {
   eyebrowBack: "Welcome back",
   title: "Your trips",
   profileLabel: "Your profile",
+  loading: "Loading your trips",
   hero: {
     title: "Start your first group trip",
     body: "Pick a place, add your crew. Go chases dates, budget and bookings.",

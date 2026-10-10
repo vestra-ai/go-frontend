@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useEffect } from "react";
 import { AppHomeView } from "@/components/home/AppHomeView";
+import { HomeHeader } from "@/components/home/HomeHeader";
+import { HomeSkeleton } from "@/components/home/HomeSkeleton";
 import { HomeZeroView } from "@/components/home/HomeZeroView";
 import { Screen } from "@/components/shell/Screen";
-import { ScreenTitle } from "@/components/shell/ScreenTitle";
 import { Avatar } from "@/components/ui/avatar";
 import { home as copy } from "@/data/seed/copy";
 import { loadHome, useGo, useRequireSession } from "@/state";
@@ -21,8 +22,9 @@ export default function HomePage() {
     if (session === "signedIn") void loadHome().catch(() => {});
   }, [session]);
 
+  // The session is read and the home answers after first paint (a refresh): the skeleton holds the page until then.
   if (session !== "signedIn" || !home) {
-    return <Screen>{null}</Screen>;
+    return <HomeSkeleton />;
   }
 
   const user = toUser(home.me);
@@ -30,18 +32,14 @@ export default function HomePage() {
 
   return (
     <Screen>
-      <div className="sticky top-0 z-30 flex shrink-0 items-center justify-between gap-3 bg-canvas px-5 pt-safe pb-2">
-        <ScreenTitle
-          className="flex-1"
-          eyebrow={hasTrips ? copy.eyebrowBack : copy.eyebrowZero}
-          title={copy.title}
-          trailing={
-            <Link href="/profile" aria-label={copy.profileLabel} className="flex size-11 items-center justify-center rounded-full">
-              <Avatar size={40} name={user.name} src={user.avatar} tone={user.tone} />
-            </Link>
-          }
-        />
-      </div>
+      <HomeHeader
+        eyebrow={hasTrips ? copy.eyebrowBack : copy.eyebrowZero}
+        avatar={
+          <Link href="/profile" aria-label={copy.profileLabel} className="flex size-11 items-center justify-center rounded-full">
+            <Avatar size={40} name={user.name} src={user.avatar} tone={user.tone} />
+          </Link>
+        }
+      />
       {hasTrips ? <AppHomeView home={home} /> : <HomeZeroView city={fromCity} />}
     </Screen>
   );
