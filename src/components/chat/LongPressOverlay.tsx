@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useLayoutEffect, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { MenuItem } from "@/components/common/MenuItem";
 import { Copy, Reply } from "@/components/icons/generated";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { chat as copy } from "@/data/seed/copy";
 import type { Attachment, AvatarSpec, BubbleMaxWidth, FrameRect } from "@/data/types";
+import { MENU_EXIT_MS } from "@/data/timing";
 import { assets } from "@/lib/assets";
 import { toastGo } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -33,6 +34,7 @@ type LongPressOverlayProps = {
   anchorRect: FrameRect;
   /** The emoji I have on this message, marked in the bar (tapping it again takes it back). */
   myReaction?: string;
+  /** Every callback below runs once the overlay's exit animation has played (`MENU_EXIT_MS`); each one closes the overlay. */
   onReact(emoji: string): void;
   onReply(): void;
   onAskGo(): void;
@@ -51,12 +53,25 @@ const BAR_OFFSET = 60; // reaction bar 50 + gap 10, so the lifted bubble lands o
 /**
  * D1 message actions: blurred scrim, reaction bar, the lifted bubble at its real position, Reply / Ask Go / Copy.
  * DESIGN-ASSUMPTION (PLAN §12.1 #10): anchored to the pressed bubble instead of the design's fixed top 300.
- * Render inside the chat Screen (positioned, page-sized: it scrolls with the thread). No enter animation (as designed).
+ * Render inside the chat Screen (positioned, page-sized: it scrolls with the thread). The scrim fades in and the column
+ * eases up from the side the bubble sits on; any way out plays that backwards before the parent closes it.
  */
 export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onReply, onAskGo, onCopy, onClose }: LongPressOverlayProps) {
   const columnRef = useRef<HTMLDivElement>(null);
   const firstReactionRef = useRef<HTMLButtonElement>(null);
   const top = anchorRect.top - BAR_OFFSET;
+
+  // Exit: the parent unmounts the overlay as soon as it is told to close, so it is told after the fade, once.
+  const [leaving, setLeaving] = useState(false);
+  const leavingRef = useRef(false);
+  const exitTimer = useRef(0);
+  useEffect(() => () => window.clearTimeout(exitTimer.current), []);
+  const leave = useCallback((then: () => void) => {
+    if (leavingRef.current) return;
+    leavingRef.current = true;
+    setLeaving(true);
+    exitTimer.current = window.setTimeout(then, MENU_EXIT_MS);
+  }, []);
 
   // Clamp against the bottom once the column's height is known (the top clamp is applied at render).
   useLayoutEffect(() => {
@@ -74,11 +89,11 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") leave(onClose);
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [leave, onClose]);
 
   const attachments = message.attachments ?? [];
   const hasText = message.text.trim() !== "";
@@ -91,7 +106,7 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
       // Clipboard can be blocked (permissions, insecure context); the toast still confirms the tap.
     });
     toastGo(copy.toasts.copied);
-    onCopy();
+    leave(onCopy);
   }
 
   return (
@@ -99,8 +114,11 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
       <button
         type="button"
         aria-label={copy.longPress.close}
-        className="absolute inset-0 z-40 cursor-default bg-scrim-strong backdrop-blur-[6px]"
-        onClick={onClose}
+        className={cn(
+          "absolute inset-0 z-40 cursor-default bg-scrim-strong backdrop-blur-[6px] transition-opacity ease-out starting:opacity-0",
+          leaving ? "opacity-0 duration-150" : "duration-220",
+        )}
+        onClick={() => leave(onClose)}
         onContextMenu={suppressContextMenu}
       />
       <div
@@ -110,7 +128,12 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
         // The column spans the frame, so its empty sides and gaps must not eat taps meant for the backdrop: only the
         // reaction bar and the menu take pointer events; a tap anywhere else (the lifted copy included) closes.
         // Unselectable: the overlay opens under the still-held finger, which would otherwise select the word there.
-        className="pointer-events-none absolute inset-x-4 z-[41] flex flex-col gap-2.5 select-none [-webkit-touch-callout:none]"
+        className={cn(
+          "pointer-events-none absolute inset-x-4 z-[41] flex flex-col gap-2.5 select-none [-webkit-touch-callout:none]",
+          "transition-[opacity,scale] ease-out starting:scale-95 starting:opacity-0",
+          mine ? "origin-top-right" : "origin-top-left",
+          leaving ? "scale-95 opacity-0 duration-150" : "duration-220",
+        )}
         style={{ top: Math.max(EDGE, top) }}
         // The press that opened the overlay is still down under it: its context-menu event now lands here, not on the bubble.
         onContextMenu={suppressContextMenu}
@@ -131,7 +154,7 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
               className="size-[42px] text-24"
               aria-label={copy.longPress.react(emoji)}
               aria-pressed={emoji === myReaction}
-              onClick={() => onReact(emoji)}
+              onClick={() => leave(() => onReact(emoji))}
             >
               {emoji}
             </Button>
@@ -157,12 +180,12 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
         )}
 
         <div className={cn("pointer-events-auto w-[230px] overflow-hidden rounded-4xl bg-white shadow-menu", mine ? "self-end" : "ml-[38px]")}>
-          <MenuItem variant="wide" label={copy.longPress.reply} icon={<Reply className="size-[18px]" />} onClick={onReply} />
+          <MenuItem variant="wide" label={copy.longPress.reply} icon={<Reply className="size-[18px]" />} onClick={() => leave(onReply)} />
           <MenuItem
             variant="wide"
             label={copy.longPress.askGo}
             icon={<Avatar kind="go" size={22} src={assets.goAvatar.src} />}
-            onClick={onAskGo}
+            onClick={() => leave(onAskGo)}
           />
           {hasText && <MenuItem variant="wide" label={copy.longPress.copy} icon={<Copy className="size-[18px]" />} onClick={copyText} />}
         </div>

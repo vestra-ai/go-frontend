@@ -85,7 +85,8 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
         author={author}
         {...who}
         quote={i === 0 ? m.quote : undefined}
-        reactions={last ? m.reactions : undefined}
+        // `[]`, not undefined, on the message's last bubble: it keeps the room for the pill, so a first reaction shifts nothing.
+        reactions={last && !m.deleted ? (m.reactions ?? []) : undefined}
         enter={enter}
         pressHandlers={press}
         className={b.attachment?.kind === "image" ? photoBubbleClass : undefined}

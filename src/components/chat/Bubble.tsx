@@ -48,7 +48,7 @@ type BubbleProps = {
   maxWidth?: BubbleMaxWidth;
   /** QuoteBlock above the text: the message this one replies to, or asks Go about. */
   quote?: { author: string; text: string };
-  /** One entry per emoji, most used first (`RoomMessage.reactions`); drawn as one pill under the bubble. */
+  /** One entry per emoji, most used first (`RoomMessage.reactions`); drawn as one pill under the bubble. `[]` = none yet, but the room for the pill is still kept (no layout shift when the first one lands); leave it out for a bubble that takes none. */
   reactions?: { emoji: string; count: number; mine: boolean }[];
   /** Extra rows after the body (GoBubble CTA / caption). */
   footer?: ReactNode;
@@ -80,6 +80,32 @@ function richText(text: string, handles: string[]): ReactNode {
   if (parts.length === 1) return withMentions(text, handles);
   return parts.map((part, i) =>
     i % 2 === 1 ? <strong key={i} className="font-bold">{withMentions(part, handles)}</strong> : <span key={i}>{withMentions(part, handles)}</span>,
+  );
+}
+
+type Reactions = NonNullable<BubbleProps["reactions"]>;
+
+/**
+ * Room under a message bubble for its reaction pill: always there, so the first reaction changes nothing in the layout
+ * (no shift of the rows below, however it is animated). The pill is drawn out of flow, 8px up over the bubble's bottom
+ * edge and hanging 14px below it, which the 8px reserved here plus the thread's 10px row gap leave 4px clear of the
+ * next bubble. Empty list = no reactions yet; the slot is still drawn.
+ */
+function ReactionSlot({ reactions, isMe }: { reactions: Reactions; isMe: boolean }) {
+  const total = reactions.reduce((n, r) => n + r.count, 0);
+  return (
+    <div className="relative h-2 w-full shrink-0">
+      {reactions.length > 0 && (
+        <ReactionChip
+          emoji={reactions.slice(0, PILL_EMOJI).map((r) => r.emoji)}
+          // Like WhatsApp: no number for a lone reaction, else the total across every emoji.
+          count={total > 1 ? total : undefined}
+          mine={reactions.some((r) => r.mine)}
+          label={reactions.map((r) => `${r.emoji} ${r.count}`).join(", ")}
+          className={cn("absolute -top-2 leading-4", isMe ? "right-2.5" : "left-2.5", enterClass)}
+        />
+      )}
+    </div>
   );
 }
 
@@ -115,7 +141,6 @@ export function Bubble({
   const label = author === "go" ? copy.goName : author === "member" ? name : undefined;
   const avatarSpec: AvatarSpec | undefined = isMe ? undefined : (avatar ?? (author === "go" ? { kind: "go" } : undefined));
   const pressable = pressHandlers;
-  const reactionTotal = reactions?.reduce((n, r) => n + r.count, 0) ?? 0;
 
   const bubble = (
     <div
@@ -147,20 +172,11 @@ export function Bubble({
     </div>
   );
 
-  // The max-width sits on a column that also holds the reaction chips, overlapping the bubble's bottom edge by 6px.
+  // The max-width sits on a column that also holds the room for the reaction pill, which overlaps the bubble's bottom edge.
   const column = (
     <div className={cn("flex flex-col", isMe ? "items-end" : "items-start", maxWidthClass[maxWidth ?? defaultMaxWidth[author]])}>
       {bubble}
-      {reactions && reactions.length > 0 && (
-        <ReactionChip
-          emoji={reactions.slice(0, PILL_EMOJI).map((r) => r.emoji)}
-          // Like WhatsApp: no number for a lone reaction, else the total across every emoji.
-          count={reactionTotal > 1 ? reactionTotal : undefined}
-          mine={reactions.some((r) => r.mine)}
-          label={reactions.map((r) => `${r.emoji} ${r.count}`).join(", ")}
-          className={cn("relative -mt-1.5", isMe ? "mr-2.5" : "ml-2.5", enterClass)}
-        />
-      )}
+      {reactions && <ReactionSlot reactions={reactions} isMe={isMe} />}
     </div>
   );
 
