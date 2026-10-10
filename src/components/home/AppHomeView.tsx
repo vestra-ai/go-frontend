@@ -10,6 +10,7 @@ import { StickyDock } from "@/components/shell/StickyDock";
 import { PastTripRow } from "@/components/home/PastTripRow";
 import { TripCard } from "@/components/home/TripCard";
 import { Plus } from "@/components/icons/generated";
+import { DashedNoteRow } from "@/components/trip/DashedNoteRow";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { home as copy } from "@/data/seed/copy";
@@ -101,15 +102,15 @@ export function AppHomeView({ home }: { home: Home }) {
             />
           );
         })}
-        {home.past_trips.length > 0 && (
-          <>
-            <SectionHeader title={copy.pastTitle} className="mt-3.5" />
-            <ListCard padding="tight">
-              {home.past_trips.map((trip, i) => (
-                <PastTripRow key={trip.trip_id} trip={pastTrip(trip, i)} settled={trip.all_settled} />
-              ))}
-            </ListCard>
-          </>
+        <SectionHeader title={copy.pastTitle} className="mt-3.5" />
+        {home.past_trips.length > 0 ? (
+          <ListCard padding="tight">
+            {home.past_trips.map((trip, i) => (
+              <PastTripRow key={trip.trip_id} trip={pastTrip(trip, i)} settled={trip.all_settled} />
+            ))}
+          </ListCard>
+        ) : (
+          <DashedNoteRow emoji={copy.pastEmpty.emoji} title={copy.pastEmpty.title} sub={copy.pastEmpty.sub} />
         )}
       </div>
       <StickyDock>

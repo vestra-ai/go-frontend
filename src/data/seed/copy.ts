@@ -67,6 +67,7 @@ export const home = {
   tripsTitle: "Your trips",
   tripsMeta: (n: number) => `${n} active`,
   pastTitle: "Past trips",
+  pastEmpty: { emoji: "🧳", title: "No past trips yet", sub: "Trips that are over will show up here" },
   pastPeople: (n: number) => `${n} ${n === 1 ? "person" : "people"}`,
   pastSettled: "all settled",
   owesTitle: "You owe",
