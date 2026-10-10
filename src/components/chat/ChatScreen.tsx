@@ -8,6 +8,7 @@ import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatSkeleton } from "@/components/chat/ChatSkeleton";
 import { Composer } from "@/components/chat/Composer";
 import { ComposerTray } from "@/components/chat/ComposerTray";
+import { EarlierMessagesRow } from "@/components/chat/EarlierMessagesRow";
 import { FactChipRow, type FactChipData } from "@/components/chat/FactChipRow";
 import { GoThinking } from "@/components/chat/GoThinking";
 import { LongPressOverlay } from "@/components/chat/LongPressOverlay";
@@ -33,7 +34,6 @@ import { useCardTap } from "@/components/sheets/useCardTap";
 import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor } from "@/components/sheets/useRecordTarget";
 import { RecordingSheet } from "@/components/trip/RecordingSheet";
-import { Button } from "@/components/ui/button";
 import { PRIVATE_COPY } from "@/data/seed/bookings";
 import { CIT } from "@/data/seed/cities";
 import { board as boardCopy, cards as cardCopy, chat as chatCopy, fromSheet, polls, staySheet } from "@/data/seed/copy";
@@ -229,6 +229,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     fromBottom.current = null;
   }, [firstId]);
   const loadEarlier = () => {
+    if (data.loadingHistory) return; // the row stays tappable while loading; a repeat tap must not re-anchor the scroll
     fromBottom.current = document.documentElement.scrollHeight - window.scrollY;
     void loadOlderMessages(tripId).catch((err) => {
       fromBottom.current = null;
@@ -451,9 +452,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
 
         <MessageList bottomPadding={modes.bottomPadding} anchorRef={anchorRef} slideIn={slideIn}>
           {data.hasMoreHistory && (
-            <Button variant="white" size="sm" className="self-center shadow-bubble" aria-busy={data.loadingHistory} disabled={data.loadingHistory} onClick={loadEarlier}>
-              {chatCopy.earlier}
-            </Button>
+            <EarlierMessagesRow label={chatCopy.earlier} loading={data.loadingHistory} onPress={loadEarlier} />
           )}
           {rows.map((m) => (
             <MessageRenderer

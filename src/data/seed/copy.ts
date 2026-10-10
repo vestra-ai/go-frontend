@@ -174,7 +174,7 @@ export const chat = {
   chipUnset: { where: "Where?", when: "When?", stay: "Stay?", budget: "Budget?", from: "From?" },
   /** The header's second line: the dates once set, else who is in. */
   subtitle: { people: (n: number) => (n === 1 ? "Just you so far" : `${n} in the trip`) },
-  earlier: "Earlier messages",
+  earlier: "Show earlier messages",
   goThinking: "Go is thinking",
   mention: { label: "Mention someone" },
   composer: {
@@ -317,7 +317,6 @@ export const polls = {
 // Words the app adds around Go's cards and the Server's record cards (CONTRACT-APP §5). What a card itself says
 // (titles, bodies, button labels) is always the card's own.
 export const cards = {
-  quickReplies: "TAP TO REPLY",
   checked: (ago: string) => `checked ${ago}`,
   options: { count: (n: number) => `${n} ${n === 1 ? "option" : "options"}`, see: "See options", pending: "Sending…" },
   mandate: {

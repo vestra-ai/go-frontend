@@ -109,6 +109,7 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
   });
 
   const sending = m.sending;
+  const chipsHugBubble = bubbles.length > 0 && !card && sending?.status !== "failed" && !m.reactions?.length;
   return (
     <div
       data-message={m.id}
@@ -128,9 +129,10 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
       )}
       {card}
       {isGo && m.quickReplies.length > 0 && (
-        <div className={cn("flex flex-col", enter && enterClass)}>
+        // Chips belong to the bubble above them: pulled up over the reaction slot's 8px + the thread's 10px gap (to 12px),
+        // unless a card or the retry line sits in between, or a reaction pill hangs there. They then get 18px, not 10px, before the next message.
+        <div className={cn("mb-2 flex flex-col", chipsHugBubble && "-mt-1.5", enter && enterClass)}>
           <QuickReplyBlock
-            eyebrow={copy.quickReplies}
             chips={m.quickReplies.map((reply) => ({ label: reply.label, onPress: () => actions.quickReply(reply.text ?? reply.label) }))}
           />
         </div>
