@@ -169,14 +169,33 @@ export const chat = {
     send: "Send",
     stopAndSend: "Stop and send voice note",
     voice: "Voice message",
-    recording: "Recording… tap the mic to send",
-    voiceNote: "🎤 Voice note · 0:06",
+    recording: "Recording voice note",
+    recordingHint: "Recording…",
+    cancelRecording: "Cancel recording",
+    micDenied: "Allow microphone access to send a voice note",
+    micUnavailable: "Voice notes aren’t supported on this device",
+    photoFailed: "Couldn’t read that photo",
+    fileTooBig: (mb: number) => `That file is over ${mb} MB`,
+  },
+  attachment: {
+    photo: "Photo",
+    openPhoto: "Open photo",
+    openFile: (name: string) => `Open ${name}`,
+    photoSub: (width: number, height: number) => `Sent by you · ${width} × ${height}`,
+    photoSaved: "Photo saved",
+    photoFile: "photo.jpg",
+    fileSub: (size: string) => `PDF · ${size}`,
+    fileSaved: "File saved",
+    fileGone: "This file isn’t available any more. Files you send are only kept until you close the app.",
+    viewerLabel: (title: string) => `${title} preview`,
+    pdf: "PDF",
+    play: "Play voice note",
+    pause: "Pause voice note",
+    voice: "Voice note",
   },
   attach: [
     { id: "photo", emoji: "📷", label: "Photo" },
     { id: "pdf", emoji: "📄", label: "Ticket or PDF" },
-    { id: "location", emoji: "📍", label: "Location" },
-    { id: "poll", emoji: "🗳️", label: "Poll" },
   ],
   longPress: {
     reactions: ["❤️", "😂", "🔥", "👍", "😮", "🙏"],
@@ -203,12 +222,6 @@ export const chat = {
 } as const;
 
 // Canned attach-menu sends, in AttachMenu row order (photo, pdf, location, poll).
-export const attachSends = {
-  goa: ["📷 Photo · Goa packing list", "📄 Shared a PDF · IndiGo e-ticket", "📍 Shared location · Anjuna", "🗳️ Poll · Scuba on Sunday? Yes / No"],
-  // DESIGN-ASSUMPTION (G-bali.md §1.7 #3): only the Goa nouns are swapped.
-  bali: ["📷 Photo · Bali packing list", "📄 Shared a PDF · IndiGo e-ticket", "📍 Shared location · Denpasar", "🗳️ Poll · Scuba on Sunday? Yes / No"],
-} as const;
-
 export const quickStart = {
   label: "Quick start",
   title: "Quick start",
@@ -539,7 +552,6 @@ export const copy = {
   invite,
   share,
   chat,
-  attachSends,
   quickStart,
   fromSheet,
   cityPicker,

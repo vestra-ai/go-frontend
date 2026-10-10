@@ -9,13 +9,13 @@ import type { AttachItem } from "@/data/types";
 type AttachMenuProps = {
   open: boolean;
   onOpenChange(open: boolean): void;
-  /** The caller sends the matching canned message (`attachSends[tripId]`, same row order). */
+  /** The caller opens the matching file picker. */
   onPick(item: AttachItem): void;
   /** The trigger (the composer's + button). */
   children: ReactNode;
 };
 
-/** 220px attach menu above the + button: Photo, Ticket or PDF, Location, Poll. Picking a row closes it. */
+/** 220px attach menu above the + button: Photo, Ticket or PDF. Picking a row closes it. */
 export function AttachMenu({ open, onOpenChange, onPick, children }: AttachMenuProps) {
   return (
     <DropdownMenu open={open} onOpenChange={onOpenChange}>

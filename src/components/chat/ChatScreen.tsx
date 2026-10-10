@@ -12,6 +12,7 @@ import { useLongPress } from "@/components/chat/useLongPress";
 import { useScrollToEnd } from "@/components/chat/useScrollToEnd";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
+import { AttachmentSheet } from "@/components/sheets/AttachmentSheet";
 import { BoardSheet } from "@/components/sheets/BoardSheet";
 import { BudgetSheet } from "@/components/sheets/BudgetSheet";
 import { CabSheet } from "@/components/sheets/CabSheet";
@@ -199,6 +200,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     askPlaces: () => store().advance(tripId, "place-asked"),
     votePlace: (id) => store().votePlace(tripId, id),
     openPlace: (id) => sheets.open("place", id),
+    openAttachment: (id) => sheets.open("attachment", id),
     morePlaces: () => toastGo(toasts.morePlaces),
     voteDate: (id) => store().voteDate(tripId, id),
     toggleFlexible: () => store().setFlexible(tripId),
@@ -241,6 +243,13 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
   const ticketId = sheet === "ticket" ? sheets.sheetId : null;
   if (ticketId && ticketId !== lastTicketId) setLastTicketId(ticketId);
   const ticket = BOOKINGS.find((b) => b.id === (ticketId ?? lastTicketId))?.ticket ?? null;
+
+  // Attachment viewer: the message's photo or PDF, kept while the sheet animates out.
+  const [lastAttachmentId, setLastAttachmentId] = useState<string | null>(null);
+  const attachmentId = sheet === "attachment" ? sheets.sheetId : null;
+  if (attachmentId && attachmentId !== lastAttachmentId) setLastAttachmentId(attachmentId);
+  const sentAttachment = chat.sent.find((m) => m.id === (attachmentId ?? lastAttachmentId))?.attachment;
+  const viewable = sentAttachment?.kind === "image" || sentAttachment?.kind === "file" ? sentAttachment : null;
 
   const payStayId = messages.flatMap((m) => (m.card?.kind === "pay-ask" ? [m.card.payload.stayId] : []))[0];
   const payStay = STAYS.find((s) => s.id === payStayId);
@@ -322,10 +331,12 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
             onChange={modes.setDraft}
             onSend={modes.sendDraft}
             recording={modes.recording}
+            recordingSeconds={modes.recordingSeconds}
+            onCancelRecording={modes.cancelRecording}
             onMic={modes.mic}
             attachOpen={modes.attachOpen}
             onAttachOpenChange={modes.onAttachOpenChange}
-            onAttach={modes.attach}
+            onAttachFile={modes.attachFile}
           />
         )}
 
@@ -432,6 +443,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
         // Private sheet -> ticket viewer in one URL replace, so closing the viewer lands back on the chat.
         onOpenTicket={() => sheets.swap("ticket", PRIVATE_DETAILS.bookingId)}
       />
+      <AttachmentSheet tripId={tripId} open={sheet === "attachment"} onOpenChange={closeOnFalse} attachment={viewable} />
       <TicketSheet tripId={tripId} open={sheet === "ticket"} onOpenChange={closeOnFalse} ticket={ticket} />
       <VisaSheet
         open={sheet === "visa"}

@@ -3,6 +3,7 @@ import { chat as chatCopy } from "@/data/seed/copy";
 import { BUDGET_RANGE } from "@/data/seed/money";
 import { GO_REPLY_MS } from "@/data/timing";
 import type {
+  Attachment,
   CityRef,
   DateOption,
   PlaceOption,
@@ -41,6 +42,8 @@ export interface ChatActions {
   setFromCity(tripId: TripId, city: CityRef): void;
 
   send(tripId: TripId, text: string, opts?: SendOptions): void;
+  /** Sends a photo / PDF / voice note as my message; Go acks it like a text. */
+  sendAttachment(tripId: TripId, attachment: Attachment): void;
   react(tripId: TripId, msgId: string, emoji: string): void;
 
   votePlace(tripId: TripId, id: PlaceOption["id"] | null): void;
@@ -80,6 +83,19 @@ export interface ChatActions {
 const SENT_MAX_WIDTH = 78;
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(Math.max(n, lo), hi);
+
+type SetState = Parameters<SliceCreator<ChatActions>>[0];
+
+/** Each send re-arms the timer, so a burst gets one Go ack, tagged with the stage of the message it answers. */
+function armAck(set: SetState, tripId: TripId, stage: StageId) {
+  schedule(`ack:${tripId}`, GO_REPLY_MS, () =>
+    set((s) => {
+      const c = s.chat[tripId];
+      c.seq += 1;
+      c.sent.push({ id: `${tripId}-sent-${c.seq}`, stage, author: "go", kind: "text", text: chatCopy.goAck, maxWidth: SENT_MAX_WIDTH });
+    }),
+  );
+}
 
 export const createChatSlice: SliceCreator<ChatActions> = (set, get) => ({
   advance: (tripId, trigger) =>
@@ -126,14 +142,23 @@ export const createChatSlice: SliceCreator<ChatActions> = (set, get) => ({
       });
     });
     if (opts.ack === false) return;
-    // Each send re-arms the timer, so a burst gets one ack, tagged with the stage of the message it answers.
-    schedule(`ack:${tripId}`, GO_REPLY_MS, () =>
-      set((s) => {
-        const c = s.chat[tripId];
-        c.seq += 1;
-        c.sent.push({ id: `${tripId}-sent-${c.seq}`, stage, author: "go", kind: "text", text: chatCopy.goAck, maxWidth: SENT_MAX_WIDTH });
-      }),
-    );
+    armAck(set, tripId, stage);
+  },
+  sendAttachment: (tripId, attachment) => {
+    const stage = stageAt(tripId, get().chat[tripId].stageIndex).id;
+    set((s) => {
+      const c = s.chat[tripId];
+      c.seq += 1;
+      c.sent.push({
+        id: `${tripId}-sent-${c.seq}`,
+        stage,
+        author: s.session.userId,
+        kind: "text",
+        attachment: { ...attachment },
+        maxWidth: SENT_MAX_WIDTH,
+      });
+    });
+    armAck(set, tripId, stage);
   },
   react: (tripId, msgId, emoji) =>
     set((s) => {

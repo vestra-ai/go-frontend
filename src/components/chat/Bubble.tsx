@@ -28,7 +28,7 @@ const defaultMaxWidth: Record<Author, BubbleMaxWidth> = { go: 76, member: 72, me
 const bubbleClass: Record<Author, string> = {
   go: "rounded-bl-none bg-go-soft px-3.5 pt-2 pb-2.5 gap-0.5 shadow-bubble",
   member: "rounded-bl-none bg-white px-3.5 pt-2 pb-2.5 gap-0.5 shadow-bubble",
-  me: "rounded-br-none bg-black px-3.5 py-2.5 gap-1 text-white",
+  me: "rounded-br-none bg-mine px-3.5 py-2.5 gap-1 text-ink",
 };
 
 const enterClass =
@@ -80,7 +80,7 @@ function bubbleAvatar(spec: AvatarSpec): ReactNode {
   );
 }
 
-/** A chat message bubble (C-chat-kickoff.md §1.2). Go is peach, members white, mine black. */
+/** A chat message bubble (C-chat-kickoff.md §1.2). Go is peach, members white, mine periwinkle. */
 export function Bubble({
   author,
   name,

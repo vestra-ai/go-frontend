@@ -1,3 +1,4 @@
+import { AttachmentContent, photoBubbleClass } from "./AttachmentContent";
 import type { ReactNode } from "react";
 import { BookingProgressCard } from "@/components/chat/cards/BookingProgressCard";
 import { BudgetAskBubble } from "@/components/chat/cards/BudgetAskBubble";
@@ -34,6 +35,8 @@ export interface CardActions {
   askPlaces(): void;
   votePlace(id: PlaceOption["id"] | null): void;
   openPlace(id: PlaceOption["id"]): void;
+  /** Tap on a photo or PDF I sent: opens it in the viewer. */
+  openAttachment(messageId: string): void;
   morePlaces(): void;
   voteDate(id: DateOption["id"] | null): void;
   toggleFlexible(): void;
@@ -226,8 +229,16 @@ export function MessageRenderer(props: MessageRendererProps) {
   if (m.author === me) {
     return (
       <div className={cn("flex flex-col", className)}>
-        <Bubble author="me" maxWidth={m.maxWidth} quote={m.quote} mention={m.mention} reaction={m.reaction} enter={enter}>
-          {m.text ?? ""}
+        <Bubble
+          author="me"
+          maxWidth={m.maxWidth}
+          quote={m.quote}
+          mention={m.mention}
+          reaction={m.reaction}
+          enter={enter}
+          className={m.attachment?.kind === "image" ? photoBubbleClass : undefined}
+        >
+          {m.attachment ? <AttachmentContent attachment={m.attachment} onOpen={() => props.actions.openAttachment(m.id)} /> : (m.text ?? "")}
         </Bubble>
       </div>
     );

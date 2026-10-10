@@ -28,7 +28,8 @@ export type ChatSheet =
   | "ticket"
   | "visa"
   | "board"
-  | "share";
+  | "share"
+  | "attachment";
 
 // G-bali.md §1.3: the Bali board icon toasts instead of opening the sheet.
 const BOARDLESS: ReadonlySet<TripId> = new Set<TripId>(["bali"]);
@@ -99,6 +100,7 @@ function sheetAllowed(sheet: ChatSheet, id: string | null, g: Guard): boolean {
     case "from":
     case "budget":
     case "share":
+    case "attachment":
       return true;
   }
 }

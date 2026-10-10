@@ -19,7 +19,7 @@
   --color-muted: #4A5878;          /* secondary text, placeholders */
   --color-faint: #A5ACB8;          /* tertiary text, chevrons, dashed "other" borders */
   --color-faint-2: #8A93A3;        /* disabled button text */
-  --color-black: #000000;          /* primary button fill, my bubble, selected seat/segment */
+  --color-black: #000000;          /* primary button fill, selected seat/segment */
   --color-white: #FFFFFF;
 
   /* ── colour: surfaces & lines ──────────────────────────────────── */
@@ -34,6 +34,10 @@
   --color-line-4: #C9CED6;         /* dashed route rule, taken-seat text, checkbox-off border */
   --color-scrim: rgb(11 27 63 / 0.38);        /* sheet backdrop */
   --color-scrim-strong: rgb(11 27 63 / 0.42); /* long-press backdrop (+ blur 6px) */
+
+  /* ── colour: my chat bubble (soft periwinkle, ink text) ─────────── */
+  --color-mine: #DDE7FA;           /* my bubble */
+  --color-mine-line: #9DB6E8;      /* quote rule inside my bubble */
 
   /* ── colour: Go brand (terracotta) ─────────────────────────────── */
   --color-go: #A44F3A;             /* "Go" label, Skip/Not now links, pending accents, unread badge, tint-button text */

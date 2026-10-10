@@ -96,7 +96,7 @@ export interface Invite {
 
 export type AvatarSpec = { kind: "go" } | { kind: "user"; src?: string; initials: string; tone: User["tone"] };
 export type FrameRect = { top: number; left: number; width: number; height: number }; // px, relative to #app-frame (page coordinates)
-export type AttachItem = "photo" | "pdf" | "location" | "poll";
+export type AttachItem = "photo" | "pdf";
 export type ComposerMode = null | "longpress" | "reply" | "askGo";
 export type BubbleMaxWidth = 64 | 70 | 72 | 76 | 78 | 80;
 
@@ -270,12 +270,22 @@ export type MessageCard = { [K in CardKind]: { kind: K; payload: CardPayloads[K]
 // Serializable visibility rules (replace PLAN §9.1's `visibleWhen` function).
 export type MessageCondition = "qs-done" | "qs-dismissed" | "booking-claimed-by-rahul";
 
+/**
+ * What a sent message carries besides text. Photos keep a small downscaled data URL (they survive a reload); PDFs and
+ * voice notes keep an object URL that only lives for this session (`persist.ts` drops it).
+ */
+export type Attachment =
+  | { kind: "image"; src: string; width: number; height: number }
+  | { kind: "file"; name: string; size: number; src?: string }
+  | { kind: "voice"; seconds: number; src?: string };
+
 export interface Message {
   id: Id;
   stage: StageId;
   author: Author;
   kind: "text" | "system" | "card";
   text?: string; // "\n" = line break, "**x**" = bold
+  attachment?: Attachment; // my photo / PDF / voice note
   card?: MessageCard;
   mention?: boolean; // me only → MentionChip "Go" before the text
   quote?: { author: string; text: string };

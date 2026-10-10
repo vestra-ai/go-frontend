@@ -1,4 +1,4 @@
-import type { TripId } from "@/data/types";
+import type { Message, TripId } from "@/data/types";
 import type { ChatTripData, GoData, HomeTripData } from "@/store/state";
 
 // persist config (PLAN §9.4): key `go-proto-v1`, version 1. `partialize` drops transient UI, drafts and passport
@@ -10,10 +10,15 @@ export const STORE_VERSION = 1;
 const mapTrips = <T, U>(record: Record<TripId, T>, fn: (value: T) => U): Record<TripId, U> =>
   Object.fromEntries(Object.entries(record).map(([id, value]) => [id, fn(value as T)])) as Record<TripId, U>;
 
+// A PDF / voice note's object URL dies with the session; a photo's downscaled data URL is kept.
+const persistedSent = (m: Message): Message =>
+  m.attachment && m.attachment.kind !== "image" ? { ...m, attachment: { ...m.attachment, src: undefined } } : m;
+
 function persistedChat(c: ChatTripData) {
   const { trip, mode, filt, pick, on, ret, booked } = c.route; // route.draft (TimeSheet) is transient
   return {
     ...c,
+    sent: c.sent.map(persistedSent),
     route: { trip, mode, filt, pick, on, ret, booked },
     visa: { uploads: c.visa.uploads, sent: c.visa.sent }, // visa.fields never reach localStorage (G-bali.md §1.4)
   };

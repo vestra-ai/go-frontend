@@ -2,11 +2,14 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { attachSends, chat as chatCopy } from "@/data/seed/copy";
+import { chat as chatCopy } from "@/data/seed/copy";
 import { GO_REPLY_MS } from "@/data/timing";
 import type { AttachItem, ComposerMode, StageId, TripId, UserId } from "@/data/types";
+import { downscalePhoto } from "@/lib/media";
+import { toastGo } from "@/lib/toast";
 import { useStore, type ChatMessage } from "@/store";
 import { writeChatQuery } from "./useChatSheets";
+import { useVoiceRecorder } from "./useVoiceRecorder";
 
 // Composer state machine (C-chat-kickoff.md §1.2 "State machine", §1.5): default composer (draft, voice note,
 // attach menu), the long-press overlay, and the reply / ask-Go trays. `?mode=longpress|reply|askGo&msg=<id>`
@@ -16,6 +19,9 @@ const MODES: readonly Exclude<ComposerMode, null>[] = ["longpress", "reply", "as
 
 // Message list bottom padding per mode (C-chat-kickoff.md §1.2 MessageList).
 const PADDING = { none: 96, longpress: 96, reply: 150, askGo: 190 } as const;
+
+/** Largest PDF the composer accepts (MB). */
+const MAX_FILE_MB = 10;
 
 // The stage where a reply / ask-Go send also fires `dates-asked` (C-chat-kickoff.md §1.3).
 const DATES_TALK: StageId = "dates-talk";
@@ -39,12 +45,17 @@ export interface ComposerModes {
   trayDraft: string;
   setTrayDraft(value: string): void;
   recording: boolean;
+  /** Whole seconds into the current voice note. */
+  recordingSeconds: number;
+  /** Drops the recording without sending it. */
+  cancelRecording(): void;
   attachOpen: boolean;
   setMode(mode: ComposerMode, msgId?: string): void;
   sendDraft(text: string): void;
   mic(): void;
   onAttachOpenChange(open: boolean): void;
-  attach(item: AttachItem): void;
+  /** A photo or PDF picked from the + menu: sent as my message. */
+  attachFile(item: AttachItem, file: File): Promise<void>;
   sendTray(text: string): void;
 }
 
@@ -70,7 +81,6 @@ export function useComposerModes(tripId: TripId, stageId: StageId, messages: Cha
   }, [invalid]);
 
   const [draft, setDraft] = useState("");
-  const [recording, setRecording] = useState(false);
   const [attachOpen, setAttachOpen] = useState(false);
 
   // The tray draft restarts whenever the tray opens on a message (reply: the seed draft; ask Go: empty).
@@ -99,26 +109,48 @@ export function useComposerModes(tripId: TripId, stageId: StageId, messages: Cha
     setDraft("");
   }
 
-  function mic() {
-    if (recording) {
-      setRecording(false);
-      useStore.getState().send(tripId, chatCopy.composer.voiceNote);
-      return;
-    }
-    setRecording(true);
+  const recorder = useVoiceRecorder(() => void sendRecording());
+  // Stops the recording and sends it as a voice note (also when the length limit is hit).
+  async function sendRecording() {
+    const clip = await recorder.stop();
+    if (!clip) return;
+    useStore.getState().sendAttachment(tripId, { kind: "voice", seconds: clip.seconds, src: URL.createObjectURL(clip.blob) });
+  }
+  const starting = useRef(false);
+
+  async function mic() {
+    if (recorder.recording) return sendRecording();
+    if (starting.current) return; // the permission prompt is still open
+    starting.current = true;
     setAttachOpen(false);
+    const result = await recorder.start().finally(() => {
+      starting.current = false;
+    });
+    if (result === "denied") toastGo(chatCopy.composer.micDenied);
+    else if (result === "unsupported") toastGo(chatCopy.composer.micUnavailable);
   }
 
   function onAttachOpenChange(open: boolean) {
     setAttachOpen(open);
-    if (open) setRecording(false); // opening the menu ends the recording without sending
+    if (open) recorder.cancel(); // opening the menu ends the recording without sending
   }
 
-  function attach(item: AttachItem) {
-    const sends = tripId === "bali" ? attachSends.bali : attachSends.goa;
-    const index = chatCopy.attach.findIndex((row) => row.id === item);
-    setAttachOpen(false);
-    if (index >= 0) useStore.getState().send(tripId, sends[index]);
+  async function attachFile(item: AttachItem, file: File) {
+    const store = useStore.getState();
+    if (item === "photo") {
+      try {
+        const photo = await downscalePhoto(file);
+        store.sendAttachment(tripId, { kind: "image", ...photo });
+      } catch {
+        toastGo(chatCopy.composer.photoFailed);
+      }
+      return;
+    }
+    if (file.size > MAX_FILE_MB * 1024 * 1024) {
+      toastGo(chatCopy.composer.fileTooBig(MAX_FILE_MB));
+      return;
+    }
+    store.sendAttachment(tripId, { kind: "file", name: file.name, size: file.size, src: URL.createObjectURL(file) });
   }
 
   function sendTray(text: string) {
@@ -155,13 +187,15 @@ export function useComposerModes(tripId: TripId, stageId: StageId, messages: Cha
     setDraft,
     trayDraft: tray.value,
     setTrayDraft: (value) => setTray({ key: trayKey, value }),
-    recording,
+    recording: recorder.recording,
+    recordingSeconds: recorder.seconds,
+    cancelRecording: recorder.cancel,
     attachOpen,
     setMode,
     sendDraft,
     mic,
     onAttachOpenChange,
-    attach,
+    attachFile,
     sendTray,
   };
 }
