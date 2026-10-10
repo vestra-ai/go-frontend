@@ -440,7 +440,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
       <Screen>
         <ChatHeader
           // The same picture as the trip home's hero banner; the drawn illustration only when the destination has no photo.
-          trip={{ name: trip.name, avatar: trip.hero?.src ?? trip.illustration, photo: Boolean(trip.hero), tint: trip.tint }}
+          // Named for the place once it is decided, like the trip home's hero; the Server's title ("New trip") until then.
+          trip={{ name: trip.destination ?? trip.name, avatar: trip.hero?.src ?? trip.illustration, photo: Boolean(trip.hero), tint: trip.tint }}
           subtitle={subtitle}
           members={view.people.slice(0, 4).map((p) => userAvatar(toUser(p)))}
           backHref={`/trips/${tripId}`}

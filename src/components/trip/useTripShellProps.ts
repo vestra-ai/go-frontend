@@ -58,7 +58,26 @@ export function useTripShellProps(tripId: TripId, active: TripTab): TripShellBin
   const chat = chatPreview(view, members);
 
   if (view.stage !== "planned") {
-    const where = trip.destination ?? planZero.hero.where;
+    const joined = planZero.hero.joined(members.length);
+    // The destination is decided (say, a won poll) before the trip is `planned`: lead with it, as the Home card does,
+    // and keep the Server's title ("New trip") for a trip that has no place yet.
+    if (trip.destination) {
+      return {
+        trip,
+        active,
+        hero: trip.hero ? { kind: "image", ...trip.hero } : { kind: "gradient" },
+        title: trip.destination,
+        titleEmoji: PLANNED_EMOJI.title,
+        meta: [
+          ...(trip.dates ? [{ emoji: PLANNED_EMOJI.dates, text: trip.dates.range }] : []),
+          { emoji: ZERO_EMOJI.joined, text: joined },
+        ],
+        collapsedSub: trip.dates?.range ?? joined,
+        members,
+        chatPreview: chat,
+      };
+    }
+    const where = planZero.hero.where;
     return {
       trip,
       active,
@@ -66,7 +85,7 @@ export function useTripShellProps(tripId: TripId, active: TripTab): TripShellBin
       title: trip.name || planZero.hero.title,
       meta: [
         { emoji: ZERO_EMOJI.where, text: trip.dates ? `${where} · ${trip.dates.range}` : where },
-        { emoji: ZERO_EMOJI.joined, text: planZero.hero.joined(members.length) },
+        { emoji: ZERO_EMOJI.joined, text: joined },
       ],
       collapsedSub: where,
       members,
