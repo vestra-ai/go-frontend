@@ -8,7 +8,7 @@ import { Toggle as TogglePrimitive } from "radix-ui"
 import { chipVariants } from "@/components/ui/chip"
 
 const toggleVariants = cva(
-  "group/toggle inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap outline-none transition-[background-color,color,border-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "group/toggle inline-flex shrink-0 cursor-pointer items-center justify-center whitespace-nowrap outline-none transition-[background-color,color,border-color] duration-200 ease-out focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {

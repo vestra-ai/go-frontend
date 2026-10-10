@@ -59,7 +59,7 @@ function Slider({
           key={index}
           aria-label={thumbLabels?.[index]}
           aria-valuetext={thumbValueText?.(_values[index])}
-          className="block size-7 shrink-0 rounded-full border-2 border-black bg-white shadow-thumb outline-none select-none focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:pointer-events-none"
+          className="block size-7 shrink-0 rounded-full border-2 border-black bg-white shadow-thumb outline-none select-none focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:ring-offset-2 disabled:pointer-events-none"
         />
       ))}
     </SliderPrimitive.Root>

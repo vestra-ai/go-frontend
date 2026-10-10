@@ -101,7 +101,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
               aria-label={muted ? muteLabel.unmute : muteLabel.mute}
               onClick={() => setListen(tripId, { muted: !muted })}
               className={cn(
-                "grid size-9 cursor-pointer place-items-center rounded-full text-16 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white",
+                "grid size-9 cursor-pointer place-items-center rounded-full text-16 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/50",
                 muted ? "bg-white/90" : "bg-white/15 hover:bg-white/25",
               )}
             >

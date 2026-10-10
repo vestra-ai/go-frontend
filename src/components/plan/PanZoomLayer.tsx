@@ -294,7 +294,7 @@ function ZoomButton({ label, disabled, onPress, children }: { label: string; dis
       aria-label={label}
       disabled={disabled}
       onClick={onPress}
-      className="grid size-[34px] cursor-pointer place-items-center text-ink outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-ink disabled:cursor-default disabled:opacity-35"
+      className="grid size-[34px] cursor-pointer place-items-center text-ink outline-none transition-opacity focus-visible:ring-2 focus-visible:ring-ink/25 disabled:cursor-default disabled:opacity-35"
     >
       <svg viewBox="0 0 14 14" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden>
         {children}

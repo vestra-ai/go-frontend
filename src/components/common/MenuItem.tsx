@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils"
 // Menu row styles, shared by ui/dropdown-menu items. Rows after the first get a hairline.
 // Kept in this server-safe module (ui/dropdown-menu is "use client").
 const menuItemVariants = cva(
-  "flex w-full cursor-pointer items-center text-left text-ink outline-none select-none transition-[transform,box-shadow,opacity,background-color] duration-160 ease-out [[data-slot=menu-item]+&]:border-t [[data-slot=menu-item]+&]:border-line focus-visible:bg-surface-pressed focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-inset data-[highlighted]:bg-surface-pressed data-[disabled]:pointer-events-none data-[disabled]:opacity-50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "flex w-full cursor-pointer items-center text-left text-ink outline-none select-none first:rounded-t-[inherit] last:rounded-b-[inherit] transition-[transform,box-shadow,opacity,background-color] duration-160 ease-out [[data-slot=menu-item]+&]:border-t [[data-slot=menu-item]+&]:border-line focus-visible:bg-surface-pressed focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:ring-inset data-[highlighted]:bg-surface-pressed data-[disabled]:pointer-events-none data-[disabled]:opacity-50 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       variant: {

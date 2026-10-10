@@ -203,7 +203,7 @@ export function CityPicker({
                   aria-label={copy.changeLabel(value.name)}
                   onClick={openSearch}
                   className={cn(
-                    "h-full cursor-pointer rounded-full pl-[14px] outline-none focus-visible:ring-2 focus-visible:ring-ink",
+                    "h-full cursor-pointer rounded-full pl-[14px] outline-none focus-visible:ring-2 focus-visible:ring-ink/25",
                     allowDeselect ? "pr-1.5" : "pr-[14px]",
                   )}
                 >
@@ -214,7 +214,7 @@ export function CityPicker({
                     type="button"
                     aria-label={copy.clearLabel}
                     onClick={() => onChange(null)}
-                    className="mr-1 grid size-8 cursor-pointer place-items-center rounded-full outline-none hover:bg-ink/10 focus-visible:ring-2 focus-visible:ring-ink"
+                    className="mr-1 grid size-8 cursor-pointer place-items-center rounded-full outline-none hover:bg-ink/10 focus-visible:ring-2 focus-visible:ring-ink/25"
                   >
                     <X className="size-3.5" strokeWidth={2.4} />
                   </button>

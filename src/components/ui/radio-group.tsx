@@ -8,7 +8,7 @@ import { RadioGroup as RadioGroupPrimitive } from "radix-ui"
 import { Check } from "@/components/icons/generated"
 
 const radioIndicatorVariants = cva(
-  "peer relative flex shrink-0 items-center justify-center rounded-full border-2 border-line-3 bg-white outline-none transition-[border-width,background-color,border-color] duration-150 focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
+  "peer relative flex shrink-0 items-center justify-center rounded-full border-2 border-line-3 bg-white outline-none transition-[border-width,background-color,border-color] duration-150 focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50",
   {
     variants: {
       variant: {

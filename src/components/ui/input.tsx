@@ -12,7 +12,7 @@ const inputVariants = cva(
         pill: "h-12 w-full rounded-full bg-white px-4",
         "pill-grey": "h-12 w-full rounded-full bg-surface-2 px-4",
         field:
-          "h-[52px] w-full rounded-3xl border border-line-2 bg-white px-4 focus-visible:border-ink aria-invalid:border-danger",
+          "h-[52px] w-full rounded-3xl border border-line-2 bg-white px-4 focus-visible:border-ink/40 aria-invalid:border-danger",
         search:
           "h-[52px] w-full rounded-3xl border-[1.5px] border-ink bg-white px-4",
         bare: "w-[170px] border-0 bg-transparent p-0 text-44 font-bold tracking-display tabular-nums",

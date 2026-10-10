@@ -6,7 +6,7 @@ import { Slot } from "radix-ui"
 import { CheckBadge } from "@/components/common/CheckBadge"
 
 const chipVariants = cva(
-  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full border whitespace-nowrap outline-none select-none transition-[scale,transform,box-shadow,background-color,border-color,color] duration-160 ease-out focus-visible:ring-2 focus-visible:ring-ink focus-visible:ring-offset-2 active:scale-[0.97] disabled:pointer-events-none",
+  "inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-full border whitespace-nowrap outline-none select-none transition-[scale,transform,box-shadow,background-color,border-color,color] duration-160 ease-out focus-visible:ring-2 focus-visible:ring-ink/25 focus-visible:ring-offset-2 active:scale-[0.97] disabled:pointer-events-none",
   {
     // Key order matters: `variant` comes after `size` so e.g. `active` (600) overrides `md` (500).
     variants: {
