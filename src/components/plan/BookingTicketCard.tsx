@@ -9,12 +9,16 @@ import { BOOKINGS_COPY } from "@/data/seed/bookings";
 import type { Booking } from "@/data/types";
 import type { User } from "@/data/types";
 import { cn } from "@/lib/utils";
+import { TicketNotches } from "./TicketNotches";
 
 const MEDIA_BG = {
   indigo: "bg-indigo",
   "stay-tint": "bg-stay-soft",
   none: "",
 } as const;
+
+/** The torn stub's width in px; the notches are placed from it. */
+export const STUB_WIDTH = 80;
 
 const ACCENT = { info: "border-info", success: "border-success" } as const;
 
@@ -56,10 +60,8 @@ export function BookingTicketCard({ booking, members }: { booking: Booking; memb
           })}
         />
       </div>
-      <div className="relative flex w-20 shrink-0 flex-col items-center justify-center gap-1 text-center">
+      <div style={{ width: STUB_WIDTH }} className="relative flex shrink-0 flex-col items-center justify-center gap-1 text-center">
         <Separator orientation="vertical" variant="dashed" className="absolute inset-y-0 left-0" />
-        <span aria-hidden className="absolute -left-[9px] -top-[9px] size-4 rounded-full bg-canvas" />
-        <span aria-hidden className="absolute -bottom-[9px] -left-[9px] size-4 rounded-full bg-canvas" />
         {stub.kind === "count" ? (
           <>
             <span className="text-26 font-bold leading-none tabular-nums">{stub.n}</span>
@@ -72,6 +74,7 @@ export function BookingTicketCard({ booking, members }: { booking: Booking; memb
           </>
         )}
       </div>
+      <TicketNotches stubWidth={STUB_WIDTH} />
     </Link>
   );
 }
