@@ -25,7 +25,7 @@ type StayCardProps = {
   disabled?: boolean;
 };
 
-/** 236px stay poll card in the E8 rail: photo with price/rating pill, area, tags, voters, Details / Vote. */
+/** 236px stay poll card in the E8 rail: photo with a price pill and a rating pill, area, tags, voters, Details / Vote. */
 export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false }: StayCardProps) {
   const userOf = useRoomUsers();
   // Seed tags lead with an emoji ("🏊 Private pool · 3 rooms"); it stays text, hidden from screen readers.
@@ -36,18 +36,22 @@ export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, vot
       <div className="relative h-[132px]">
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
         <img src={stay.img} alt={stay.name} className="size-full object-cover" />
-        <Badge variant="glass" size="md-bold" className="absolute top-2.5 left-2.5 gap-1.5 px-2.5 text-13 tabular-nums">
-          {stay.priceLabel}
-          {stay.priceLabel && stay.rating && <span aria-hidden className="h-3 w-px bg-line-2" />}
-          {stay.rating && (
-            <>
-              <span className="text-amber">★</span>
-              {stay.rating}
-            </>
+        {/* Price on the left, rating on the right; a long price truncates before it reaches the rating. */}
+        <div className="absolute inset-x-2.5 top-2.5 flex items-start gap-1.5">
+          {stay.priceLabel && (
+            <Badge variant="glass" size="md-bold" className="min-w-0 shrink px-2.5 text-13 tabular-nums shadow-photo-chip">
+              <span className="min-w-0 truncate">{stay.priceLabel}</span>
+            </Badge>
           )}
-        </Badge>
+          {stay.rating && (
+            <Badge variant="glass" size="md-bold" className="ml-auto gap-1 px-2.5 text-13 tabular-nums shadow-photo-chip">
+              <span aria-hidden className="text-amber">★</span>
+              {stay.rating}
+            </Badge>
+          )}
+        </div>
       </div>
-      <div className="flex flex-col gap-1 px-3 pt-2.5 pb-3">
+      <div className="flex flex-1 flex-col gap-1 px-3 pt-2.5 pb-3">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-16 leading-[1.3] font-semibold tracking-body">{stay.name}</span>
           <span className="text-13 tracking-caption text-muted">{stay.reviews}</span>
@@ -71,7 +75,7 @@ export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, vot
           )}
           {!hideVotes && copy.votes(voters.length)}
         </div>
-        <div className="mt-1.5 flex gap-1.5">
+        <div className="mt-auto flex gap-1.5 pt-1.5">
           <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onDetails}>
             {copy.details}
           </Button>

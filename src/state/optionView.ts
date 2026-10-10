@@ -138,7 +138,8 @@ export function toStay(o: AnyOption, id: string, voters: Id[], ctx: StayContext)
     name: n.name,
     area: n.area || n.subtitle,
     areaLong: n.area || n.subtitle,
-    priceLabel: priceLabel(n),
+    // The photo's pill is the price and the rating alone: the Server's `price_note` ("per night, per room, …") can run long.
+    priceLabel: priceLabel({ ...n, priceNote: "" }),
     rating: n.rating != null ? String(n.rating) : "",
     reviews: d.review_count != null ? `${d.review_count} reviews` : "",
     tags: n.highlights.slice(0, 2).join(" · ") || (d.amenities ?? []).slice(0, 2).join(" · "),

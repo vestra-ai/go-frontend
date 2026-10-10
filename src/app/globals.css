@@ -151,6 +151,7 @@
   --shadow-thumb:   0 2px 6px rgb(11 27 63 / 0.20);                                    /* slider thumb */
   --shadow-chip:    0 2px 6px rgb(11 27 63 / 0.08);                                    /* reaction chip on card */
   --shadow-tile:    0 1px 4px rgb(0 0 0 / 0.12);                                       /* calendar tile */
+  --shadow-photo-chip: 0 1px 2px rgb(0 0 0 / 0.06), 0 2px 6px rgb(0 0 0 / 0.10);     /* white pill on a photo: holds its edge on a white photo */
   --shadow-page:    0 2px 6px rgb(0 0 0 / 0.12), 0 12px 30px rgb(0 0 0 / 0.10);        /* PDF page */
   --shadow-frame:   0 24px 80px rgb(11 27 63 / 0.18);                                  /* phone frame on desktop */
 
