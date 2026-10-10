@@ -69,13 +69,10 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[], people
   const target = active ? (messages.find((m) => m.id === active.id && isActionable(m)) ?? null) : null;
   const mode: ComposerMode = target && active ? active.mode : null;
 
+  // One draft for both boxes: what was typed in the composer is there when the reply / ask-Go tray opens, a send from the
+  // tray clears it, and cancelling the tray hands it back to the composer.
   const [draft, setDraftValue] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
-
-  // The tray draft restarts whenever the tray opens on a message.
-  const trayKey = mode === "reply" || mode === "askGo" ? `${mode}:${target?.id}` : null;
-  const [tray, setTray] = useState(() => ({ key: trayKey, value: "" }));
-  if (tray.key !== trayKey) setTray({ key: trayKey, value: "" });
 
   // My typing line stops when I leave the room.
   useEffect(() => () => live.typing(tripId, false), [tripId]);
@@ -178,6 +175,8 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[], people
     const mentions = mentionedIds(text, people);
     if (mode === "reply") sendMessage(tripId, { text, replyTo: target.id, mentions });
     else sendMessage(tripId, { text, aboutMessageId: target.id, mentions });
+    setDraftValue("");
+    live.typing(tripId, false);
     setMode(null);
   }
 
@@ -187,8 +186,9 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[], people
     bottomPadding: PADDING[mode ?? "none"],
     draft,
     setDraft,
-    trayDraft: tray.value,
-    setTrayDraft: (value) => setTray({ key: trayKey, value }),
+    // The tray's text is the composer's: it does not announce typing (the tray may be a message to Go).
+    trayDraft: draft,
+    setTrayDraft: setDraftValue,
     recording: recorder.recording,
     recordingSeconds: recorder.seconds,
     cancelRecording: recorder.cancel,
