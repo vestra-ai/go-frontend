@@ -87,6 +87,8 @@ type AvatarProps = Omit<React.ComponentProps<typeof AvatarPrimitive.Root>, "chil
     tone?: AvatarTone
     /** Image URL (an `assets` entry's `.src`). kind="go" defaults to Go's avatar. */
     src?: string
+    /** kind="trip": `src` is a photo (the destination's), so it covers the avatar; otherwise it is square art, inset and contained. */
+    photo?: boolean
     /** Used for the image alt and the initials fallback. */
     name?: string
     /** Fallback text; defaults to the initials of `name`. */
@@ -102,6 +104,7 @@ function Avatar({
   kind = "user",
   shape = "rounded",
   src,
+  photo = false,
   name,
   initials,
   children,
@@ -152,8 +155,8 @@ function Avatar({
           className={cn(
             "absolute inset-0 m-auto",
             // The trip art is a square SVG: it takes the root's radius (rounded-xl tile, or the circle shape) so its
-            // corners can never poke out of the avatar.
-            kind === "trip" ? "size-[91%] rounded-[inherit] object-contain" : "size-full rounded-full object-cover"
+            // corners can never poke out of the avatar. A trip photo fills it instead.
+            kind === "trip" && !photo ? "size-[91%] rounded-[inherit] object-contain" : kind === "trip" ? "size-full rounded-[inherit] object-cover" : "size-full rounded-full object-cover"
           )}
         />
       )}

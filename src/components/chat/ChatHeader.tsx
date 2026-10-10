@@ -9,7 +9,8 @@ import type { AvatarSpec, Trip } from "@/data/types";
 import { assets } from "@/lib/assets";
 
 type ChatHeaderProps = {
-  trip: { name: string; avatar?: string; tint: Trip["tint"] };
+  /** `avatar`: the destination's photo (`photo`) or, without one, the trip's illustration. */
+  trip: { name: string; avatar?: string; photo?: boolean; tint: Trip["tint"] };
   subtitle: string;
   /** Stage members, max 4, never Kabir. */
   members: AvatarSpec[];
@@ -39,7 +40,7 @@ export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, on
   const title = (
     <>
       {/* DESIGN-ASSUMPTION: the design's trip avatar is a circle; Avatar kind=trip defaults to rounded-xl. */}
-      <Avatar kind="trip" shape="circle" size={36} tone={trip.tint} src={trip.avatar} />
+      <Avatar kind="trip" shape="circle" size={36} tone={trip.tint} src={trip.avatar} photo={trip.photo} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
         <span className="truncate text-16 leading-[1.25] font-semibold tracking-body">{trip.name}</span>
         <span className="flex min-w-0 items-center gap-1.5">

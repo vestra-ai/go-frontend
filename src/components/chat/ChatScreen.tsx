@@ -433,7 +433,8 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
     <RoomUsersProvider value={users}>
       <Screen>
         <ChatHeader
-          trip={{ name: trip.name, avatar: trip.illustration, tint: trip.tint }}
+          // The same picture as the trip home's hero banner; the drawn illustration only when the destination has no photo.
+          trip={{ name: trip.name, avatar: trip.hero?.src ?? trip.illustration, photo: Boolean(trip.hero), tint: trip.tint }}
           subtitle={subtitle}
           members={view.people.slice(0, 4).map((p) => userAvatar(toUser(p)))}
           backHref={`/trips/${tripId}`}
