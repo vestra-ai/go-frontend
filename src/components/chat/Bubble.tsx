@@ -32,6 +32,9 @@ const bubbleClass: Record<Author, string> = {
   me: "rounded-br-none bg-mine px-3.5 py-2.5 gap-1 text-ink",
 };
 
+/** How many distinct emoji the reaction pill shows side by side (WhatsApp shows three); the count after them is the total. */
+const PILL_EMOJI = 3;
+
 const enterClass =
   "transition-[opacity,translate] duration-220 ease-out starting:translate-y-1.5 starting:opacity-0";
 
@@ -45,7 +48,8 @@ type BubbleProps = {
   maxWidth?: BubbleMaxWidth;
   /** QuoteBlock above the text: the message this one replies to, or asks Go about. */
   quote?: { author: string; text: string };
-  reaction?: { emoji: string; count: number };
+  /** One entry per emoji, most used first (`RoomMessage.reactions`); drawn as one pill under the bubble. */
+  reactions?: { emoji: string; count: number; mine: boolean }[];
   /** Extra rows after the body (GoBubble CTA / caption). */
   footer?: ReactNode;
   /** Mount animation; true only for messages appended after first render. */
@@ -53,7 +57,7 @@ type BubbleProps = {
   /** LongPressOverlay copy: scale 1.03 from the side the bubble sits on. */
   lifted?: boolean;
   bubbleRef?: Ref<HTMLDivElement>;
-  /** Member or mine: `useLongPress` handlers; makes the bubble a focusable button that opens the actions dialog. */
+  /** `useLongPress` handlers (members', mine and Go's text bubbles); makes the bubble a focusable button that opens the actions dialog. */
   pressHandlers?: LongPressHandlers;
   /** Overrides on the bubble element (GoBubble's CTA padding). */
   className?: string;
@@ -95,7 +99,7 @@ export function Bubble({
   avatar,
   maxWidth,
   quote,
-  reaction,
+  reactions,
   footer,
   enter = false,
   lifted = false,
@@ -110,7 +114,8 @@ export function Bubble({
   const content = typeof children === "string" ? richText(children, handles) : children;
   const label = author === "go" ? copy.goName : author === "member" ? name : undefined;
   const avatarSpec: AvatarSpec | undefined = isMe ? undefined : (avatar ?? (author === "go" ? { kind: "go" } : undefined));
-  const pressable = (author === "member" || author === "me") && pressHandlers;
+  const pressable = pressHandlers;
+  const reactionTotal = reactions?.reduce((n, r) => n + r.count, 0) ?? 0;
 
   const bubble = (
     <div
@@ -142,14 +147,17 @@ export function Bubble({
     </div>
   );
 
-  // The max-width sits on a column that also holds the reaction chip, overlapping the bubble's bottom edge by 6px.
+  // The max-width sits on a column that also holds the reaction chips, overlapping the bubble's bottom edge by 6px.
   const column = (
     <div className={cn("flex flex-col", isMe ? "items-end" : "items-start", maxWidthClass[maxWidth ?? defaultMaxWidth[author]])}>
       {bubble}
-      {reaction && (
+      {reactions && reactions.length > 0 && (
         <ReactionChip
-          emoji={reaction.emoji}
-          count={reaction.count}
+          emoji={reactions.slice(0, PILL_EMOJI).map((r) => r.emoji)}
+          // Like WhatsApp: no number for a lone reaction, else the total across every emoji.
+          count={reactionTotal > 1 ? reactionTotal : undefined}
+          mine={reactions.some((r) => r.mine)}
+          label={reactions.map((r) => `${r.emoji} ${r.count}`).join(", ")}
           className={cn("relative -mt-1.5", isMe ? "mr-2.5" : "ml-2.5", enterClass)}
         />
       )}

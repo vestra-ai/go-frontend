@@ -19,8 +19,11 @@ export interface RoomMessage {
   /** A shared place (1.1): drawn as a line with a map link. */
   location?: { label: string; href: string };
   quote?: { author: string; text: string };
-  /** One chip under the bubble: my reaction when I have one, else the most used. */
-  reaction?: { emoji: string; count: number };
+  /**
+   * One entry per distinct emoji, most used first (a tie keeps the order the emoji were first given), so everyone in the
+   * room sees the same summary under the bubble. `mine` marks the one I picked.
+   */
+  reactions?: { emoji: string; count: number; mine: boolean }[];
   myReaction?: string;
   card?: Card;
   quickReplies: QuickReply[];
@@ -46,14 +49,14 @@ function toAttachments(list: ApiAttachment[]): { attachments: Attachment[]; loca
   return { attachments, location };
 }
 
-function reactionOf(message: Message, meId: Id): Pick<RoomMessage, "reaction" | "myReaction"> {
+function reactionsOf(message: Message, meId: Id): Pick<RoomMessage, "reactions" | "myReaction"> {
   if (message.reactions.length === 0) return {};
-  const counts = new Map<string, number>();
+  const counts = new Map<string, number>(); // insertion order = the order the emoji were first given
   for (const r of message.reactions) counts.set(r.emoji, (counts.get(r.emoji) ?? 0) + 1);
   const mine = message.reactions.find((r) => r.person_id === meId)?.emoji;
-  const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0][0];
-  const emoji = mine ?? top;
-  return { reaction: { emoji, count: counts.get(emoji) ?? 1 }, ...(mine ? { myReaction: mine } : {}) };
+  // `sort` is stable, so equal counts keep that order.
+  const reactions = [...counts].map(([emoji, count]) => ({ emoji, count, mine: emoji === mine })).sort((a, b) => b.count - a.count);
+  return { reactions, ...(mine ? { myReaction: mine } : {}) };
 }
 
 /** What a quoted message says in one line. */
@@ -85,7 +88,7 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
       deleted: m.deleted,
       ...(m.deleted ? { attachments: [] } : toAttachments(m.attachments)),
       ...(quoted ? { quote: { author: authorName(quoted, users, meId), text: previewOf(quoted) } } : {}),
-      ...reactionOf(m, meId),
+      ...reactionsOf(m, meId),
       ...(m.card && !m.deleted ? { card: m.card } : {}),
       quickReplies: m.deleted ? [] : (m.quick_replies ?? []),
     };

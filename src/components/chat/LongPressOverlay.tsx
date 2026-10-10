@@ -2,24 +2,38 @@
 
 import { useEffect, useLayoutEffect, useRef } from "react";
 import { MenuItem } from "@/components/common/MenuItem";
-import { Copy, Plus, Reply } from "@/components/icons/generated";
+import { Copy, Reply } from "@/components/icons/generated";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { chat as copy } from "@/data/seed/copy";
-import type { AvatarSpec, BubbleMaxWidth, FrameRect } from "@/data/types";
+import type { Attachment, AvatarSpec, BubbleMaxWidth, FrameRect } from "@/data/types";
 import { assets } from "@/lib/assets";
 import { toastGo } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { AttachmentContent, photoBubbleClass } from "./AttachmentContent";
 import { Bubble } from "./Bubble";
 
 type LongPressOverlayProps = {
-  /** `mine`: my own message, drawn on the right with no avatar or name. */
-  message: { id: string; name?: string; text: string; avatar?: AvatarSpec; maxWidth?: BubbleMaxWidth; mine?: boolean };
+  /**
+   * `author`: a member and Go sit on the left (`name` / `avatar` are the member's; Go brings its own), mine on the right
+   * with neither. `attachments` / `location` are drawn as the thread draws them (not tappable here); a message with no
+   * text has nothing to copy, so the menu leaves Copy out.
+   */
+  message: {
+    id: string;
+    author: "member" | "go" | "me";
+    name?: string;
+    text: string;
+    avatar?: AvatarSpec;
+    maxWidth?: BubbleMaxWidth;
+    attachments?: Attachment[];
+    location?: { label: string };
+  };
   /** Rect of the pressed bubble row, relative to #app-frame's top-left (page coordinates). */
   anchorRect: FrameRect;
+  /** The emoji I have on this message, marked in the bar (tapping it again takes it back). */
+  myReaction?: string;
   onReact(emoji: string): void;
-  /** "More reactions"; the overlay stays open. */
-  onMore(): void;
   onReply(): void;
   onAskGo(): void;
   /** Called after the overlay has copied the text and shown "Message copied"; close it here. */
@@ -39,7 +53,7 @@ const BAR_OFFSET = 60; // reaction bar 50 + gap 10, so the lifted bubble lands o
  * DESIGN-ASSUMPTION (PLAN §12.1 #10): anchored to the pressed bubble instead of the design's fixed top 300.
  * Render inside the chat Screen (positioned, page-sized: it scrolls with the thread). No enter animation (as designed).
  */
-export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply, onAskGo, onCopy, onClose }: LongPressOverlayProps) {
+export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onReply, onAskGo, onCopy, onClose }: LongPressOverlayProps) {
   const columnRef = useRef<HTMLDivElement>(null);
   const firstReactionRef = useRef<HTMLButtonElement>(null);
   const top = anchorRect.top - BAR_OFFSET;
@@ -66,8 +80,14 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose]);
 
+  const attachments = message.attachments ?? [];
+  const hasText = message.text.trim() !== "";
+  const mine = message.author === "me";
+  const bubble = { author: message.author, name: message.name, avatar: message.avatar, maxWidth: message.maxWidth, lifted: true } as const;
+
   function copyText() {
-    void navigator.clipboard?.writeText(message.text).catch(() => {
+    // Go writes `**bold**`; the bubble shows it bold, so what is copied has no markers.
+    void navigator.clipboard?.writeText(message.text.replace(/\*\*(.+?)\*\*/g, "$1")).catch(() => {
       // Clipboard can be blocked (permissions, insecure context); the toast still confirms the tap.
     });
     toastGo(copy.toasts.copied);
@@ -98,7 +118,7 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
         <div
           className={cn(
             "pointer-events-auto flex gap-0.5 rounded-full bg-white px-1.5 py-1 shadow-menu",
-            message.mine ? "self-end" : "ml-[30px] self-start",
+            mine ? "self-end" : "ml-[30px] self-start",
           )}
         >
           {copy.longPress.reactions.map((emoji, i) => (
@@ -106,25 +126,37 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
               key={emoji}
               ref={i === 0 ? firstReactionRef : undefined}
               type="button"
-              variant="ghost"
+              variant={emoji === myReaction ? "soft" : "ghost"}
               size="icon"
               className="size-[42px] text-24"
               aria-label={copy.longPress.react(emoji)}
+              aria-pressed={emoji === myReaction}
               onClick={() => onReact(emoji)}
             >
               {emoji}
             </Button>
           ))}
-          <Button type="button" variant="soft" size="icon" className="size-[42px] text-muted" aria-label={copy.longPress.more} onClick={onMore}>
-            <Plus className="size-[18px]" />
-          </Button>
         </div>
 
-        <Bubble author={message.mine ? "me" : "member"} name={message.name} avatar={message.avatar} maxWidth={message.maxWidth} lifted>
-          {message.text}
-        </Bubble>
+        {attachments.map((a, i) => (
+          <Bubble key={i} {...bubble} className={a.kind === "image" ? photoBubbleClass : undefined}>
+            <AttachmentContent attachment={a} />
+          </Bubble>
+        ))}
+        {(hasText || message.location || attachments.length === 0) && (
+          <Bubble {...bubble}>
+            {message.location ? (
+              <span className="flex flex-col gap-1">
+                {hasText && <span>{message.text}</span>}
+                <span className="font-semibold underline underline-offset-2">📍 {message.location.label}</span>
+              </span>
+            ) : (
+              message.text
+            )}
+          </Bubble>
+        )}
 
-        <div className={cn("pointer-events-auto w-[230px] overflow-hidden rounded-4xl bg-white shadow-menu", message.mine ? "self-end" : "ml-[38px]")}>
+        <div className={cn("pointer-events-auto w-[230px] overflow-hidden rounded-4xl bg-white shadow-menu", mine ? "self-end" : "ml-[38px]")}>
           <MenuItem variant="wide" label={copy.longPress.reply} icon={<Reply className="size-[18px]" />} onClick={onReply} />
           <MenuItem
             variant="wide"
@@ -132,7 +164,7 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
             icon={<Avatar kind="go" size={22} src={assets.goAvatar.src} />}
             onClick={onAskGo}
           />
-          <MenuItem variant="wide" label={copy.longPress.copy} icon={<Copy className="size-[18px]" />} onClick={copyText} />
+          {hasText && <MenuItem variant="wide" label={copy.longPress.copy} icon={<Copy className="size-[18px]" />} onClick={copyText} />}
         </div>
       </div>
     </>

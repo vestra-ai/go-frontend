@@ -29,7 +29,7 @@ function endPress(press: React.RefObject<Press | null>) {
 }
 
 /**
- * Long-press gesture for member and own bubbles (C-chat-kickoff.md §1.2). Spread the result onto the pressable element.
+ * Long-press gesture for message bubbles (C-chat-kickoff.md §1.2). Spread the result onto the pressable element.
  * Fires `onLongPress(element)` after `ms`; up, cancel, leave, a move over `moveTolerance` or any scroll clears it.
  * Enter / Space fire immediately (keyboard path). The native context menu is suppressed.
  */

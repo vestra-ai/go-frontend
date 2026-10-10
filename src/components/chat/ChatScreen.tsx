@@ -422,8 +422,10 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
 
   // Composer / tray / overlay.
   const target = modes.target;
-  const targetUser = target?.mine ? me : target?.author.kind === "person" ? users[target.author.id] : null;
-  const targetMine = Boolean(target?.mine);
+  // Who the message is from: a member, me or Go. The tray words it as "Replying to Arjun / yourself / Go".
+  const targetAuthor = !target ? null : target.mine ? "me" : target.author.kind === "go" ? "go" : "member";
+  const targetUser = target?.author.kind === "person" && !target.mine ? (users[target.author.id] ?? null) : null;
+  const targetName = targetAuthor === "me" ? chatCopy.tray.yourself : targetAuthor === "go" ? chatCopy.goName : targetUser?.firstName;
   const trayMode = modes.mode === "reply" || modes.mode === "askGo" ? modes.mode : null;
   const subtitle = view.dates ? toTripDates(view.dates).short : chatCopy.subtitle.people(view.people.length);
 
@@ -462,22 +464,24 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
           {goThinking && <GoThinking />}
         </MessageList>
 
-        {trayMode && target && targetUser ? (
+        {trayMode && target && targetName !== undefined ? (
           <ComposerTray
             mode={trayMode}
             banner={{
               title:
                 trayMode === "reply"
-                  ? chatCopy.tray.replyingTo(targetMine ? chatCopy.tray.yourself : targetUser.firstName)
-                  : targetMine
+                  ? chatCopy.tray.replyingTo(targetName)
+                  : targetAuthor === "me"
                     ? chatCopy.tray.askGoAboutMine
-                    : chatCopy.tray.askGoAbout(targetUser.firstName),
+                    : targetAuthor === "go"
+                      ? chatCopy.tray.askGoAboutGo
+                      : chatCopy.tray.askGoAbout(targetName),
               snippet: target.text,
               accent: trayMode === "reply" ? "go" : "ink",
             }}
             value={modes.trayDraft}
             onChange={modes.setTrayDraft}
-            placeholder={trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetMine ? chatCopy.tray.yourself : targetUser.firstName) : chatCopy.tray.askGoPlaceholder}
+            placeholder={trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetName) : chatCopy.tray.askGoPlaceholder}
             onSend={modes.sendTray}
             onCancel={() => modes.setMode(null)}
             mentionItems={mentionItems}
@@ -498,20 +502,23 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
           />
         )}
 
-        {overlayTarget && targetUser && anchor?.id === overlayTarget.id && (
+        {overlayTarget && targetAuthor && targetName !== undefined && anchor?.id === overlayTarget.id && (
           <LongPressOverlay
-            message={
-              targetMine
-                ? { id: overlayTarget.id, text: overlayTarget.text, mine: true }
-                : { id: overlayTarget.id, name: targetUser.firstName, text: overlayTarget.text, avatar: userAvatar(targetUser) }
-            }
+            message={{
+              id: overlayTarget.id,
+              author: targetAuthor,
+              text: overlayTarget.text,
+              attachments: overlayTarget.attachments,
+              location: overlayTarget.location,
+              ...(targetUser ? { name: targetUser.firstName, avatar: userAvatar(targetUser) } : {}),
+            }}
             anchorRect={anchor.rect}
+            myReaction={overlayTarget.myReaction}
             onReact={(emoji) => {
               // One reaction per person per message: the same emoji again takes it back.
               void react(tripId, overlayTarget.id, overlayTarget.myReaction === emoji ? null : emoji).catch(fail(chatCopy.toasts.reactFailed));
               modes.setMode(null);
             }}
-            onMore={() => toastGo(chatCopy.toasts.emojiKeyboard)}
             onReply={() => modes.setMode("reply", overlayTarget.id)}
             onAskGo={() => modes.setMode("askGo", overlayTarget.id)}
             // The overlay has already copied the text and toasted "Message copied".

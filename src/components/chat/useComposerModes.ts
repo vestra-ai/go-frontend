@@ -36,7 +36,7 @@ async function photoSize(file: Blob): Promise<{ width: number; height: number } 
 
 export interface ComposerModes {
   mode: ComposerMode;
-  /** The message (a member's or mine) the overlay / tray is about (null when `mode` is null). */
+  /** The message (a member's, mine or Go's) the overlay / tray is about (null when `mode` is null). */
   target: RoomMessage | null;
   bottomPadding: 96 | 150 | 190;
   draft: string;
@@ -58,8 +58,8 @@ export interface ComposerModes {
   sendTray(text: string): void;
 }
 
-/** What the long-press actions apply to: a person's stored message (mine included), not deleted. */
-const isActionable = (m: RoomMessage) => m.author.kind === "person" && !m.deleted && !m.sending;
+/** What the long-press actions apply to: a stored message of a person (mine included) or of Go, not deleted. */
+const isActionable = (m: RoomMessage) => (m.author.kind === "person" || m.author.kind === "go") && !m.deleted && !m.sending;
 
 /** `people`: everyone in the trip with their "@" handle, so a send can list who its text names (`mentions`, §4.6). */
 export function useComposerModes(tripId: TripId, messages: RoomMessage[], people: MentionHandle[]): ComposerModes {

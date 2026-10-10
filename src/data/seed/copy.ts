@@ -214,7 +214,6 @@ export const chat = {
   longPress: {
     reactions: ["❤️", "😂", "🔥", "👍", "😮", "🙏"],
     react: (emoji: string) => `React ${emoji}`,
-    more: "More reactions",
     reply: "Reply",
     askGo: "Ask Go",
     copy: "Copy",
@@ -227,13 +226,13 @@ export const chat = {
     askGoAbout: (name: string) => `Ask Go about ${name}’s message`,
     /** The same two for my own message, and the name the reply line uses for me. */
     askGoAboutMine: "Ask Go about your message",
+    askGoAboutGo: "Ask Go about this message",
     yourself: "yourself",
     askGoPlaceholder: "Ask Go anything about this",
     cancel: "Cancel",
   },
   toasts: {
     reactFailed: "Couldn’t save your reaction. Try again.",
-    emojiKeyboard: "Your full emoji keyboard opens here",
     copied: "Message copied",
   },
 } as const;

@@ -39,9 +39,9 @@ type MessageRendererProps = {
   enter: boolean;
   /** Extra classes on the row wrapper. */
   className?: string;
-  /** One shared `useLongPress` for every member and own bubble; the target's `[data-msg-id]` names the message. */
+  /** One shared `useLongPress` for every bubble; the target's `[data-msg-id]` names the message. */
   pressHandlers: LongPressHandlers;
-  /** A press started / ended on a member or own bubble (ChatScreen holds auto-scroll while a press is armed). */
+  /** A press started / ended on a message row (ChatScreen holds auto-scroll while a press is armed). */
   onPressStart(): void;
   onPressEnd(): void;
   actions: MessageActions;
@@ -69,11 +69,12 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
   const author = isGo ? "go" : m.mine ? "me" : "member";
   const user = m.author.kind === "person" ? userOf(room.users, m.author.id) : null;
   const who = user && !m.mine ? { name: user.firstName, avatar: userAvatar(user) } : {};
-  // Members' and my own stored messages take the long-press actions; Go's, deleted ones and sends still in flight do not.
-  const actionable = (author === "member" || author === "me") && !m.deleted && !m.sending;
+  // Every stored message with a bubble (a member's, mine, Go's) takes the long-press actions; deleted ones and sends
+  // still in flight do not.
+  const actionable = !m.deleted && !m.sending;
   const press = actionable ? pressHandlers : undefined;
   const text = m.deleted ? copy.message.deleted : m.text;
-  // The reaction chip and the quote belong to the message: they sit on its last / first bubble.
+  // The reaction chips and the quote belong to the message: they sit on its last / first bubble.
   const bubbles = [...m.attachments.map((a) => ({ attachment: a })), ...(text || m.location ? [{ attachment: null }] : [])];
 
   const rows = bubbles.map((b, i) => {
@@ -84,7 +85,7 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
         author={author}
         {...who}
         quote={i === 0 ? m.quote : undefined}
-        reaction={last ? m.reaction : undefined}
+        reactions={last ? m.reactions : undefined}
         enter={enter}
         pressHandlers={press}
         className={b.attachment?.kind === "image" ? photoBubbleClass : undefined}
@@ -110,8 +111,8 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
   return (
     <div
       data-message={m.id}
-      // Member and own bubbles: long-press opens the message actions. The wrapper names the message for the shared
-      // handler and the overlay's anchor, and tells ChatScreen a press is armed.
+      // Long-press on a bubble opens the message actions. The wrapper names the message for the shared handler and the
+      // overlay's anchor, and tells ChatScreen a press is armed.
       {...(actionable
         ? { "data-msg-id": m.id, onPointerDown: onPressStart, onPointerUp: onPressEnd, onPointerCancel: onPressEnd, onPointerLeave: onPressEnd }
         : {})}
