@@ -8,10 +8,7 @@ import { ScopeBadge } from "@/components/common/ScopeBadge";
 import { ScopeToggle } from "@/components/common/ScopeToggle";
 import { DayCard } from "@/components/plan/DayCard";
 import { TimelineRow } from "@/components/plan/TimelineRow";
-import { Screen } from "@/components/shell/Screen";
 import { ItineraryZero } from "@/components/trip/empty/ItineraryZero";
-import { TripShell } from "@/components/trip/TripShell";
-import { useTripShellProps } from "@/components/trip/useTripShellProps";
 import type { TripId, User } from "@/data/types";
 import { monthShort, parseDay, weekdayShort } from "@/lib/dates";
 import { loadItinerary, useTripGate } from "@/state";
@@ -89,7 +86,6 @@ function ItineraryView({ tripId }: { tripId: TripId }) {
   const params = useSearchParams();
   const [scope, setScope] = useState<Scope>(() => (params.get("scope") === "me" ? "me" : "everyone"));
   const data = useTripGate(tripId);
-  const shell = useTripShellProps(tripId, "itinerary");
   const ready = data !== null;
 
   useEffect(() => {
@@ -102,33 +98,29 @@ function ItineraryView({ tripId }: { tripId: TripId }) {
     if (window.location.search !== query) window.history.replaceState(window.history.state, "", query);
   }, [scope]);
 
-  if (!data?.view || !shell) return <Screen>{null}</Screen>;
+  if (!data?.view) return null;
 
   // "Everyone" draws from the trip itself until the tab's own read lands; "Just me" only exists as its own read.
   const everyone = data.itinerary.everyone ?? data.view.itinerary;
   const days = scope === "me" ? data.itinerary.me : everyone;
   const empty = everyone.every((day) => day.items.length === 0);
 
-  return (
-    <TripShell {...shell}>
-      {empty ? (
-        <ItineraryZero tripId={tripId} />
-      ) : (
-        <>
-          <div className="@container flex items-center gap-2">
-            <ScopeToggle className="flex-1" value={scope} onValueChange={setScope} />
-          </div>
-          {days && <ItineraryPlan days={days} scope={scope} users={usersById(data.view.people)} bookings={data.view.bookings} />}
-        </>
-      )}
-    </TripShell>
+  return empty ? (
+    <ItineraryZero tripId={tripId} />
+  ) : (
+    <>
+      <div className="@container flex items-center gap-2">
+        <ScopeToggle className="flex-1" value={scope} onValueChange={setScope} />
+      </div>
+      {days && <ItineraryPlan days={days} scope={scope} users={usersById(data.view.people)} bookings={data.view.bookings} />}
+    </>
   );
 }
 
 export default function ItineraryPage() {
   const { tripId } = useParams<{ tripId: string }>();
   return (
-    <Suspense fallback={<Screen>{null}</Screen>}>
+    <Suspense fallback={null}>
       <ItineraryView key={tripId} tripId={tripId} />
     </Suspense>
   );

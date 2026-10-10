@@ -8,7 +8,7 @@ import type { TripId, User } from "@/data/types";
 import { useTripData } from "@/state";
 import { toUser, tripFromView } from "@/state/view";
 
-/** The TripShell props every trip tab shares; pages add `children`, share control and `forceCollapsed`. */
+/** The TripShell props every trip tab shares; the tabs' layout adds `children` and `forceCollapsed`. */
 export type TripShellBindings = Pick<
   TripShellProps,
   "trip" | "active" | "hero" | "title" | "titleEmoji" | "meta" | "collapsedSub" | "members" | "chatPreview"

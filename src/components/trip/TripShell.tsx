@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { createContext, useContext, useState } from "react";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
@@ -11,6 +11,20 @@ import { CollapsingTripHeader } from "./CollapsingTripHeader";
 import { TripHero, type TripHeroMedia, type TripMetaLine } from "./TripHero";
 import { TripTabs, type TripTab } from "./TripTabs";
 import { useCollapsingHeader } from "./useCollapsingHeader";
+
+/** What a tab's content can ask of the shell it sits in (the shell is shared by the four tabs, so it is not the page's to drive). */
+interface TripShellActions {
+  /** Opens the invite sheet. */
+  openShare(): void;
+}
+
+const TripShellActionsContext = createContext<TripShellActions | null>(null);
+
+export function useTripShellActions(): TripShellActions {
+  const actions = useContext(TripShellActionsContext);
+  if (!actions) throw new Error("useTripShellActions must be used inside a TripShell");
+  return actions;
+}
 
 export interface TripShellProps {
   trip: Trip;
@@ -52,6 +66,7 @@ export function TripShell({
   const setOpen = onShareOpenChange ?? setInnerOpen;
   const collapsed = forceCollapsed || scrolledPast;
   const share = onShare ?? (() => setOpen(true));
+  const actions: TripShellActions = { openShare: () => setOpen(true) };
 
   return (
     <Screen>
@@ -64,8 +79,16 @@ export function TripShell({
           <TripTabs tripId={trip.id} active={active} variant="hero" className="relative z-[2] mx-4 -mt-[26px]" />
         </>
       )}
-      {/* Switching trip tabs re-animates just this content (PageTransition marks the wrapper `data-switch="tab"`). */}
-      <div className={`flex flex-col gap-2.5 px-4 pb-[120px] [[data-switch=tab]_&]:animate-page-in ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}>{children}</div>
+      {/* The shell lives in the tabs' shared layout, so it stays put when the tab changes. Keyed by the tab, this column is
+          what remounts and re-animates (PageTransition marks the wrapper `data-switch="tab"`). */}
+      <TripShellActionsContext.Provider value={actions}>
+        <div
+          key={active}
+          className={`flex flex-col gap-2.5 px-4 pb-[120px] [[data-switch=tab]_&]:animate-page-in ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}
+        >
+          {children}
+        </div>
+      </TripShellActionsContext.Provider>
       <StickyDock>
         <FadeDock variant="fade" aria-hidden className="h-[120px]" />
         <ChatFab tripId={trip.id} avatars={chatPreview.avatars} preview={chatPreview.text} unread={chatPreview.unread} />

@@ -9,7 +9,6 @@ import { BudgetSheet } from "@/components/sheets/BudgetSheet";
 import { RecordPaymentSheet } from "@/components/sheets/RecordPaymentSheet";
 import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor } from "@/components/sheets/useRecordTarget";
-import { Screen } from "@/components/shell/Screen";
 import { CALL_COPY } from "@/data/seed/calls";
 import { tripHome as copy } from "@/data/seed/copy";
 import type { TripId } from "@/data/types";
@@ -26,9 +25,8 @@ import { DoneList, type AskDraft } from "./DoneList";
 import { TripHomeZero } from "./empty/TripHomeZero";
 import { PendingCard } from "./PendingCard";
 import { RecordingSheet } from "./RecordingSheet";
-import { TripShell } from "./TripShell";
+import { useTripShellActions } from "./TripShell";
 import { useTripHomeSheets } from "./useTripHomeSheets";
-import { useTripShellProps } from "./useTripShellProps";
 
 // "🧳 Extra baggage" → "Extra baggage" (strip the leading emoji/spaces).
 const LEADING_NON_LETTERS = new RegExp("^[^\\p{L}]+", "u");
@@ -41,7 +39,7 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
   const router = useRouter();
   const params = useSearchParams();
   const data = useTripGate(tripId);
-  const shell = useTripShellProps(tripId, "home");
+  const { openShare } = useTripShellActions();
   const features = useGo((s) => s.config?.features);
   const sheets = useTripHomeSheets();
   const budget = useGroupBudget(tripId);
@@ -74,7 +72,7 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot params
   }, [populated, openParam, checkinParam, features?.checkin]);
 
-  if (!data?.view || !shell) return <Screen>{null}</Screen>;
+  if (!data?.view) return null;
   const { view } = data;
   const users = usersById(view.people);
 
@@ -132,57 +130,55 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
 
   return (
     <>
-      <TripShell {...shell} shareOpen={sheets.shareOpen} onShareOpenChange={sheets.setShareOpen}>
-        {!populated ? (
-          <TripHomeZero view={view} onInvite={() => sheets.setShareOpen(true)} onSetBudget={openBudget} />
-        ) : (
-          <>
-            {allSet ? (
-              <AllSetCard />
-            ) : (
-              <>
-                <SectionHeader title={copy.pendingTitle} meta={copy.pendingMeta(pending.length)} />
-                {checkins.map((item) => {
-                  const bookingId = item.target.booking_id ?? "";
-                  const booking = view.bookings.find((b) => b.booking_id === bookingId);
-                  const companionId = data.checkin[bookingId]?.companion?.person_id;
-                  const logo = httpUrl(booking?.journey?.logo_url);
-                  return (
-                    <CheckinCard
-                      key={item.item_id}
-                      sub={item.subtitle ?? ""}
-                      companion={companionId ? users[companionId] : undefined}
-                      logo={logo ? { src: logo, alt: booking?.journey?.carrier_name ?? "" } : undefined}
-                      onCheckIn={() => sheets.openCheckin(bookingId)}
-                    />
-                  );
-                })}
-                <PendingCard rows={rows} onAct={act} />
-              </>
-            )}
+      {!populated ? (
+        <TripHomeZero view={view} onInvite={openShare} onSetBudget={openBudget} />
+      ) : (
+        <>
+          {allSet ? (
+            <AllSetCard />
+          ) : (
+            <>
+              <SectionHeader title={copy.pendingTitle} meta={copy.pendingMeta(pending.length)} />
+              {checkins.map((item) => {
+                const bookingId = item.target.booking_id ?? "";
+                const booking = view.bookings.find((b) => b.booking_id === bookingId);
+                const companionId = data.checkin[bookingId]?.companion?.person_id;
+                const logo = httpUrl(booking?.journey?.logo_url);
+                return (
+                  <CheckinCard
+                    key={item.item_id}
+                    sub={item.subtitle ?? ""}
+                    companion={companionId ? users[companionId] : undefined}
+                    logo={logo ? { src: logo, alt: booking?.journey?.carrier_name ?? "" } : undefined}
+                    onCheckIn={() => sheets.openCheckin(bookingId)}
+                  />
+                );
+              })}
+              <PendingCard rows={rows} onAct={act} />
+            </>
+          )}
 
-            {done.length > 0 && (
-              <>
-                <SectionHeader data-anchor="done" className="mt-2" title={copy.doneTitle} meta={copy.doneLabel(done.length, allSet)} />
-                <DoneList
-                  rows={done}
-                  openRow={openRow}
-                  onToggle={(key) => setOpenRow((current) => (current === key ? null : key))}
-                  asks={asks}
-                  // Single-select per row; tapping the selected chip clears it.
-                  onChip={(key, label) => setAsk(key, { chip: asks[key]?.chip === label ? null : label })}
-                  onDraft={(key, text) => setAsk(key, { draft: text })}
-                  onCall={askGoToCall}
-                  // Listen in and the recording are hidden while `features.calls` is off (§7).
-                  onListen={features?.calls ? (call) => void tap(call, "listen") : undefined}
-                  onEnd={(call) => void tap(call, "stop")}
-                  onRecording={features?.calls ? sheets.openRecording : undefined}
-                />
-              </>
-            )}
-          </>
-        )}
-      </TripShell>
+          {done.length > 0 && (
+            <>
+              <SectionHeader data-anchor="done" className="mt-2" title={copy.doneTitle} meta={copy.doneLabel(done.length, allSet)} />
+              <DoneList
+                rows={done}
+                openRow={openRow}
+                onToggle={(key) => setOpenRow((current) => (current === key ? null : key))}
+                asks={asks}
+                // Single-select per row; tapping the selected chip clears it.
+                onChip={(key, label) => setAsk(key, { chip: asks[key]?.chip === label ? null : label })}
+                onDraft={(key, text) => setAsk(key, { draft: text })}
+                onCall={askGoToCall}
+                // Listen in and the recording are hidden while `features.calls` is off (§7).
+                onListen={features?.calls ? (call) => void tap(call, "listen") : undefined}
+                onEnd={(call) => void tap(call, "stop")}
+                onRecording={features?.calls ? sheets.openRecording : undefined}
+              />
+            </>
+          )}
+        </>
+      )}
 
       <RecordingSheet tripId={tripId} call={sheets.call} open={sheets.sheet === "recording"} onOpenChange={(open) => !open && sheets.close()} />
       <RecordPaymentSheet open={sheets.sheet === "record"} onOpenChange={(open) => !open && sheets.close()} target={sheets.record} />

@@ -13,11 +13,8 @@ import { BudgetSheet } from "@/components/sheets/BudgetSheet";
 import { RecordPaymentSheet } from "@/components/sheets/RecordPaymentSheet";
 import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor, useRecordSheet } from "@/components/sheets/useRecordTarget";
-import { Screen } from "@/components/shell/Screen";
 import { DashedNoteRow } from "@/components/trip/DashedNoteRow";
 import { ExpensesZero } from "@/components/trip/empty/ExpensesZero";
-import { TripShell } from "@/components/trip/TripShell";
-import { useTripShellProps } from "@/components/trip/useTripShellProps";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MONEY_COPY } from "@/data/seed/money";
@@ -32,7 +29,7 @@ export default function ExpensesPage() {
   const { tripId } = useParams<{ tripId: TripId }>();
   // useSearchParams needs a Suspense boundary for static prerendering.
   return (
-    <Suspense fallback={<Screen>{null}</Screen>}>
+    <Suspense fallback={null}>
       <Expenses key={tripId} tripId={tripId} />
     </Suspense>
   );
@@ -55,7 +52,6 @@ function Expenses({ tripId }: { tripId: TripId }) {
   const record = useRecordSheet();
   const budget = useGroupBudget(tripId);
   const data = useTripGate(tripId);
-  const shell = useTripShellProps(tripId, "expenses");
   const ready = data !== null;
   const filter = scope === "me" ? "mine" : "all";
 
@@ -68,7 +64,7 @@ function Expenses({ tripId }: { tripId: TripId }) {
     if (ready && filter === "mine") void loadTransactions(tripId, "mine").catch(() => {});
   }, [ready, tripId, filter]);
 
-  if (!data?.view || !shell || !data.money || !data.transactions.all) return <Screen>{null}</Screen>;
+  if (!data?.view || !data.money || !data.transactions.all) return null;
   const { view, money } = data;
   const all = data.transactions.all;
 
@@ -93,46 +89,44 @@ function Expenses({ tripId }: { tripId: TripId }) {
 
   return (
     <>
-      <TripShell {...shell}>
-        {zero ? (
-          <ExpensesZero scope={scope} onScopeChange={changeScope} budgetSet={budget.isSet} onSetBudget={openBudget} />
-        ) : (
-          <>
-            <ScopeToggle aria-label={MONEY_COPY.scopeLabel} value={scope} onValueChange={changeScope} />
-            <SpendSummary view={model} onEditBudget={openBudget} />
-            <SectionHeader title={MONEY_COPY.settleTitle} meta={model.settleMeta || undefined} className="mt-2" />
-            {model.settlements.length === 0 ? (
-              <DashedNoteRow emoji={MONEY_COPY.allSquare.emoji} title={MONEY_COPY.allSquare.title} sub={MONEY_COPY.allSquare.sub} />
-            ) : (
-              <Card variant="shadow" radius="2xl" className="px-3.5 pt-1.5 pb-0.5">
-                {money.transfers.map((transfer, i) => (
-                  <SettleRow
-                    key={`${transfer.from_person_id}|${transfer.to_person_id}`}
-                    settlement={model.settlements[i]}
-                    users={users}
-                    isYou={transfer.from_person_id === meId}
-                    onRecord={() => record.show(recordTargetFor(view, transfer))}
-                  />
-                ))}
-              </Card>
-            )}
-            <SectionHeader title={MONEY_COPY.txTitle} meta={MONEY_COPY.txMeta} className="mt-2" />
-            {rows.length > 0 && (
-              <Card variant="shadow" radius="2xl" className="px-3.5 py-0.5">
-                {rows.map((tx, i) => (
-                  <TransactionRow key={tx.id} tx={tx} users={users} meId={meId} showDate first={i === 0} />
-                ))}
-              </Card>
-            )}
-            <Button variant="white" size="base" asChild className="w-full gap-1.5 shadow-card">
-              <Link href={`/trips/${tripId}/expenses/transactions?scope=${scope}`}>
-                {scope === "me" ? MONEY_COPY.seeEveryone : MONEY_COPY.seeAll(all.totalCount)}
-                <ChevronRight className="size-[15px]" strokeWidth={2.4} />
-              </Link>
-            </Button>
-          </>
-        )}
-      </TripShell>
+      {zero ? (
+        <ExpensesZero scope={scope} onScopeChange={changeScope} budgetSet={budget.isSet} onSetBudget={openBudget} />
+      ) : (
+        <>
+          <ScopeToggle aria-label={MONEY_COPY.scopeLabel} value={scope} onValueChange={changeScope} />
+          <SpendSummary view={model} onEditBudget={openBudget} />
+          <SectionHeader title={MONEY_COPY.settleTitle} meta={model.settleMeta || undefined} className="mt-2" />
+          {model.settlements.length === 0 ? (
+            <DashedNoteRow emoji={MONEY_COPY.allSquare.emoji} title={MONEY_COPY.allSquare.title} sub={MONEY_COPY.allSquare.sub} />
+          ) : (
+            <Card variant="shadow" radius="2xl" className="px-3.5 pt-1.5 pb-0.5">
+              {money.transfers.map((transfer, i) => (
+                <SettleRow
+                  key={`${transfer.from_person_id}|${transfer.to_person_id}`}
+                  settlement={model.settlements[i]}
+                  users={users}
+                  isYou={transfer.from_person_id === meId}
+                  onRecord={() => record.show(recordTargetFor(view, transfer))}
+                />
+              ))}
+            </Card>
+          )}
+          <SectionHeader title={MONEY_COPY.txTitle} meta={MONEY_COPY.txMeta} className="mt-2" />
+          {rows.length > 0 && (
+            <Card variant="shadow" radius="2xl" className="px-3.5 py-0.5">
+              {rows.map((tx, i) => (
+                <TransactionRow key={tx.id} tx={tx} users={users} meId={meId} showDate first={i === 0} />
+              ))}
+            </Card>
+          )}
+          <Button variant="white" size="base" asChild className="w-full gap-1.5 shadow-card">
+            <Link href={`/trips/${tripId}/expenses/transactions?scope=${scope}`}>
+              {scope === "me" ? MONEY_COPY.seeEveryone : MONEY_COPY.seeAll(all.totalCount)}
+              <ChevronRight className="size-[15px]" strokeWidth={2.4} />
+            </Link>
+          </Button>
+        </>
+      )}
       <RecordPaymentSheet open={record.open} onOpenChange={record.onOpenChange} target={record.target} />
       <BudgetSheet open={budgetOpen} onOpenChange={setBudgetOpen} {...budget} />
     </>

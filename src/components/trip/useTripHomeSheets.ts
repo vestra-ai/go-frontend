@@ -7,7 +7,7 @@ import type { CallModel } from "@/state/homeView";
 // Sheet state for the trip home route. Which sheet is open lives in component state and opens only from a tap: no query
 // param opens, names or closes a sheet. (`?open=<booking>` expands a Done row, not a sheet.)
 
-export type TripHomeSheet = "recording" | "checkin" | "share" | "record" | "budget";
+export type TripHomeSheet = "recording" | "checkin" | "record" | "budget";
 export type CheckinStep = "details" | "seat";
 
 type Open = { sheet: TripHomeSheet; step: CheckinStep };
@@ -21,8 +21,6 @@ export interface TripHomeSheets {
   /** The flight being checked in, and the open step. */
   checkinBookingId: string | null;
   checkinStep: CheckinStep | null;
-  shareOpen: boolean;
-  setShareOpen(open: boolean): void;
   openRecording(call: CallModel): void;
   /** "Check in now" → step details. */
   openCheckin(bookingId: string): void;
@@ -49,8 +47,6 @@ export function useTripHomeSheets(): TripHomeSheets {
     record,
     checkinBookingId,
     checkinStep: open?.sheet === "checkin" ? open.step : null,
-    shareOpen: sheet === "share",
-    setShareOpen: (isOpen) => (isOpen ? show("share") : setOpen(null)),
     openRecording: (next) => {
       setCall(next);
       show("recording");
