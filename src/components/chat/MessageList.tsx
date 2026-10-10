@@ -20,15 +20,18 @@ type MessageListProps = {
   bottomPadding: keyof typeof padClass;
   /** End sentinel; pass the same ref to `useScrollToEnd`. */
   anchorRef: RefObject<HTMLSpanElement | null>;
+  /** Slide up with the page (default). Off when the thread replaces the skeleton in place. */
+  slideIn?: boolean;
   children: ReactNode;
 };
 
 /** The chat thread, in the document flow (the body scrolls). No date separators, timestamps or receipts (as designed); the only typing row is Go's (`GoThinking`). */
-export function MessageList({ bottomPadding, anchorRef, children }: MessageListProps) {
+export function MessageList({ bottomPadding, anchorRef, slideIn = true, children }: MessageListProps) {
   return (
     <div
       className={cn(
-        "flex flex-1 flex-col gap-2.5 px-4 pt-4 [[data-own]_&]:animate-page-in", // the page slide-up, minus the pinned header
+        "flex flex-1 flex-col gap-2.5 px-4 pt-4",
+        slideIn && "[[data-own]_&]:animate-page-in", // the page slide-up, minus the pinned header
         padClass[bottomPadding],
       )}
     >

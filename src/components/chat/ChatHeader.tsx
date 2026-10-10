@@ -24,7 +24,9 @@ type ChatHeaderProps = {
   children: ReactNode;
 };
 
-const titleClass = "flex h-[52px] min-w-0 flex-1 items-center gap-2.5 px-1 text-left";
+/** The title block and the pinned bar; shared with the chat skeleton, so both lay out alike. */
+export const chatTitleClass = "flex h-[52px] min-w-0 flex-1 items-center gap-2.5 px-1 text-left";
+export const chatHeaderClass = "sticky top-0 z-30 shrink-0 bg-white pt-safe pb-3 shadow-header";
 
 // The stack is decorative (the subtitle names who joined).
 function stackAvatar(spec: AvatarSpec) {
@@ -54,7 +56,7 @@ export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, on
   );
 
   return (
-    <header className="sticky top-0 z-30 shrink-0 bg-white pt-safe pb-3 shadow-header">
+    <header className={chatHeaderClass}>
       {/* The visible title is a button/link (avatar + name + crew line), so the page heading is announced separately. */}
       <h1 className="sr-only">{trip.name}</h1>
       <div className="flex items-center gap-1 pr-2 pl-3">
@@ -64,11 +66,11 @@ export function ChatHeader({ trip, subtitle, members, backHref, onTitlePress, on
           </Link>
         </Button>
         {onTitlePress ? (
-          <button type="button" className={titleClass} onClick={onTitlePress}>
+          <button type="button" className={chatTitleClass} onClick={onTitlePress}>
             {title}
           </button>
         ) : (
-          <Link href={backHref} className={titleClass}>
+          <Link href={backHref} className={chatTitleClass}>
             {title}
           </Link>
         )}

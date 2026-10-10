@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { chat as copy } from "@/data/seed/copy";
 import type { AttachItem } from "@/data/types";
 import type { MentionItem } from "@/lib/mentions";
+import { cn } from "@/lib/utils";
 import { AttachMenu } from "./AttachMenu";
 import { MentionSuggestions } from "./MentionSuggestions";
 import { MicSendButton } from "./MicSendButton";
@@ -32,6 +33,8 @@ type ComposerProps = {
   onAttachFile(item: AttachItem, file: File): void;
   /** Go and the people in the trip: what typing "@" lists. */
   mentionItems?: MentionItem[];
+  /** Slide up with the page (default). Off when the composer replaces the skeleton in place. */
+  slideIn?: boolean;
 };
 
 // File picker per menu row; the menu closes first, then the native picker opens.
@@ -50,6 +53,7 @@ export function Composer({
   onAttachOpenChange,
   onAttachFile,
   mentionItems,
+  slideIn = true,
 }: ComposerProps) {
   const draft = value.trim();
   const listId = useId();
@@ -77,7 +81,7 @@ export function Composer({
   return (
     <StickyDock>
       <FadeDock variant="gradient">
-        <div className="relative flex items-center gap-2.5 px-4 pt-6 [[data-own]_&]:animate-page-in">
+        <div className={cn("relative flex items-center gap-2.5 px-4 pt-6", slideIn && "[[data-own]_&]:animate-page-in")}>
           {recording ? (
             <RecordingBar seconds={recordingSeconds} onCancel={onCancelRecording} onSend={onMic} />
           ) : (

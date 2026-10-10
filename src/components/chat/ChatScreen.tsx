@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { CallCard, OptionsCard, Transfer } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { ChatHeader } from "@/components/chat/ChatHeader";
+import { ChatSkeleton } from "@/components/chat/ChatSkeleton";
 import { Composer } from "@/components/chat/Composer";
 import { ComposerTray } from "@/components/chat/ComposerTray";
 import { FactChipRow, type FactChipData } from "@/components/chat/FactChipRow";
@@ -110,12 +111,16 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     if (ready) void loadRoom(tripId).catch((err) => toastGo(errorMessage(err)));
   }, [ready, tripId]);
 
+  // A room that is not there yet when the page opens (a refresh, a first visit) is replaced by the skeleton in place; only
+  // one that is already there slides up with the page.
+  const [slideIn] = useState(() => data?.view != null && data.room === "ready");
+
   // First-render messages count as history (no rise-in), so the room mounts once its first page is in.
-  if (!data?.view || data.room !== "ready") return <Screen>{null}</Screen>;
-  return <Room tripId={tripId} data={data} />;
+  if (!data?.view || data.room !== "ready") return <ChatSkeleton tripId={tripId} />;
+  return <Room tripId={tripId} data={data} slideIn={slideIn} />;
 }
 
-function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
+function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slideIn: boolean }) {
   const view = data.view!;
   const anchorRef = useRef<HTMLSpanElement>(null);
   const params = useSearchParams();
@@ -444,7 +449,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
           <FactChipRow chips={chipData} />
         </ChatHeader>
 
-        <MessageList bottomPadding={modes.bottomPadding} anchorRef={anchorRef}>
+        <MessageList bottomPadding={modes.bottomPadding} anchorRef={anchorRef} slideIn={slideIn}>
           {data.hasMoreHistory && (
             <Button variant="white" size="sm" className="self-center shadow-bubble" aria-busy={data.loadingHistory} disabled={data.loadingHistory} onClick={loadEarlier}>
               {chatCopy.earlier}
@@ -500,6 +505,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
             onAttachOpenChange={modes.onAttachOpenChange}
             onAttachFile={modes.attachFile}
             mentionItems={mentionItems}
+            slideIn={slideIn}
           />
         )}
 

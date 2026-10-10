@@ -167,6 +167,7 @@ export const share = {
 
 export const chat = {
   goName: "Go",
+  loading: "Loading the chat",
   header: { back: "Back", board: "Trip board", share: "Share trip invite" },
   chipEmoji: { where: "📍", when: "📅", stay: "🏡", budget: "💰", from: "🛫" },
   /** A fact chip that has no value yet asks its question. */
