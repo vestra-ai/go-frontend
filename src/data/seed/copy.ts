@@ -175,6 +175,8 @@ export const chat = {
   /** The header's second line: the dates once set, else who is in. */
   subtitle: { people: (n: number) => (n === 1 ? "Just you so far" : `${n} in the trip`) },
   earlier: "Show earlier messages",
+  /** The floating button while the reader is up the thread and newer messages came in. */
+  newMessages: (n: number) => (n === 1 ? "1 new message" : n > 99 ? "99+ new messages" : `${n} new messages`),
   goThinking: "Go is thinking",
   mention: { label: "Mention someone" },
   composer: {

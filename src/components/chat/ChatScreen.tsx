@@ -13,9 +13,10 @@ import { FactChipRow, type FactChipData } from "@/components/chat/FactChipRow";
 import { GoThinking } from "@/components/chat/GoThinking";
 import { LongPressOverlay } from "@/components/chat/LongPressOverlay";
 import { MessageList } from "@/components/chat/MessageList";
+import { NewMessagesPill } from "@/components/chat/NewMessagesPill";
 import { RoomUsersProvider } from "@/components/chat/RoomContext";
 import { useLongPress } from "@/components/chat/useLongPress";
-import { useScrollToEnd, useStayAtEnd } from "@/components/chat/useScrollToEnd";
+import { useScrollToEnd, useStayAtEnd, useThreadFollow } from "@/components/chat/useScrollToEnd";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { AttachmentSheet } from "@/components/sheets/AttachmentSheet";
@@ -215,7 +216,9 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   const goThinking = data.typing.some((e) => e.who.kind === "go");
   const liveScrollKey = goThinking ? `${lastId}+go` : lastId;
   const [heldScrollKey, setHeldScrollKey] = useState<string | null>(null);
-  useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey]);
+  // A new message scrolls a reader who is at the end; one who has scrolled up stays where they are, with a button that counts what came in.
+  const thread = useThreadFollow(anchorRef, rows);
+  useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey], thread.follow);
   // Opening or closing the reply / ask-Go tray moves the bottom edge only: the thread follows it when it was already at
   // the end, and stays where it is when reading further up (the message being replied to is usually there).
   useStayAtEnd(anchorRef, modes.bottomPadding);
@@ -512,6 +515,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
             slideIn={slideIn}
           />
         )}
+
+        {thread.unread > 0 && <NewMessagesPill label={chatCopy.newMessages(thread.unread)} bottomPadding={modes.bottomPadding} onPress={thread.jumpToEnd} />}
 
         {overlayTarget && targetAuthor && targetName !== undefined && anchor?.id === overlayTarget.id && (
           <LongPressOverlay
