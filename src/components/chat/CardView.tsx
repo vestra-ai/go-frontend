@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import type {
   CallCard,
   Card,
@@ -14,6 +14,7 @@ import type {
   PayCard,
   Transfer,
   TripView,
+  VoteCard as VoteCardType,
   WorkingCard,
 } from "@/api/contract";
 import { isKnownCard, type Features } from "@/api/contract";
@@ -27,6 +28,9 @@ import { cards as copy, polls } from "@/data/seed/copy";
 import type { User, VisaMember } from "@/data/types";
 import { daysBetween, formatDay, formatDayShort, formatHHMM, monthShort, parseDay, timeAgo, wallTime, weekdayShort } from "@/lib/dates";
 import { inr } from "@/lib/format";
+import { SKELETON_BAR } from "@/lib/skeleton";
+import { cn } from "@/lib/utils";
+import { loadDecision } from "@/state/actions";
 import { bookingEmoji, httpUrl, routeLine } from "@/state/bookingView";
 import { closesIn } from "@/state/boardView";
 import { toSettlement } from "@/state/moneyView";
@@ -102,6 +106,54 @@ function until(iso: string | null | undefined): string {
 
 function fallback(card: Card): ReactNode {
   return <Bubble author="go">{card.fallback_text}</Bubble>;
+}
+
+/** A vote's card with its options not in the room yet: the size of a poll, so what lands in its place barely moves. */
+function VoteSkeleton() {
+  return (
+    <InChatCard aria-busy className="flex flex-col gap-1 pt-3.5 pb-3">
+      <span role="status" className="sr-only">
+        {polls.loading}
+      </span>
+      <div aria-hidden className="flex flex-col gap-1">
+        <div className="px-4 pb-1 text-18 leading-[1.3] font-semibold tracking-h4">
+          <span className={SKELETON_BAR}>Where should we go this time?</span>
+        </div>
+        {[0, 1, 2].map((i) => (
+          <div key={i} className={cn("flex h-16 items-center gap-3.5 px-4", i > 0 && "border-t border-line")}>
+            <span className="size-12 shrink-0 rounded-xl bg-line" />
+            <span className="flex flex-1 flex-col gap-px">
+              <span className="text-15 leading-[1.3] font-semibold">
+                <span className={SKELETON_BAR}>Option name here</span>
+              </span>
+              <span className="text-13">
+                <span className={SKELETON_BAR}>No votes yet</span>
+              </span>
+            </span>
+          </div>
+        ))}
+      </div>
+    </InChatCard>
+  );
+}
+
+/**
+ * The message of a vote arrives on the socket before the trip read brings its decision. The text bubble that stood in
+ * for the card for that moment flashed, then jumped to the poll. Read the decision now instead and hold a placeholder;
+ * only if that read fails does the card's own text stay.
+ */
+function VotePending({ card, room }: { card: VoteCardType; room: RoomModel }) {
+  const [failed, setFailed] = useState(false);
+  const { tripId } = room;
+  const decisionId = card.decision_id;
+  useEffect(() => {
+    let current = true;
+    loadDecision(tripId, decisionId).catch(() => current && setFailed(true));
+    return () => {
+      current = false;
+    };
+  }, [tripId, decisionId]);
+  return failed ? fallback(card) : <VoteSkeleton />;
 }
 
 // ---------------------------------------------------------------------------
@@ -586,7 +638,7 @@ function renderKnown(card: KnownCard, room: RoomModel, actions: RoomActions): Re
   switch (card.kind) {
     case "vote": {
       const decision = room.view.decisions.find((d) => d.decision_id === card.decision_id);
-      return decision ? <VoteCard decision={decision} room={room} actions={actions} /> : null;
+      return decision ? <VoteCard decision={decision} room={room} actions={actions} /> : <VotePending card={card} room={room} />;
     }
     case "mandate": {
       const decision = room.view.decisions.find((d) => d.decision_id === card.decision_id);

@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { CallCard, OptionsCard, Transfer } from "@/api/contract";
+import { isKnownCard, type CallCard, type OptionsCard, type Transfer } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatSkeleton } from "@/components/chat/ChatSkeleton";
@@ -219,6 +219,10 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   // Opening or closing the reply / ask-Go tray moves the bottom edge only: the thread follows it when it was already at
   // the end, and stays where it is when reading further up (the message being replied to is usually there).
   useStayAtEnd(anchorRef, modes.bottomPadding);
+  // A vote's card stands as a placeholder until its decision is read, and the poll is taller: if the thread was at its end,
+  // it follows the newest card to its new end.
+  const newest = rows[rows.length - 1]?.card;
+  useStayAtEnd(anchorRef, newest && isKnownCard(newest) && newest.kind === "vote" ? view.decisions.some((d) => d.decision_id === newest.decision_id) : true);
 
   // "Earlier messages" adds a page above: keep what was on screen where it was.
   const firstId = rows[0]?.id ?? "";

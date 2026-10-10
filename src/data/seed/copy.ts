@@ -314,6 +314,8 @@ export const polls = {
   closed: "Vote closed",
   cancelled: "Vote called off",
   failed: "Couldn’t save your vote. Try again.",
+  /** Read by assistive tech while a vote's card waits for its options. */
+  loading: "Loading the vote",
 } as const;
 
 // Words the app adds around Go's cards and the Server's record cards (CONTRACT-APP §5). What a card itself says
