@@ -445,7 +445,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
           )}
           {rows.map((m) => (
             <MessageRenderer
-              key={m.id}
+              key={m.key}
               message={m}
               room={room}
               enter={!historyIds.has(m.id)}

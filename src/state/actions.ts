@@ -515,6 +515,7 @@ async function deliver(tripId: Id, clientId: string, mentions?: Id[]) {
       const held = d.seq;
       upsertMessage(d, message);
       advanceSeq(d, message.updated_seq, held);
+      d.sentAs[message.message_id] = clientId;
       d.outbox = d.outbox.filter((o) => o.clientId !== clientId);
     });
     blobs.delete(clientId);

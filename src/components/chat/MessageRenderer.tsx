@@ -114,7 +114,8 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
       {...(author === "member" && !m.deleted
         ? { "data-msg-id": m.id, onPointerDown: onPressStart, onPointerUp: onPressEnd, onPointerCancel: onPressEnd, onPointerLeave: onPressEnd }
         : {})}
-      className={cn("flex flex-col gap-2.5", sending?.status === "sending" && "opacity-60", className)}
+      // Sending → stored is the same row (see `RoomMessage.key`): only the opacity changes, so it eases there.
+      className={cn("flex flex-col gap-2.5 transition-opacity duration-220 ease-out", sending?.status === "sending" && "opacity-60", className)}
     >
       {rows}
       {sending?.status === "failed" && (

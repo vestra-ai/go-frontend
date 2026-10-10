@@ -9,6 +9,8 @@ import { userOf } from "@/state/view";
 export interface RoomMessage {
   /** `message_id`, or the `client_message_id` of a send still on its way. */
   id: string;
+  /** The React key: a send of mine keeps the `client_message_id` it started with, so becoming the stored message does not remount the row (and replay its entrance). */
+  key: string;
   author: { kind: "go" } | { kind: "system" } | { kind: "person"; id: Id };
   mine: boolean;
   text: string;
@@ -78,6 +80,7 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
     const mine = m.author.kind === "person" && m.author.person_id === meId;
     return {
       id: m.message_id,
+      key: data.sentAs[m.message_id] ?? m.message_id,
       author: m.author.kind === "person" ? { kind: "person", id: m.author.person_id } : { kind: m.author.kind },
       mine,
       text: m.deleted ? "" : (m.text ?? ""),
@@ -98,6 +101,7 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
     const a = out.attachment;
     rows.push({
       id: out.clientId,
+      key: out.clientId,
       author: { kind: "person", id: meId },
       mine: true,
       text: out.text ?? "",

@@ -91,6 +91,8 @@ export interface TripData {
   hasMoreHistory: boolean;
   loadingHistory: boolean;
   outbox: OutgoingMessage[];
+  /** The `client_message_id` a stored message of mine was sent as: the thread keeps that row's key, so the swap from "sending" to stored is not a new row. */
+  sentAs: Record<Id, string>;
   typing: TypingEntry[];
   catchUp: CatchUp | null;
 
@@ -130,6 +132,7 @@ export function emptyTrip(): TripData {
     hasMoreHistory: false,
     loadingHistory: false,
     outbox: [],
+    sentAs: {},
     typing: [],
     catchUp: null,
     myVotes: {},

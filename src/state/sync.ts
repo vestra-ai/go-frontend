@@ -111,7 +111,10 @@ function onFrame(frame: ServerFrame) {
         if (message.author.kind === "person" && message.author.person_id === myId) {
           // My own send came back on the socket before its POST answered: hide the "sending" twin (§3.2).
           const twin = t.outbox.find((o) => !o.echoedBy && o.status === "sending" && (o.text ?? "") === (message.text ?? ""));
-          if (twin) twin.echoedBy = message.message_id;
+          if (twin) {
+            twin.echoedBy = message.message_id;
+            t.sentAs[message.message_id] = twin.clientId;
+          }
         } else if (t.view && message.seq > t.view.seq) {
           // Not yet in the counts the trip was read with. Opening the room marks it read again.
           t.view.me.unread_count += 1;
