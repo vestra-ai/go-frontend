@@ -26,6 +26,9 @@ export function useTripShellActions(): TripShellActions {
   return actions;
 }
 
+/** The column under the tab bar (its top padding is the shell's, since the collapsed preset changes it); shared with the skeleton. */
+export const tripBodyClass = "flex flex-col gap-2.5 px-4 pb-[120px]";
+
 export interface TripShellProps {
   trip: Trip;
   active: TripTab;
@@ -84,7 +87,7 @@ export function TripShell({
       <TripShellActionsContext.Provider value={actions}>
         <div
           key={active}
-          className={`flex flex-col gap-2.5 px-4 pb-[120px] [[data-switch=tab]_&]:animate-page-in ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}
+          className={`${tripBodyClass} [[data-switch=tab]_&]:animate-page-in ${forceCollapsed ? "pt-[calc(env(safe-area-inset-top,0px)+118px)]" : "pt-4"}`}
         >
           {children}
         </div>

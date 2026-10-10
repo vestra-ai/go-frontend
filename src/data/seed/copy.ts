@@ -563,6 +563,7 @@ export const planZero = {
 // ---------------------------------------------------------------------------
 
 export const tripHome = {
+  loading: "Loading your trip",
   pendingTitle: "Pending on you",
   pendingMeta: (n: number) => `${n} left`,
   allSet: { title: "You’re all set", sub: "Nothing pending on you. Go pings you if plans change." },

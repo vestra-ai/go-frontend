@@ -15,6 +15,7 @@ import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor, useRecordSheet } from "@/components/sheets/useRecordTarget";
 import { DashedNoteRow } from "@/components/trip/DashedNoteRow";
 import { ExpensesZero } from "@/components/trip/empty/ExpensesZero";
+import { ExpensesSkeleton } from "@/components/trip/TripBodySkeletons";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { MONEY_COPY } from "@/data/seed/money";
@@ -64,7 +65,9 @@ function Expenses({ tripId }: { tripId: TripId }) {
     if (ready && filter === "mine") void loadTransactions(tripId, "mine").catch(() => {});
   }, [ready, tripId, filter]);
 
-  if (!data?.view || !data.money || !data.transactions.all) return null;
+  if (!data?.view) return null;
+  // The money and the transactions are two reads of their own, after the trip.
+  if (!data.money || !data.transactions.all) return <ExpensesSkeleton scope={scope} />;
   const { view, money } = data;
   const all = data.transactions.all;
 

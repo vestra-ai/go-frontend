@@ -26,6 +26,7 @@ import { TripHomeZero } from "./empty/TripHomeZero";
 import { PendingCard } from "./PendingCard";
 import { RecordingSheet } from "./RecordingSheet";
 import { useTripShellActions } from "./TripShell";
+import { PendingSkeleton } from "./TripBodySkeletons";
 import { useTripHomeSheets } from "./useTripHomeSheets";
 
 // "🧳 Extra baggage" → "Extra baggage" (strip the leading emoji/spaces).
@@ -85,7 +86,10 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
   const pending = data.needsYou ?? [];
   const checkins = pending.filter((item) => item.kind === "checkin" && item.target.booking_id);
   const rows = pending.filter((item) => item.kind !== "checkin").map((item) => toPendingRow(item, users));
-  const allSet = pending.length === 0;
+  // The needs-you list has its own read, after the trip: until it lands the trip's own count says whether anything waits
+  // (no "You're all set" flash for a person with things pending; a placeholder list instead).
+  const pendingLoading = data.needsYou === null && view.needs_you_count > 0;
+  const allSet = data.needsYou === null ? view.needs_you_count === 0 : pending.length === 0;
   const done = buildDone(view, data.calls, users);
 
   const act = (row: PendingRowModel) => {
@@ -136,6 +140,8 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
         <>
           {allSet ? (
             <AllSetCard />
+          ) : pendingLoading ? (
+            <PendingSkeleton count={view.needs_you_count} />
           ) : (
             <>
               <SectionHeader title={copy.pendingTitle} meta={copy.pendingMeta(pending.length)} />

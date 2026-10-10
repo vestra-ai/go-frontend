@@ -9,6 +9,7 @@ import { ScopeToggle } from "@/components/common/ScopeToggle";
 import { DayCard } from "@/components/plan/DayCard";
 import { TimelineRow } from "@/components/plan/TimelineRow";
 import { ItineraryZero } from "@/components/trip/empty/ItineraryZero";
+import { ItineraryDaysSkeleton } from "@/components/trip/TripBodySkeletons";
 import type { TripId, User } from "@/data/types";
 import { monthShort, parseDay, weekdayShort } from "@/lib/dates";
 import { loadItinerary, useTripGate } from "@/state";
@@ -112,7 +113,11 @@ function ItineraryView({ tripId }: { tripId: TripId }) {
       <div className="@container flex items-center gap-2">
         <ScopeToggle className="flex-1" value={scope} onValueChange={setScope} />
       </div>
-      {days && <ItineraryPlan days={days} scope={scope} users={usersById(data.view.people)} bookings={data.view.bookings} />}
+      {days ? (
+        <ItineraryPlan days={days} scope={scope} users={usersById(data.view.people)} bookings={data.view.bookings} />
+      ) : (
+        <ItineraryDaysSkeleton />
+      )}
     </>
   );
 }

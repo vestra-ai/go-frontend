@@ -10,8 +10,9 @@ const TRIP_TAB = /^\/trips\/([^/]+)(?:\/(?:itinerary|bookings|expenses))?$/;
 // Pages that keep a pinned header still and animate their own body instead (they mark it with `[[data-own]_&]:animate-page-in`).
 const OWN_TRANSITION = /^\/trips\/[^/]+\/(?:chat|expenses\/transactions)$/;
 
-// Pages that draw a skeleton of their own while the session is read: the skeleton is the shell, so it shows at once.
-const OWN_SKELETON = /^\/home$/;
+// Pages that draw a skeleton of their own while the session is read (Home, the trip tabs): the skeleton is the shell,
+// so it shows at once.
+const OWN_SKELETON = /^\/(?:home|trips\/(?!new(?:\/|$))[^/]+(?:\/(?:itinerary|bookings|expenses))?)$/;
 
 const keyOf = (pathname: string) => {
   const trip = TRIP_TAB.exec(pathname);
