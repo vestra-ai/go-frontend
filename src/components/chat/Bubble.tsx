@@ -108,7 +108,8 @@ export function Bubble({
     <div
       ref={bubbleRef}
       className={cn(
-        "flex flex-col rounded-5xl",
+        // wrap-anywhere (not break-words): a long unbroken string must also lower the column's min-content width, or the bubble outgrows its max-width.
+        "flex flex-col rounded-5xl wrap-anywhere",
         bubbleClass[author],
         pressable && "select-none [-webkit-touch-callout:none]",
         className,
