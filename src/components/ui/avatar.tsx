@@ -144,6 +144,9 @@ function Avatar({
           data-slot="avatar-image"
           src={imageSrc}
           alt={name ?? ""}
+          // People's photos are Google profile pictures (lh3.googleusercontent.com), which refuses a request that
+          // carries our page as its Referer: the image errors and the initials show instead.
+          referrerPolicy="no-referrer"
           onLoad={(e) => settle(e.currentTarget)}
           onError={(e) => settle(e.currentTarget)}
           className={cn(
