@@ -156,7 +156,7 @@ export const PRESETS: Preset[] = [
 
   // B · Invite crew (B-crew.md §1.1)
   preset("B1", "Who’s coming, empty", "/trips/new", { signedIn: true, goa: "draft" }),
-  preset("B2", "Share sheet · invite link · new", "/trips/new?sheet=share", { signedIn: true, goa: "draft" }),
+  preset("B2", "Share sheet · invite link · new", "/trips/new", { signedIn: true, goa: "draft" }),
   preset("B6", "Who’s coming, link", "/trips/new?joined=2", { signedIn: true, goa: "draft" }),
   preset("B7", "Friend taps the link · join Goa crew · updated", "/invite/goa-k7q", { signedIn: true, goa: "crew" }),
 
@@ -164,8 +164,8 @@ export const PRESETS: Preset[] = [
   preset("C1", "Quick start · cities in one line, Other city searches inline · updated", CHAT, { ...GOA_CREW, chat: KICKOFF_CHAT }),
   preset("C2", "Go opens · variant A", CHAT, { ...GOA_CREW, chat: { ...KICKOFF_CHAT, quickStart: "done", fromCity: BENGALURU } }),
   preset("C3", "After skipping quick start", CHAT, C3_STATE),
-  preset("C4", "From sheet · cities in one line + Other city · updated", `${CHAT}?sheet=from`, C3_STATE),
-  preset("C5", "From sheet · Other city expanded with search · updated", `${CHAT}?sheet=from&q=Ind`, C3_STATE),
+  preset("C4", "From sheet · cities in one line + Other city · updated", CHAT, C3_STATE),
+  preset("C5", "From sheet · Other city expanded with search · updated", CHAT, C3_STATE),
 
   // D · Message actions (C-chat-kickoff.md §1.1)
   preset("D1", "Long-press · reactions and copy work · updated", `${CHAT}?mode=longpress&msg=dt-arjun`, D_STATE),
@@ -174,23 +174,23 @@ export const PRESETS: Preset[] = [
 
   // E · Deciding together (E-deciding.md §1.1)
   preset("E1", "Go suggests places", CHAT, E1_STATE),
-  preset("E2", "Place details", `${CHAT}?sheet=place&id=goa`, E1_STATE),
-  preset("E3", "Place details · Gokarna · new", `${CHAT}?sheet=place&id=gokarna`, E1_STATE),
-  preset("E4", "Place details · Udaipur · new", `${CHAT}?sheet=place&id=udaipur`, E1_STATE),
+  preset("E2", "Place details", CHAT, E1_STATE),
+  preset("E3", "Place details · Gokarna · new", CHAT, E1_STATE),
+  preset("E4", "Place details · Udaipur · new", CHAT, E1_STATE),
   preset("E5", "Dates poll + I’m flexible", CHAT, { ...GOA_CREW, ensureStage: "dates-poll", chat: { dateVote: null, flexible: false } }),
   preset("E6", "Budget ask", CHAT, E6_STATE),
-  preset("E7", "Budget sheet · min–max slider", `${CHAT}?sheet=budget`, E6_STATE),
+  preset("E7", "Budget sheet · min–max slider", CHAT, E6_STATE),
   preset("E8", "Go suggests stays", CHAT, E8_STATE),
-  preset("E9", "Stay details · Villa Sol · new", `${CHAT}?sheet=stay&id=sol`, E8_STATE),
-  preset("E10", "Stay details · Casa Azul · new", `${CHAT}?sheet=stay&id=azul`, E8_STATE),
-  preset("E11", "Stay details · The Palms · new", `${CHAT}?sheet=stay&id=palms`, E8_STATE),
+  preset("E9", "Stay details · Villa Sol · new", CHAT, E8_STATE),
+  preset("E10", "Stay details · Casa Azul · new", CHAT, E8_STATE),
+  preset("E11", "Stay details · The Palms · new", CHAT, E8_STATE),
   preset("E12", "One person books", CHAT, E12_STATE),
   preset("E13", "Others see who’s booking", CHAT, {
     ...GOA_CREW,
     ensureStage: "pay",
     chat: { stayBooking: { status: "claimed", by: "rahul", paid: false, done: false } },
   }),
-  preset("E14", "Payment sheet", `${CHAT}?sheet=pay`, E12_STATE),
+  preset("E14", "Payment sheet", CHAT, E12_STATE),
   preset("E15", "Booking the stay", CHAT, {
     ...GOA_CREW,
     ensureStage: "book",
@@ -199,12 +199,12 @@ export const PRESETS: Preset[] = [
 
   // F · Travel, private, plan (F-travel.md §1.1). ensureStage never books the cab or sets privateViewed.
   preset("F1", "Travel ask", CHAT, { ...GOA_CREW, ensureStage: "travel" }),
-  preset("F2", "Route sheet · BLR ⇄ GOA, flight / train / bus, filters · updated", `${CHAT}?sheet=route`, {
+  preset("F2", "Route sheet · BLR ⇄ GOA, flight / train / bus, filters · updated", CHAT, {
     ...GOA_CREW,
     ensureStage: "travel",
     chat: { route: F2_ROUTE },
   }),
-  preset("F3", "Preferred time slots · onward and return · new", `${CHAT}?sheet=route`, {
+  preset("F3", "Preferred time slots · onward and return · new", CHAT, {
     ...GOA_CREW,
     ensureStage: "travel",
     chat: { route: { ...F2_ROUTE, on: ["s3"], draft: { on: ["s3"], ret: [] } } },
@@ -214,20 +214,20 @@ export const PRESETS: Preset[] = [
     ensureStage: "route-confirm",
     chat: { route: { booked: { optionId: "f2", trip: "round" } } },
   }),
-  preset("F5", "Cab sheet · All / Sedan / SUV, total price · updated", `${CHAT}?sheet=cab`, { ...GOA_CREW, ensureStage: "route-confirm" }),
+  preset("F5", "Cab sheet · All / Sedan / SUV, total price · updated", CHAT, { ...GOA_CREW, ensureStage: "route-confirm" }),
   preset("F6", "Private answer in group", CHAT, { ...GOA_CREW, ensureStage: "private", chat: { privateViewed: false } }),
-  preset("F7", "Just-for-me sheet", `${CHAT}?sheet=private`, { ...GOA_CREW, ensureStage: "private", chat: { privateViewed: true } }),
+  preset("F7", "Just-for-me sheet", CHAT, { ...GOA_CREW, ensureStage: "private", chat: { privateViewed: true } }),
   preset("F8", "Go’s final plan", CHAT, PLANNED),
 
   // G · Bali (G-bali.md §1.1)
   preset("G1", "Bali invite from app home · join · new", "/invite/bali-x9m", BALI_PENDING),
   preset("G2", "Visa ask", "/trips/bali/chat", BALI_VISA),
-  preset("G3", "Visa details sheet", "/trips/bali/chat?sheet=visa", BALI_VISA),
+  preset("G3", "Visa details sheet", "/trips/bali/chat", BALI_VISA),
 
-  // H · Trip board (H-board.md §1.1). An explicit ?sheet= suppresses the QuickStart auto-open.
-  preset("H1", "Board, empty", `${CHAT}?sheet=board`, { ...GOA_CREW, chat: { ...KICKOFF_CHAT, quickStart: "dismissed" } }),
-  preset("H2", "Board, stay poll open", `${CHAT}?sheet=board`, E8_STATE),
-  preset("H3", "Board · Go reminds you to book your return", `${CHAT}?sheet=board`, {
+  // H · Trip board (H-board.md §1.1).
+  preset("H1", "Board, empty", CHAT, { ...GOA_CREW, chat: { ...KICKOFF_CHAT, quickStart: "dismissed" } }),
+  preset("H2", "Board, stay poll open", CHAT, E8_STATE),
+  preset("H3", "Board · Go reminds you to book your return", CHAT, {
     ...PLANNED,
     chat: { route: { booked: { optionId: "f2", trip: "oneway" } } },
   }),
@@ -253,17 +253,17 @@ export const PRESETS: Preset[] = [
     ...PLANNED,
     home: { ...HOME_IDLE, calls: ["villa", "indigo"], openRow: "fly" },
   }),
-  preset("J5", "Listening in · booking details, mute, take over, end · updated", `${HOME}?sheet=listen&call=villa`, {
+  preset("J5", "Listening in · booking details, mute, take over, end · updated", HOME, {
     ...PLANNED,
     home: { ...HOME_IDLE, calls: ["villa"] },
   }),
   preset("J6", "Home · all done · last call recording", HOME, J6_STATE),
-  preset("J7", "Call recording · outcome, player, transcript", `${HOME}?sheet=recording&call=villa`, J6_STATE),
+  preset("J7", "Call recording · outcome, player, transcript", HOME, J6_STATE),
 
   // K · Web check-in (K-checkin.md §1.1)
   preset("K1", "Home · web check-in open, 2 days before", HOME, { ...PLANNED, home: K_OPEN }),
-  preset("K2", "Check-in 1 · details", `${HOME}?sheet=checkin&step=details`, { ...PLANNED, home: K_OPEN }),
-  preset("K3", "Check-in 2 · seat next to Arjun", `${HOME}?sheet=checkin&step=seat`, { ...PLANNED, home: K_OPEN }),
+  preset("K2", "Check-in 1 · details", HOME, { ...PLANNED, home: K_OPEN }),
+  preset("K3", "Check-in 2 · seat next to Arjun", HOME, { ...PLANNED, home: K_OPEN }),
   preset("K4", "Check-in 3 · boarding pass", `${HOME}/checkin/pass`, {
     ...PLANNED,
     home: { ...K_OPEN, checkin: { status: "done", digiYatra: true, declaration: true, seat: "14A" } },
@@ -281,7 +281,7 @@ export const PRESETS: Preset[] = [
   preset("M4", "Expenses · everyone + transactions", `${HOME}/expenses`, M_STATE),
   preset("M5", "Expenses · just me + transactions", `${HOME}/expenses?scope=me`, M_STATE),
   preset("M6", "All transactions · filters work · updated", `${HOME}/expenses/transactions`, M_STATE),
-  preset("M7", "Record a payment", `${HOME}/expenses?scope=me&sheet=record`, M_STATE),
+  preset("M7", "Record a payment", `${HOME}/expenses?scope=me`, M_STATE),
 ];
 
 export const PRESET_IDS: PresetId[] = PRESETS.map((p) => p.id);

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 type CheckinCardProps = Omit<React.ComponentProps<typeof Card>, "children"> & {
   /** The friend on the same flight (companion note avatar). */
   companion: User;
-  /** "Check in now" → `?sheet=checkin&step=details`. */
+  /** "Check in now" opens the check-in sheet. */
   onCheckIn(): void;
 };
 

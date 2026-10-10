@@ -25,7 +25,7 @@ export function SpendSummary({ tripId, view }: SpendSummaryProps) {
         </div>
         {view.showEditBudget && (
           <Button variant="white" size="sm" asChild className="h-10 shrink-0 gap-1.5 pl-3 pr-3.5 shadow-card">
-            <Link href={`/trips/${tripId}/chat?sheet=budget`}>
+            <Link href={`/trips/${tripId}/chat?stage=budget`}>
               <Pencil className="size-[15px]" />
               {MONEY_COPY.editBudget}
             </Link>

@@ -38,7 +38,7 @@ export function ExpensesZero({ tripId, scope, onScopeChange }: ExpensesZeroProps
           <GoStatusCard
             title={copy.budget.title}
             sub={copy.budget.sub}
-            cta={{ label: copy.budget.cta, href: chatHref(tripId, "stage=budget&sheet=budget") }}
+            cta={{ label: copy.budget.cta, href: chatHref(tripId, "stage=budget") }}
           />
         )}
       </div>

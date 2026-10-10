@@ -162,7 +162,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     setScrollTarget(card);
   }
 
-  // Fact chips (PLAN §8.1, E-deciding.md §1.2; Bali: G-bali.md §1.3). `?sheet=budget` fast-forwards to `budget`.
+  // Fact chips (PLAN §8.1, E-deciding.md §1.2; Bali: G-bali.md §1.3). Opening the budget sheet fast-forwards to `budget`.
   function onChip(key: ChipKey, isSet: boolean) {
     if (toastHeader) {
       if (key === "budget" || key === "from") sheets.open(key);
@@ -357,7 +357,6 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
       <QuickStartSheet
         open={sheet === "quickstart"}
         initial={{ answers: chat.quickStartAnswers, from: chat.fromCity ?? DEFAULT_CITY }}
-        initialQuery={sheets.query}
         onDone={(answers, from) => {
           store().completeQuickStart(tripId, answers, from);
           sheets.close();
@@ -370,7 +369,6 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
       <FromCitySheet
         open={sheet === "from"}
         initialCity={chat.fromCity ?? DEFAULT_CITY}
-        initialQuery={sheets.query}
         onSave={(city) => {
           store().setFromCity(tripId, city);
           sheets.close();

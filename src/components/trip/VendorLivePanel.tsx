@@ -12,7 +12,7 @@ const listen = splitEmoji(CALL_COPY.card.listen); // "🎧 Listen in"
 type VendorLivePanelProps = {
   who: string;
   asking: string;
-  /** "🎧 Listen in" → `?sheet=listen&call={vendor}`. */
+  /** "🎧 Listen in" opens the Listen sheet for this vendor. */
   onListen(): void;
   /** "End call" → `endCall(vendor)`. */
   onEnd(): void;

@@ -29,8 +29,7 @@ function WhosComing() {
   const users = useStore((s) => s.trips.members);
   const createDraftGoa = useStore((s) => s.createDraftGoa);
   const simulateJoins = useStore((s) => s.simulateJoins);
-  // B2 is a state: `?sheet=share` opens it on load without starting the join simulation.
-  const [shareOpen, setShareOpen] = useState(params.get("sheet") === "share");
+  const [shareOpen, setShareOpen] = useState(false);
   const instantJoin = params.get("joined") === "2";
 
   useEffect(() => {
@@ -50,16 +49,6 @@ function WhosComing() {
     // DESIGN-ASSUMPTION: the design's two Back targets (B2, B6 -> B1) collapse into one Back.
     if (window.history.length > 1) router.back();
     else router.push("/home");
-  }
-
-  function onShareOpenChange(open: boolean) {
-    setShareOpen(open);
-    if (!open && params.has("sheet")) {
-      const next = new URLSearchParams(params.toString());
-      next.delete("sheet");
-      const qs = next.toString();
-      router.replace(qs ? `/trips/new?${qs}` : "/trips/new", { scroll: false });
-    }
   }
 
   return (
@@ -151,7 +140,7 @@ function WhosComing() {
       <ShareInviteSheet
         trip={trip}
         open={shareOpen}
-        onOpenChange={onShareOpenChange}
+        onOpenChange={setShareOpen}
         onShared={() => simulateJoins()}
       />
     </Screen>

@@ -13,19 +13,17 @@ type QuickStartSheetProps = {
   open: boolean;
   /** First open: {vibe:'beach', spend:null} + Bengaluru. */
   initial: { answers: QuickStartAnswers; from: CityRef | null };
-  /** ?q= opens the sheet in search mode. */
-  initialQuery?: string | null;
   onDone: (answers: QuickStartAnswers, from: CityRef | null) => void;
   /** Not now, X, scrim, drag-down, Back. */
   onDismiss: () => void;
 };
 
-export function QuickStartSheet({ open, initial, initialQuery, onDone, onDismiss }: QuickStartSheetProps) {
+export function QuickStartSheet({ open, initial, onDone, onDismiss }: QuickStartSheetProps) {
   const [vibe, setVibe] = useState<Vibe | null>(initial.answers.vibe);
   const [spend, setSpend] = useState<Spend | null>(initial.answers.spend);
   const [from, setFrom] = useState<CityRef | null>(initial.from);
-  const [searchOpen, setSearchOpen] = useState(Boolean(initialQuery));
-  const [query, setQuery] = useState(initialQuery ?? "");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   // Draft restarts from `initial` each time the sheet opens; nothing is written before Done.
   const [wasOpen, setWasOpen] = useState(open);
@@ -35,8 +33,8 @@ export function QuickStartSheet({ open, initial, initialQuery, onDone, onDismiss
       setVibe(initial.answers.vibe);
       setSpend(initial.answers.spend);
       setFrom(initial.from);
-      setSearchOpen(Boolean(initialQuery));
-      setQuery(initialQuery ?? "");
+      setSearchOpen(false);
+      setQuery("");
     }
   }
 

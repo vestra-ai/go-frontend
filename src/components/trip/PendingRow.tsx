@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -7,7 +6,7 @@ type PendingRowProps = Omit<React.ComponentProps<"div">, "title"> & {
   leading: React.ReactNode;
   title: string;
   sub: string;
-  cta: { label: string; href: string };
+  cta: { label: string; onPress: () => void };
 };
 
 /** One "Pending on you" row; place inside `ListCard padding="rows"` (divider from the second row on). */
@@ -23,8 +22,8 @@ export function PendingRow({ leading, title, sub, cta, className, ...props }: Pe
         <span className="text-16 leading-[1.3] font-semibold tracking-body">{title}</span>
         <span className="text-13 tracking-caption text-muted">{sub}</span>
       </div>
-      <Button variant="primary" size="sm" asChild className="px-[18px] tracking-h4">
-        <Link href={cta.href}>{cta.label}</Link>
+      <Button variant="primary" size="sm" className="px-[18px] tracking-h4" onClick={cta.onPress}>
+        {cta.label}
       </Button>
     </div>
   );

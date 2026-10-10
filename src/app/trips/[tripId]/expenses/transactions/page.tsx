@@ -9,6 +9,7 @@ import { TransactionGroup } from "@/components/money/TransactionGroup";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Screen } from "@/components/shell/Screen";
+import { RecordPaymentSheet } from "@/components/sheets/RecordPaymentSheet";
 import { Button } from "@/components/ui/button";
 import { MONEY_COPY } from "@/data/seed/money";
 import { TRIP_IDS } from "@/data/seed/trips";
@@ -55,6 +56,7 @@ function Transactions({ tripId }: { tripId: TripId }) {
   const fromMe = useSearchParams().get("scope") === "me";
   const { transactions } = useMoney(tripId, "everyone");
   const [filter, setFilter] = useState<TransactionFilter>("all");
+  const [recordOpen, setRecordOpen] = useState(false);
   const groups = groupByDate(transactions.filter(matches[filter]));
   // DESIGN-ASSUMPTION (M-bookings-money.md §1.8 #7): back returns to the scope you came from.
   const backHref = `/trips/${tripId}/expenses${fromMe ? "?scope=me" : ""}`;
@@ -84,14 +86,13 @@ function Transactions({ tripId }: { tripId: TripId }) {
       </div>
       <StickyDock>
         <FadeDock variant="gradient" className="px-4 pt-[30px] [[data-own]_&]:animate-page-in">
-          <Button variant="primary" size="xl" asChild className="w-full gap-2">
-            <Link href={`/trips/${tripId}/expenses?scope=me&sheet=record`}>
-              <Plus className="size-[18px]" />
-              {T.record}
-            </Link>
+          <Button variant="primary" size="xl" className="w-full gap-2" onClick={() => setRecordOpen(true)}>
+            <Plus className="size-[18px]" />
+            {T.record}
           </Button>
         </FadeDock>
       </StickyDock>
+      <RecordPaymentSheet open={recordOpen} onOpenChange={setRecordOpen} />
     </Screen>
   );
 }

@@ -7,7 +7,7 @@ type BudgetAskBubbleProps = {
   cta: string;
   /** 'Only you and Go see what you add' */
   caption: string;
-  /** Opens ?sheet=budget */
+  /** Opens the budget sheet. */
   onCta: () => void;
 };
 

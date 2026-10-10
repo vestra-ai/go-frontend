@@ -20,7 +20,7 @@ const STAGE_QUERY: Record<(typeof copy.nextUp)[number]["key"], string> = {
   where: "stage=places",
   when: "stage=dates-poll",
   stay: "stage=stays",
-  budget: "stage=budget&sheet=budget",
+  budget: "stage=budget",
   travel: "stage=travel",
 };
 

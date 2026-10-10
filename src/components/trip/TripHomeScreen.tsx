@@ -3,6 +3,8 @@
 import { notFound } from "next/navigation";
 import { CheckinSheet } from "@/components/checkin/CheckinSheet";
 import { SectionHeader } from "@/components/common/SectionHeader";
+import { CabSheet } from "@/components/sheets/CabSheet";
+import { RecordPaymentSheet } from "@/components/sheets/RecordPaymentSheet";
 import { MOCK_LAST_CALL } from "@/data/seed/calls";
 import { CHECKIN } from "@/data/seed/checkin";
 import { tripHome as copy } from "@/data/seed/copy";
@@ -65,7 +67,12 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
                 {pending.some((p) => p.kind === "checkin") && (
                   <CheckinCard companion={users[CHECKIN.friendId]} onCheckIn={sheets.openCheckin} />
                 )}
-                <PendingCard tripId={tripId} items={pending} settleWith={users[owedTo ?? userId]} />
+                <PendingCard
+                  items={pending}
+                  settleWith={users[owedTo ?? userId]}
+                  onRecord={sheets.openRecord}
+                  onBookCab={sheets.openCab}
+                />
               </>
             )}
 
@@ -113,6 +120,8 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
               />
             </>
           )}
+          <RecordPaymentSheet open={sheets.sheet === "record"} onOpenChange={(open) => !open && sheets.close()} />
+          <CabSheet tripId={tripId} open={sheets.sheet === "cab"} onOpenChange={(open) => !open && sheets.close()} />
           <CheckinSheet
             tripId={tripId}
             step={sheets.checkinStep}

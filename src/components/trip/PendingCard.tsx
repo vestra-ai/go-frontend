@@ -1,20 +1,23 @@
 import { Avatar } from "@/components/ui/avatar";
 import { ListCard } from "@/components/common/ListCard";
 import { tripHome as copy } from "@/data/seed/copy";
-import type { TripId, User } from "@/data/types";
+import type { User } from "@/data/types";
 import type { PendingItem } from "@/store/selectors";
 import { PendingRow } from "./PendingRow";
 
 type PendingCardProps = Omit<React.ComponentProps<typeof ListCard>, "children"> & {
-  tripId: TripId;
   /** `selectPending` result; `checkin` is rendered by CheckinCard, not here. */
   items: PendingItem[];
   /** The person you owe (settle-up row avatar). */
   settleWith: User;
+  /** "Record" opens the record-a-payment sheet over this page. */
+  onRecord: () => void;
+  /** "Book" opens the airport-cab sheet over this page. */
+  onBookCab: () => void;
 };
 
 /** Settle-up and airport-cab rows under "Pending on you" (J-triphome-calls.md §1.2 A.3). Null when neither is pending. */
-export function PendingCard({ tripId, items, settleWith, ...props }: PendingCardProps) {
+export function PendingCard({ items, settleWith, onRecord, onBookCab, ...props }: PendingCardProps) {
   const rows = items.filter((i) => i.kind !== "checkin");
   if (rows.length === 0) return null;
   const { settle, cab } = copy.pending;
@@ -28,7 +31,7 @@ export function PendingCard({ tripId, items, settleWith, ...props }: PendingCard
             leading={<Avatar size={40} src={settleWith.avatar} initials={settleWith.initials} tone={settleWith.tone} />}
             title={settle.title}
             sub={settle.sub}
-            cta={{ label: settle.cta, href: `/trips/${tripId}/expenses?scope=me&sheet=record` }}
+            cta={{ label: settle.cta, onPress: onRecord }}
           />
         ) : (
           <PendingRow
@@ -45,7 +48,7 @@ export function PendingCard({ tripId, items, settleWith, ...props }: PendingCard
             }
             title={cab.title}
             sub={cab.sub}
-            cta={{ label: cab.cta, href: `/trips/${tripId}/chat?sheet=cab` }}
+            cta={{ label: cab.cta, onPress: onBookCab }}
           />
         ),
       )}

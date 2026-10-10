@@ -23,7 +23,7 @@ type PayAskCardProps = {
     helper: string;
     booker: { title: string; sub: string };
   };
-  /** → `?sheet=pay` */
+  /** Opens the pay sheet. */
   onClaim: () => void;
 };
 

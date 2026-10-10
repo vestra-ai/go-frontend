@@ -41,37 +41,25 @@ function ExpensesView() {
 
 function Expenses({ tripId }: { tripId: TripId }) {
   const params = useSearchParams();
-  const urlKey = `${params.get("scope")}|${params.get("sheet")}`;
-  // Local state seeded from the URL (PLAN §12.1 #19); re-seeded when a link changes the query (the tab link resets the scope).
+  // The scope is local state seeded from the URL (PLAN §12.1 #19); re-seeded when a link changes it (the tab link resets the scope).
   const [scope, setScope] = useState<ScopeValue>(parseScope(params.get("scope")));
-  const [sheetOpen, setSheetOpen] = useState(params.get("sheet") === "record");
-  const [seenKey, setSeenKey] = useState(urlKey);
-  if (seenKey !== urlKey) {
-    setSeenKey(urlKey);
+  const [seenScope, setSeenScope] = useState(params.get("scope"));
+  if (seenScope !== params.get("scope")) {
+    setSeenScope(params.get("scope"));
     setScope(parseScope(params.get("scope")));
-    setSheetOpen(params.get("sheet") === "record");
   }
+  const [sheetOpen, setSheetOpen] = useState(false);
 
   const shell = useTripShellProps(tripId, "expenses");
   const money = useMoney(tripId, scope);
   if (!shell) notFound();
 
-  // history.replaceState only: no navigation, no new history entry (Next mirrors it into useSearchParams).
-  const syncUrl = (patch: { scope?: ScopeValue; sheet?: "record" | null }) => {
-    const q = new URLSearchParams(window.location.search);
-    if (patch.scope) q.set("scope", patch.scope);
-    if (patch.sheet === null) q.delete("sheet");
-    else if (patch.sheet) q.set("sheet", patch.sheet);
-    const qs = q.toString();
-    window.history.replaceState(window.history.state, "", `${window.location.pathname}${qs ? `?${qs}` : ""}`);
-  };
   const changeScope = (next: ScopeValue) => {
     setScope(next);
-    syncUrl({ scope: next });
-  };
-  const changeSheet = (open: boolean) => {
-    setSheetOpen(open);
-    syncUrl({ sheet: open ? "record" : null });
+    // history.replaceState only: no navigation, no new history entry (Next mirrors it into useSearchParams).
+    const q = new URLSearchParams(window.location.search);
+    q.set("scope", next);
+    window.history.replaceState(window.history.state, "", `${window.location.pathname}?${q}`);
   };
 
   // Zero until the first transaction exists (PLAN §12.1 #23).
@@ -97,7 +85,7 @@ function Expenses({ tripId }: { tripId: TripId }) {
                   key={s.fromId}
                   settlement={s}
                   isYou={s.fromId === SESSION_USER_ID}
-                  onRecord={() => changeSheet(true)}
+                  onRecord={() => setSheetOpen(true)}
                 />
               ))}
             </Card>
@@ -116,7 +104,7 @@ function Expenses({ tripId }: { tripId: TripId }) {
           </>
         )}
       </TripShell>
-      <RecordPaymentSheet open={sheetOpen} onOpenChange={changeSheet} />
+      <RecordPaymentSheet open={sheetOpen} onOpenChange={setSheetOpen} />
     </>
   );
 }

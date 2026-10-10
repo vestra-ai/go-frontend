@@ -13,8 +13,6 @@ type FromCitySheetProps = {
   open: boolean;
   /** fromCity ?? seed Bengaluru. */
   initialCity: CityRef;
-  /** ?q=Ind opens the sheet in search mode (C5). */
-  initialQuery?: string | null;
   onSave: (city: CityRef) => void;
   /** X, scrim, drag, Back: nothing saved. */
   onClose: () => void;
@@ -23,10 +21,10 @@ type FromCitySheetProps = {
 // Sheet top on the 912px design artboard: 447 (h 465). Search results float above the field, so it never grows.
 const SHEET_TOP = 447;
 
-export function FromCitySheet({ open, initialCity, initialQuery, onSave, onClose }: FromCitySheetProps) {
+export function FromCitySheet({ open, initialCity, onSave, onClose }: FromCitySheetProps) {
   const [city, setCity] = useState<CityRef>(initialCity);
-  const [searchOpen, setSearchOpen] = useState(Boolean(initialQuery));
-  const [query, setQuery] = useState(initialQuery ?? "");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [query, setQuery] = useState("");
 
   // Draft restarts from props each time the sheet opens.
   const [wasOpen, setWasOpen] = useState(open);
@@ -34,8 +32,8 @@ export function FromCitySheet({ open, initialCity, initialQuery, onSave, onClose
     setWasOpen(open);
     if (open) {
       setCity(initialCity);
-      setSearchOpen(Boolean(initialQuery));
-      setQuery(initialQuery ?? "");
+      setSearchOpen(false);
+      setQuery("");
     }
   }
 

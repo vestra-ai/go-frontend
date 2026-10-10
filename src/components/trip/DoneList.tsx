@@ -41,7 +41,7 @@ type DoneListProps = Omit<React.ComponentProps<typeof ListCard>, "children" | "o
   onEnd(vendor: VendorId): void;
   /** The latest finished call: its row (with the Recording button) shows in that vendor's card. */
   pastCall: LastCall;
-  /** Recording button → `?sheet=recording&call={vendor}`. */
+  /** Recording button opens the Recording sheet for this vendor. */
   onRecording(vendor: VendorId): void;
   /** Flights "Preview" → `previewCheckin()` + `toggleRow(null)` + scroll to top. */
   onPreviewCheckin(): void;

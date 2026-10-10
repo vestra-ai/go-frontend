@@ -1,17 +1,19 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import { stageAt, stageIndexOf } from "@/data/scenario/engine";
 import { BOOKINGS } from "@/data/seed/bookings";
 import { PLACES } from "@/data/seed/places";
 import { STAYS } from "@/data/seed/stays";
 import type { CardKind, StageId, TripId } from "@/data/types";
+import { dropQueryParams } from "@/lib/query";
 import { useStore } from "@/store";
 import type { BoardTarget } from "@/store/selectors";
 
-// URL ↔ sheet state for the chat route (PLAN §8; C-chat-kickoff.md §1.1, E-deciding.md §1.1, F-travel.md §1.5,
-// G-bali.md §1.3, H-board.md §1.4). The query string is the source of truth for which content sheet is open.
+// Sheet state for the chat route (C-chat-kickoff.md §1.1, E-deciding.md §1.1, F-travel.md §1.5, G-bali.md §1.3,
+// H-board.md §1.4). Which content sheet is open lives in component state and opens only from a tap: no query param
+// opens, names or closes a sheet.
 
 export type ChatSheet =
   | "quickstart"
@@ -28,29 +30,10 @@ export type ChatSheet =
   | "board"
   | "share";
 
-const SHEETS: readonly ChatSheet[] = [
-  "quickstart",
-  "from",
-  "place",
-  "budget",
-  "stay",
-  "pay",
-  "route",
-  "cab",
-  "private",
-  "ticket",
-  "visa",
-  "board",
-  "share",
-];
-
-/** Params a content sheet owns; closing a sheet strips them all. */
-const SHEET_PARAMS = ["sheet", "id", "q"] as const;
-
 // G-bali.md §1.3: the Bali board icon toasts instead of opening the sheet.
 const BOARDLESS: ReadonlySet<TripId> = new Set<TripId>(["bali"]);
 
-// `?sheet=` values that fast-forward the scenario before opening (E-deciding.md §1.1, H-board.md §1.4).
+// Sheets that fast-forward the scenario when they open (E-deciding.md §1.1, H-board.md §1.4).
 const ENSURE: Partial<Record<ChatSheet, StageId>> = { budget: "budget", stay: "stays", route: "travel" };
 
 // Board rows that close the board, fast-forward, then scroll to their card (H-board.md §1.4).
@@ -59,7 +42,7 @@ const BOARD_CARDS: Partial<Record<BoardTarget, { stage: StageId; card: CardKind 
   when: { stage: "dates-poll", card: "dates-poll" },
   stay: { stage: "stays", card: "stay-poll" },
 };
-// Board rows that swap the board for another sheet in one URL replace.
+// Board rows that swap the board for another sheet.
 const BOARD_SHEETS: Partial<Record<BoardTarget, { stage: StageId; sheet: ChatSheet }>> = {
   budget: { stage: "budget", sheet: "budget" },
   travel: { stage: "travel", sheet: "route" },
@@ -67,7 +50,7 @@ const BOARD_SHEETS: Partial<Record<BoardTarget, { stage: StageId; sheet: ChatShe
 
 /**
  * Writes the chat query string with the native History API (Next syncs `useSearchParams` with it, no RSC round trip).
- * `push` adds an entry so Back closes the sheet first; `replace` rewrites the current one (PLAN §8).
+ * `push` adds an entry; `replace` rewrites the current one. Used by the composer's reply / ask-Go tray, not by sheets.
  */
 export function writeChatQuery(mutate: (params: URLSearchParams) => void, how: "push" | "replace" = "replace") {
   const params = new URLSearchParams(window.location.search);
@@ -88,7 +71,7 @@ interface Guard {
 const hasStage = (tripId: TripId, id: StageId) => stageIndexOf(tripId, id) >= 0;
 const reached = (g: Guard, id: StageId) => hasStage(g.tripId, id) && g.stageIndex >= stageIndexOf(g.tripId, id);
 
-/** Query guards: false strips the params (unknown sheet or id, or a sheet that can't open in this trip/stage). */
+/** Guards: false means the sheet is not opened (unknown id, or a sheet that can't open in this trip/stage). */
 function sheetAllowed(sheet: ChatSheet, id: string | null, g: Guard): boolean {
   switch (sheet) {
     case "quickstart":
@@ -120,24 +103,20 @@ function sheetAllowed(sheet: ChatSheet, id: string | null, g: Guard): boolean {
   }
 }
 
-const isSheet = (value: string | null): value is ChatSheet => SHEETS.includes(value as ChatSheet);
-
 export interface ChatSheets {
   /** The open content sheet after the guards; QuickStart auto-opens while it is pending in `kickoff`. */
   sheet: ChatSheet | null;
-  /** `?id=` for the place / stay sheets. */
+  /** The id for the place / stay / ticket sheets. */
   sheetId: string | null;
-  /** `?q=`: the QuickStart / From sheet opens in search mode with this query. */
-  query: string | null;
-  /** Opens by tap: pushes an entry so Back closes the sheet first. */
   open(sheet: ChatSheet, id?: string): void;
-  /** Swaps the open sheet for another in one URL replace (board → budget / route, private → ticket). */
+  /** Swaps the open sheet for another (board → budget / route, private → ticket). */
   swap(sheet: ChatSheet, id?: string): void;
-  /** Closes the open sheet: `history.back()` when this screen pushed it, otherwise a replace that strips it. */
   close(): void;
   /** Board row / reminder / Vote: close or swap, fast-forward, then scroll to the row's card. */
   boardAction(target: BoardTarget): void;
 }
+
+type Open = { sheet: ChatSheet; id: string | null };
 
 export function useChatSheets(tripId: TripId, opts: { onScrollToCard(card: CardKind): void }): ChatSheets {
   const params = useSearchParams();
@@ -146,38 +125,23 @@ export function useChatSheets(tripId: TripId, opts: { onScrollToCard(card: CardK
   const bookingOpen = useStore((s) => s.chat[tripId].stayBooking.status === "open");
   const stageId = stageAt(tripId, stageIndex).id;
 
-  const raw = params.get("sheet");
-  const rawId = params.get("id");
+  const [current, setCurrent] = useState<Open | null>(null);
+
   const guard: Guard = { tripId, stageIndex, stageId, bookingOpen };
-  const allowed = isSheet(raw) && sheetAllowed(raw, rawId, guard);
+  const allowed = current !== null && sheetAllowed(current.sheet, current.id, guard);
+  // A sheet that can't open here (unknown id, wrong stage) is forgotten, so it can't pop open later.
+  if (current !== null && !allowed) setCurrent(null);
 
-  // DESIGN-ASSUMPTION (H-board.md §1.1): an explicit `?sheet=` suppresses the QuickStart auto-open
+  // DESIGN-ASSUMPTION (H-board.md §1.1): an open sheet suppresses the QuickStart auto-open
   // (C-chat-kickoff.md §1.1 says pending wins; only one content sheet can be open at a time).
-  const autoQuickStart = raw === null && stageId === "kickoff" && quickStart === "pending";
-  const sheet: ChatSheet | null = allowed ? raw : autoQuickStart ? "quickstart" : null;
+  const autoQuickStart = current === null && stageId === "kickoff" && quickStart === "pending";
+  const sheet: ChatSheet | null = allowed ? current.sheet : autoQuickStart ? "quickstart" : null;
 
-  // True while the open sheet's history entry was pushed by this screen (a tap), so closing pops it.
-  const pushed = useRef(false);
-  useEffect(() => {
-    const onPop = () => {
-      pushed.current = false;
-    };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
-  }, []);
-
-  // `?sheet=budget|stay|route` fast-forward first (forward-only, no timers).
-  const ensure = isSheet(raw) ? ENSURE[raw] : undefined;
+  // Opening `budget|stay|route` fast-forwards first (forward-only, no timers).
+  const ensure = allowed ? ENSURE[current.sheet] : undefined;
   useEffect(() => {
     if (ensure) useStore.getState().ensureStage(tripId, ensure);
   }, [ensure, tripId]);
-
-  // Unknown sheets / ids and sheets that can't open here are stripped from the URL.
-  const strip = raw !== null && !allowed;
-  useEffect(() => {
-    if (!strip) return;
-    writeChatQuery((p) => SHEET_PARAMS.forEach((k) => p.delete(k)));
-  }, [strip]);
 
   // `?stage=<id>` demo jump (PLAN §8): fast-forward once, then drop the param.
   const jump = params.get("stage");
@@ -185,38 +149,26 @@ export function useChatSheets(tripId: TripId, opts: { onScrollToCard(card: CardK
     if (jump === null) return;
     const target = jump as StageId;
     if (hasStage(tripId, target)) useStore.getState().ensureStage(tripId, target);
-    writeChatQuery((p) => p.delete("stage"));
+    dropQueryParams("stage");
   }, [jump, tripId]);
 
-  function open(next: ChatSheet, id?: string) {
-    writeChatQuery((p) => {
-      p.set("sheet", next);
-      if (id) p.set("id", id);
-      else p.delete("id");
-      p.delete("q");
-      p.delete("mode");
-      p.delete("msg");
-    }, "push");
-    pushed.current = true;
+  function swap(next: ChatSheet, id?: string) {
+    setCurrent({ sheet: next, id: id ?? null });
   }
 
-  function swap(next: ChatSheet, id?: string) {
-    writeChatQuery((p) => {
-      p.set("sheet", next);
-      if (id) p.set("id", id);
-      else p.delete("id");
-      p.delete("q");
-    });
+  function open(next: ChatSheet, id?: string) {
+    swap(next, id);
+    // Opening a sheet closes the composer's reply / ask-Go tray.
+    if (params.has("mode") || params.has("msg")) {
+      writeChatQuery((p) => {
+        p.delete("mode");
+        p.delete("msg");
+      });
+    }
   }
 
   function close() {
-    if (!new URLSearchParams(window.location.search).has("sheet")) return; // auto-opened QuickStart has no param
-    if (pushed.current) {
-      pushed.current = false;
-      window.history.back();
-      return;
-    }
-    writeChatQuery((p) => SHEET_PARAMS.forEach((k) => p.delete(k)));
+    setCurrent(null);
   }
 
   function boardAction(target: BoardTarget) {
@@ -236,8 +188,7 @@ export function useChatSheets(tripId: TripId, opts: { onScrollToCard(card: CardK
 
   return {
     sheet,
-    sheetId: allowed ? rawId : null,
-    query: params.get("q"),
+    sheetId: allowed ? current.id : null,
     open,
     swap,
     close,

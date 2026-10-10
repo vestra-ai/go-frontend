@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 type LastCallRowProps = {
   lastCall: LastCall;
-  /** "Recording" → `?sheet=recording&call={lastCall.vendor}`. */
+  /** "Recording" opens the Recording sheet for the last call. */
   onRecording(): void;
   className?: string;
 };
