@@ -8,20 +8,20 @@ import { WelcomeOrbit } from "@/components/home/WelcomeOrbit";
 import { GoogleButton } from "@/components/shell/GoogleButton";
 import { Screen } from "@/components/shell/Screen";
 import { welcome as copy } from "@/data/seed/copy";
+import { safeNextPath } from "@/lib/auth";
 import { toastGo } from "@/lib/toast";
-import { useHydrated, useStore } from "@/store";
+import { useSession } from "@/state";
 
 export default function WelcomePage() {
   const router = useRouter();
-  const hydrated = useHydrated();
-  const signedIn = useStore((s) => s.session.signedIn);
-  const signIn = useStore((s) => s.signIn);
+  const session = useSession();
 
+  // `?next=`: where a signed-out visitor was headed (an invite link, a trip). The button reads the same param.
   useEffect(() => {
-    if (hydrated && signedIn) router.replace("/home");
-  }, [hydrated, signedIn, router]);
+    if (session === "signedIn") router.replace(safeNextPath(new URLSearchParams(window.location.search).get("next")));
+  }, [session, router]);
 
-  if (!hydrated || signedIn) {
+  if (session !== "signedOut") {
     return (
       <Screen bg="surface">
         <div className="flex-1 bg-white" />
@@ -39,12 +39,7 @@ export default function WelcomePage() {
         </div>
         <FeatureTrio items={[...copy.features]} />
         <div className="relative mt-auto flex flex-col gap-2.5 pt-[22px]">
-          <GoogleButton
-            onSignedIn={() => {
-              signIn();
-              router.replace("/home");
-            }}
-          />
+          <GoogleButton />
           <LegalLine
             {...copy.legal}
             onTerms={() => toastGo(copy.toasts.terms)}

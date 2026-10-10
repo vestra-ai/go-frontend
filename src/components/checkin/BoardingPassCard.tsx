@@ -6,13 +6,13 @@ import { Separator } from "@/components/ui/separator";
 import { QrBitmap } from "@/components/icons/custom/QrBitmap";
 import { CHECKIN_COPY } from "@/data/seed/checkin";
 import type { CheckIn } from "@/data/types";
-import { assets } from "@/lib/assets";
 
 const copy = CHECKIN_COPY.pass;
 
 type BoardingPassCardProps = {
-  checkin: CheckIn;
-  /** The chosen seat (store), shown in the SEAT field. */
+  /** A finished check-in (`pass` is set). */
+  checkin: CheckIn & { pass: NonNullable<CheckIn["pass"]> };
+  /** The seat the airline confirmed, shown in the SEAT field. */
   seat: string;
   /** Hides the "DigiYatra on" pill when the traveller switched it off. */
   digiYatra?: boolean;
@@ -25,9 +25,15 @@ export function BoardingPassCard({ checkin, seat, digiYatra = true }: BoardingPa
 
   return (
     <Card variant="shadow" radius="3xl" className="overflow-hidden">
-      <div className="flex items-center justify-between bg-indigo px-[18px] py-3.5 text-white">
-        {/* eslint-disable-next-line @next/next/no-img-element -- SVG brand logo */}
-        <img src={assets.indigo.src} alt={assets.indigo.alt} width={assets.indigo.width} height={assets.indigo.height} className="h-auto w-[70px]" />
+      <div className="flex items-center justify-between bg-ink px-[18px] py-3.5 text-white">
+        {checkin.logo ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the carrier's wordmark from the booking
+          <img src={checkin.logo} alt="" className="h-5 w-auto max-w-[110px] object-contain" />
+        ) : (
+          <span aria-hidden className="text-18 leading-none">
+            ✈️
+          </span>
+        )}
         <span className="text-14 font-bold tracking-badge">{checkin.flight}</span>
       </div>
       <div className="flex flex-col gap-4 p-[18px]">
@@ -57,7 +63,7 @@ export function BoardingPassCard({ checkin, seat, digiYatra = true }: BoardingPa
       </div>
       <Separator variant="dashed" aria-hidden className="mx-[18px] w-auto border-t-2 border-line" />
       <div className="flex items-center gap-4 p-[18px]">
-        <QrBitmap rows={pass.qr} size={150} />
+        {pass.qr && <QrBitmap rows={pass.qr} size={150} />}
         <div className="flex flex-1 flex-col gap-2">
           {digiYatra && (
             <Badge variant="success-soft" size="md" className="self-start text-12 font-bold">
@@ -66,7 +72,7 @@ export function BoardingPassCard({ checkin, seat, digiYatra = true }: BoardingPa
             </Badge>
           )}
           <p className="text-13 text-muted">{copy.digiYatraHelp}</p>
-          <p className="text-13 text-muted">{checkin.passenger.bags}</p>
+          {checkin.passenger.bags && <p className="text-13 text-muted">{checkin.passenger.bags}</p>}
         </div>
       </div>
     </Card>

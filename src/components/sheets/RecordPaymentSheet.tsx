@@ -9,17 +9,16 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { toasts } from "@/data/seed/copy";
+import { errorMessage, newKey } from "@/api/http";
 import { MONEY_COPY } from "@/data/seed/money";
-import { USERS } from "@/data/seed/users";
-import type { PaymentMethod } from "@/data/types";
+import type { PaymentMethod, User } from "@/data/types";
 import { inr } from "@/lib/format";
 import { toastGo } from "@/lib/toast";
-import { useStore } from "@/store";
+import { recordPayment } from "@/state";
+import { METHOD_TO_API } from "@/state/moneyView";
+import { toMinor } from "@/state/view";
 
 const copy = MONEY_COPY.recordSheet;
-const me = USERS.aarav;
-const payee = USERS.rahul;
 
 /** Digits only, at most 6, grouped en-IN ("5800" -> "5,800"); empty stays empty. */
 const formatAmount = (raw: string) => {
@@ -28,35 +27,66 @@ const formatAmount = (raw: string) => {
 };
 const toNumber = (formatted: string) => Number(formatted.replace(/\D/g, "")) || 0;
 
+/** Whom the payment goes to and what I owe them right now (a transfer from `GET …/money`). */
+export interface RecordTarget {
+  tripId: string;
+  me: User;
+  payee: User;
+  /** Whole rupees. */
+  owed: number;
+  currency: string;
+}
+
 type RecordPaymentSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Kept by the caller while the sheet animates out. */
+  target: RecordTarget | null;
 };
 
-/** M7: record a payment you made outside Go. Content mounts per open, so the form resets each time. */
-export function RecordPaymentSheet({ open, onOpenChange }: RecordPaymentSheetProps) {
+/** Record a payment you made outside Go (CONTRACT-APP §4.9). Content mounts per open, so the form resets each time. */
+export function RecordPaymentSheet({ open, onOpenChange, target }: RecordPaymentSheetProps) {
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} top={120} aria-label={copy.title}>
-      <RecordPaymentForm onDone={() => onOpenChange(false)} />
+      {target && <RecordPaymentForm target={target} onDone={() => onOpenChange(false)} />}
     </BottomSheet>
   );
 }
 
-function RecordPaymentForm({ onDone }: { onDone: () => void }) {
-  const recordPayment = useStore((s) => s.recordPayment);
+function RecordPaymentForm({ target, onDone }: { target: RecordTarget; onDone: () => void }) {
+  const { me, payee } = target;
   // Frozen at open so the status line does not jump while the sheet animates out after recording.
-  const [owed] = useState(
-    () => useStore.getState().money.settlements.find((s) => s.fromId === me.id && s.toId === payee.id)?.amount ?? 0,
-  );
-  const [amount, setAmount] = useState(() => formatAmount(String(owed)));
+  const [owed] = useState(target.owed);
+  const [amount, setAmount] = useState(() => formatAmount(String(Math.round(owed))));
   const [via, setVia] = useState<PaymentMethod>("UPI");
   const [note, setNote] = useState("");
+  const [pending, setPending] = useState(false);
+  // One key for this form: a second tap, or a retry after a dropped answer, records the payment once (§1.4).
+  const [key] = useState(newKey);
   const n = toNumber(amount);
 
-  const record = () => {
-    recordPayment({ amount: n, via, note: note.trim() });
-    toastGo(toasts.recorded);
-    onDone();
+  const record = async () => {
+    if (pending || n === 0) return;
+    setPending(true);
+    try {
+      const trimmed = note.trim();
+      await recordPayment(
+        target.tripId,
+        {
+          to_person_id: payee.id,
+          amount_minor: toMinor(n),
+          currency: target.currency,
+          method: METHOD_TO_API[via as keyof typeof METHOD_TO_API] ?? "other",
+          ...(trimmed ? { note: trimmed.slice(0, 120) } : {}),
+        },
+        key,
+      );
+      toastGo(copy.recorded(payee.firstName));
+      onDone();
+    } catch (err) {
+      setPending(false);
+      toastGo(errorMessage(err, copy.failed));
+    }
   };
 
   return (
@@ -90,7 +120,7 @@ function RecordPaymentForm({ onDone }: { onDone: () => void }) {
               onChange={(e) => setAmount(formatAmount(e.target.value))}
             />
           </label>
-          <span className="text-13 text-muted">{n >= owed ? copy.settles : copy.left(inr(owed - n))}</span>
+          <span className="text-13 text-muted">{n >= owed ? copy.settles(payee.firstName) : copy.left(inr(owed - n))}</span>
         </Card>
         <Eyebrow className="px-1">{copy.paidVia}</Eyebrow>
         <PaidViaChips value={via} onChange={setVia} />
@@ -104,12 +134,12 @@ function RecordPaymentForm({ onDone }: { onDone: () => void }) {
         />
       </SheetBody>
       <SheetFooter>
-        <Button variant="primary" size="xl" className="w-full" disabled={n === 0} onClick={record}>
+        <Button variant="primary" size="xl" className="w-full" disabled={n === 0 || pending} aria-busy={pending} onClick={record}>
           {copy.cta(amount || "0")}
         </Button>
         <p className="flex items-center gap-1.5 self-center text-13 text-muted">
           <Avatar size={18} name={payee.name} src={payee.avatar} tone={payee.tone} />
-          {copy.helper}
+          {copy.helper(payee.firstName)}
         </p>
       </SheetFooter>
     </>

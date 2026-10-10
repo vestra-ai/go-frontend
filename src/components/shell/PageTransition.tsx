@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useEffect, useState, type ReactNode } from "react";
-import { useHydrated } from "@/store/useHydrated";
+import { useSession } from "@/state";
 
 // The four trip tabs (home / itinerary / bookings / expenses) are separate routes that share one hero + tab bar.
 const TRIP_TAB = /^\/trips\/([^/]+)(?:\/(?:itinerary|bookings|expenses))?$/;
@@ -24,13 +24,14 @@ const keyOf = (pathname: string) => {
  * The slide-up starts only once the new page has painted: after a page change the wrapper is `data-phase="pre"` (the
  * animated parts hold at opacity 0, see globals.css) for two frames. A heavy first render (iOS) otherwise burns the
  * animation's clock before the first frame shows, and the page just snaps in. On a first load or refresh the pages
- * render an empty shell until the persisted store has been read (client only), so the wrapper stays `pre` until then:
+ * render an empty shell until the session has been read (client only), so the wrapper stays `pre` until then:
  * the slide-up plays on the real content instead of on the empty shell.
  * (A root `template.tsx` would not do: it only remounts when the top-level segment changes.)
  */
 export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const hydrated = useHydrated();
+  // "Hydrated" is: the session has been read, so the page is drawing its real content.
+  const hydrated = useSession() !== "loading";
   const [state, setState] = useState({ pathname, key: keyOf(pathname), tabSwitch: false, ready: true });
   if (state.pathname !== pathname) {
     const key = keyOf(pathname);

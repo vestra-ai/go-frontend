@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { Button } from "@/components/ui/button";
 
@@ -32,13 +31,8 @@ export function PollRow({ emoji, eyebrow, value, sub, cta, options, onAction }: 
       <div className="flex gap-1.5 pl-8">
         {options.map((o) => (
           <div key={o.id} className="flex flex-1 flex-col gap-1">
-            <Image
-              src={o.img}
-              alt={o.name}
-              width={160}
-              height={52}
-              className="h-[52px] w-full rounded-lg object-cover"
-            />
+            {/* eslint-disable-next-line @next/next/no-img-element -- the option's own photo, from Go's image cache */}
+            <img src={o.img} alt={o.name} className="h-[52px] w-full rounded-lg object-cover" />
             <span className="text-12 font-semibold">
               {o.name} · {o.votes}
             </span>

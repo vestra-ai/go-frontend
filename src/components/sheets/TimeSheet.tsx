@@ -14,6 +14,8 @@ type TimeSheetProps = {
   open: boolean;
   trip: TripType;
   codes: [string, string];
+  /** The day each leg leaves ("Fri 6"), for the eyebrows. */
+  days: [string, string];
   draft: { on: SlotId[]; ret: SlotId[] };
   /** Options the drafts would show (`previewCount`). */
   preview: number;
@@ -47,7 +49,7 @@ function SlotGrid({ leg, selected, onToggle }: { leg: Leg; selected: SlotId[]; o
 }
 
 /** F3 "Preferred times": nested over the route sheet (which stays put), onward + return slot grids. */
-export function TimeSheet({ open, trip, codes, draft, preview, onToggle, onClear, onApply, onClose }: TimeSheetProps) {
+export function TimeSheet({ open, trip, codes, days, draft, preview, onToggle, onClear, onApply, onClose }: TimeSheetProps) {
   return (
     <BottomSheet
       open={open}
@@ -59,11 +61,11 @@ export function TimeSheet({ open, trip, codes, draft, preview, onToggle, onClear
     >
       <SheetBody className="gap-3.5 pb-[130px]">
         <SheetHeader title={ROUTE_COPY.time.title} subtitle={ROUTE_COPY.time.sub} closeLabel={ROUTE_COPY.close} />
-        <Eyebrow className="px-1">{ROUTE_COPY.time.onwardEyebrow(codes[0])}</Eyebrow>
+        <Eyebrow className="px-1">{ROUTE_COPY.time.onwardEyebrow(codes[0], days[0])}</Eyebrow>
         <SlotGrid leg="on" selected={draft.on} onToggle={onToggle} />
         {trip === "round" && (
           <div className="flex flex-col gap-3.5">
-            <Eyebrow className="px-1">{ROUTE_COPY.time.returnEyebrow(codes[1])}</Eyebrow>
+            <Eyebrow className="px-1">{ROUTE_COPY.time.returnEyebrow(codes[1], days[1])}</Eyebrow>
             <SlotGrid leg="ret" selected={draft.ret} onToggle={onToggle} />
           </div>
         )}

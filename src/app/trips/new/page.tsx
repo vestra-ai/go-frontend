@@ -16,32 +16,88 @@ import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { crew as copy } from "@/data/seed/copy";
+import { timeAgo } from "@/lib/dates";
 import { formatWhosIn } from "@/lib/format";
 import { copyInviteLink } from "@/lib/share";
-import { useHydrated, useStore } from "@/store";
+import { toastGo } from "@/lib/toast";
+import { newKey } from "@/api/http";
+import { createTrip, loadMe, useGo, useOpenTrip, useRequireSession } from "@/state";
+import { toUser, tripFromView } from "@/state/view";
 
-/** B1 / B2 / B6: invite the crew while the Goa draft fills up. */
+const CREATE_KEY = "go-new-trip-key";
+
+/**
+ * `POST /trips` for a visit without `?trip=`. The Idempotency-Key is kept for the tab until the trip exists, so a
+ * reload (or a second effect run) while the request is on its way replays the same answer instead of adding a trip.
+ */
+let creating: Promise<string> | null = null;
+function createOnce(hint: string | null): Promise<string> {
+  creating ??= (async () => {
+    let key = window.sessionStorage.getItem(CREATE_KEY);
+    if (!key) {
+      key = newKey();
+      window.sessionStorage.setItem(CREATE_KEY, key);
+    }
+    // The body must be the same on a replay: read my profile first, then build it once.
+    const me = useGo.getState().me ?? (await loadMe());
+    const view = await createTrip(
+      { ...(hint ? { destination_hint: hint.slice(0, 80) } : {}), ...(me.from_city ? { from_city: me.from_city } : {}) },
+      key,
+    );
+    window.sessionStorage.removeItem(CREATE_KEY);
+    return view.trip_id;
+  })().finally(() => {
+    creating = null;
+  });
+  return creating;
+}
+
+/** Who's coming (CONTRACT-APP §4.4): the new trip's people, live as friends tap the invite link. */
 function WhosComing() {
   const router = useRouter();
   const params = useSearchParams();
-  const hydrated = useHydrated();
-  const trip = useStore((s) => s.trips.trips.goa);
-  const users = useStore((s) => s.trips.members);
-  const createDraftGoa = useStore((s) => s.createDraftGoa);
-  const simulateJoins = useStore((s) => s.simulateJoins);
+  const session = useRequireSession();
+  const tripId = params.get("trip");
+  const hint = params.get("hint");
   const [shareOpen, setShareOpen] = useState(false);
-  const instantJoin = params.get("joined") === "2";
 
   useEffect(() => {
-    if (!hydrated) return;
-    createDraftGoa();
-    if (instantJoin) simulateJoins({ instant: true });
-  }, [hydrated, instantJoin, createDraftGoa, simulateJoins]);
+    if (session !== "signedIn" || tripId) return;
+    let cancelled = false;
+    createOnce(hint)
+      .then((id) => {
+        if (!cancelled) router.replace(`/trips/new?trip=${encodeURIComponent(id)}`);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        window.sessionStorage.removeItem(CREATE_KEY);
+        toastGo(copy.createFailed);
+        router.replace("/home");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [session, tripId, hint, router]);
 
-  if (!hydrated || !trip) return <Screen>{null}</Screen>;
+  if (session !== "signedIn" || !tripId) return <Screen>{null}</Screen>;
+  return <Crew tripId={tripId} shareOpen={shareOpen} setShareOpen={setShareOpen} />;
+}
 
-  const organizer = users[trip.organizerId];
-  const joined = trip.memberIds.filter((id) => id !== trip.organizerId);
+function Crew({ tripId, shareOpen, setShareOpen }: { tripId: string; shareOpen: boolean; setShareOpen: (open: boolean) => void }) {
+  const router = useRouter();
+  const { view, forbidden } = useOpenTrip(tripId);
+
+  useEffect(() => {
+    if (forbidden) router.replace("/home");
+  }, [forbidden, router]);
+
+  if (!view) return <Screen>{null}</Screen>;
+
+  const trip = tripFromView(view);
+  const organizerPerson = view.people.find((p) => p.person_id === view.organizer_person_id) ?? view.me.person;
+  const organizer = toUser(organizerPerson);
+  const iAmOrganizer = organizerPerson.person_id === view.me.person.person_id;
+  const joined = view.people.filter((p) => p.person_id !== organizerPerson.person_id);
   const hasJoined = joined.length > 0;
   const chatHref = `/trips/${trip.id}/chat`;
 
@@ -76,7 +132,7 @@ function WhosComing() {
         <Card variant="shadow" radius="4xl" className="mt-[22px] flex flex-col items-center gap-3.5 px-5 pt-7 pb-[22px] text-center">
           <CrewCluster user={organizer} />
           <h2 className="text-20 leading-[1.3] font-semibold tracking-h3">
-            {hasJoined ? formatWhosIn(joined.map((id) => users[id].firstName)) : copy.cardTitleEmpty}
+            {hasJoined ? formatWhosIn(joined.map((p) => toUser(p).firstName)) : copy.cardTitleEmpty}
           </h2>
           <p className="max-w-[290px] text-15 leading-[1.4] text-muted">
             {hasJoined ? copy.cardBodyJoined(trip.name) : copy.cardBodyEmpty(trip.name)}
@@ -84,20 +140,14 @@ function WhosComing() {
           <div className="mt-1 self-stretch">
             <InviteLinkField
               url={trip.inviteUrl}
-              onCopy={() => {
-                void copyInviteLink(trip);
-                simulateJoins();
-              }}
+              onCopy={() => void copyInviteLink(trip)}
             />
           </div>
           <Button
             variant="primary"
             size="lg"
             className="gap-2 self-stretch px-[18px]"
-            onClick={() => {
-              setShareOpen(true);
-              simulateJoins();
-            }}
+            onClick={() => setShareOpen(true)}
           >
             <MessageCircle className="size-5 text-white" strokeWidth={2} />
             {copy.cta}
@@ -110,11 +160,11 @@ function WhosComing() {
             <div className="mt-2">
               <CrewList
                 rows={[
-                  { user: organizer, name: copy.you, status: copy.organizer, joined: false },
-                  ...joined.map((id) => ({
-                    user: users[id],
-                    name: users[id].name,
-                    status: copy.joinLabel[id] ?? "",
+                  { user: organizer, name: iAmOrganizer ? copy.you : organizer.name, status: copy.organizer, joined: false },
+                  ...joined.map((p) => ({
+                    user: toUser(p),
+                    name: p.person_id === view.me.person.person_id ? copy.you : p.name,
+                    status: copy.joinLabel(timeAgo(p.joined_at)),
                     joined: true,
                   })),
                 ]}
@@ -137,12 +187,7 @@ function WhosComing() {
         </FadeDock>
       </StickyDock>
 
-      <ShareInviteSheet
-        trip={trip}
-        open={shareOpen}
-        onOpenChange={setShareOpen}
-        onShared={() => simulateJoins()}
-      />
+      <ShareInviteSheet trip={trip} open={shareOpen} onOpenChange={setShareOpen} />
     </Screen>
   );
 }

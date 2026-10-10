@@ -4,7 +4,7 @@ import type { PastTrip } from "@/data/types";
 import { cn } from "@/lib/utils";
 
 /** Static past-trip row; place inside `ListCard padding="tight"`. */
-export function PastTripRow({ trip }: { trip: PastTrip }) {
+export function PastTripRow({ trip, settled = true }: { trip: PastTrip; settled?: boolean }) {
   return (
     <ListRow
       dense
@@ -16,7 +16,7 @@ export function PastTripRow({ trip }: { trip: PastTrip }) {
       }
       title={trip.title}
       sub={trip.sub}
-      trailing={<CheckBadge size={22} />}
+      trailing={settled ? <CheckBadge size={22} /> : undefined}
     />
   );
 }

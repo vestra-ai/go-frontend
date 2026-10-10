@@ -3,7 +3,6 @@ import { Eyebrow } from "@/components/common/Eyebrow";
 import { LiveDot } from "@/components/common/LiveDot";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { paySheet } from "@/data/seed/copy";
 import type { User } from "@/data/types";
 
 export type ReceiptCardProps = {
@@ -30,11 +29,10 @@ export function ReceiptCard({ label, item, split, cta, href }: ReceiptCardProps)
         <div className="flex items-center gap-2.5 rounded-2xl bg-surface-2 px-3.5 py-3">
           <LiveDot size={8} pulse={false} />
           <span className="flex-1 text-16 leading-[1.35] font-medium tracking-body">{item.title}</span>
-          {/* DESIGN-ASSUMPTION (PLAN §12.1 #7): the payer is always Rahul, so the alt is the design's literal. */}
           <Avatar
             size={24}
             src={item.payer.avatar}
-            name={paySheet.receiptPayerAlt}
+            name={`Paid by ${item.payer.firstName}`}
             initials={item.payer.initials}
             tone={item.payer.tone}
           />

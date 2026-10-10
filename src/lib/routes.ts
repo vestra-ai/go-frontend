@@ -1,7 +1,7 @@
-// Route & cab sheet derivations (F-travel.md §1.3 "lib/routes.ts"): exactly the design's DCLogic.
-// Pure helpers: no React, no store. Copy comes from the seeds.
-import { CAB_COPY, CAB_OPTIONS } from "@/data/seed/cabs";
-import { LEG_CODES, ROUTE_COPY, ROUTE_FILTERS, ROUTE_OPTIONS, TIME_SLOTS } from "@/data/seed/routes";
+// Route & cab sheet derivations: pure helpers over the options an `options` card carries (CONTRACT-APP §4.7). The card's
+// options are filtered on the client: by how you travel, by a quick filter, and by the time of day you want to leave.
+import { CAB_COPY } from "@/data/seed/cabs";
+import { ROUTE_COPY, ROUTE_FILTERS, TIME_SLOTS } from "@/data/seed/routes";
 import type { CabOption, RouteFilter, RouteMode, RouteOption, SlotId, TripType } from "@/data/types";
 import { inr } from "@/lib/format";
 
@@ -13,14 +13,22 @@ export interface RouteQuery {
   ret: SlotId[];
 }
 
-/** Leg codes per mode: flight `["BLR → GOX","GOX → BLR"]`, train/bus `["BLR → GOA","GOA → BLR"]`. */
-export function legCodes(mode: RouteMode): [string, string] {
-  return LEG_CODES[mode];
+/** Leg codes of the first option of a mode: `["BLR → GOX","GOX → BLR"]` (the return is the onward reversed when no option has one). */
+export function legCodes(options: RouteOption[], mode: RouteMode): [string, string] {
+  const first = options.find((o) => o.mode === mode) ?? options[0];
+  const onward = first?.legs[0]?.code ?? "";
+  const back = first?.legs[1]?.code ?? onward.split(" → ").reverse().join(" → ");
+  return [onward, back];
 }
 
 /** The mode's filter chips. */
 export function filtersFor(mode: RouteMode): RouteFilter[] {
   return ROUTE_FILTERS[mode];
+}
+
+/** The ways of travelling the card actually offers, in the sheet's order. */
+export function modesOf(options: RouteOption[]): RouteMode[] {
+  return (["flight", "train", "bus"] as const).filter((mode) => options.some((o) => o.mode === mode));
 }
 
 /** No slots = any time; otherwise the hour falls in a selected half-open slot [from, to). */
@@ -32,30 +40,31 @@ function inSlots(h: number, list: SlotId[]): boolean {
 const CHEAPEST_COUNT = 3;
 
 function okFilt(o: RouteOption, mode: RouteMode, filt: string): boolean {
-  // A filter this mode doesn't offer (e.g. one left in the persisted store) behaves like "All".
+  // A filter this mode doesn't offer behaves like "All".
   if (filt === "all" || !ROUTE_FILTERS[mode].some((f) => f.id === filt)) return true;
-  if (mode !== "flight") return o.kind === filt;
-  if (filt === "nonstop") return o.kind !== "stop"; // the mixed-airline f1 counts as nonstop (as designed)
+  if (filt === "nonstop") return o.kind !== "stop";
   return true; // cheapest: narrowed and re-ordered by price in visibleRoutes
 }
 
 export function matchRoute(o: RouteOption, q: RouteQuery): boolean {
   return (
-    (q.trip === "round" || !o.roundOnly) &&
+    o.mode === q.mode &&
+    // A round trip needs an option with a way back; one way needs one sold that way.
+    (q.trip === "round" ? o.legs.length > 1 : !o.roundOnly) &&
     okFilt(o, q.mode, q.filt) &&
     inSlots(o.legs[0].h, q.on) &&
-    (q.trip === "oneway" || inSlots(o.legs[1].h, q.ret))
+    (q.trip === "oneway" || inSlots(o.legs[1]?.h ?? 0, q.ret))
   );
 }
 
 /**
- * Matching options in seed order (flight: f1 f2 f3 f6 f7 f4 f5 f8).
- * "Cheapest" instead keeps the lowest few fares among the matches (after the time slots), cheapest first.
+ * Matching options in the card's own order. "Cheapest" instead keeps the lowest few fares among the matches (after
+ * the time slots), cheapest first.
  */
-export function visibleRoutes(q: RouteQuery): RouteOption[] {
-  const matches = ROUTE_OPTIONS[q.mode].filter((o) => matchRoute(o, q));
-  if (q.mode !== "flight" || q.filt !== "cheapest") return matches;
-  return matches.sort((a, b) => priceOf(a, q.trip) - priceOf(b, q.trip)).slice(0, CHEAPEST_COUNT);
+export function visibleRoutes(options: RouteOption[], q: RouteQuery): RouteOption[] {
+  const matches = options.filter((o) => matchRoute(o, q));
+  if (q.filt !== "cheapest") return matches;
+  return [...matches].sort((a, b) => priceOf(a, q.trip) - priceOf(b, q.trip)).slice(0, CHEAPEST_COUNT);
 }
 
 /** The picked option if visible, else the first visible one, else null. Silent: `pick` itself is unchanged. */
@@ -74,7 +83,7 @@ export function slotText(list: SlotId[]): string {
   return ROUTE_COPY.slots(list.length);
 }
 
-/** "1 option" · "2 options" · "8 options · scroll for more" (always rendered, so 0 gives "0 options"). */
+/** "1 option" · "2 options" (always rendered, so 0 gives "0 options"). */
 export function countLine(n: number): string {
   return ROUTE_COPY.countLine(n);
 }
@@ -94,8 +103,8 @@ export function ctaLabel(c: RouteOption | null, trip: TripType): string {
 }
 
 /** Options the time-sheet drafts would show, with the current trip, mode and filter. */
-export function previewCount(q: RouteQuery, draft: { on: SlotId[]; ret: SlotId[] }): number {
-  return visibleRoutes({ ...q, on: draft.on, ret: draft.ret }).length;
+export function previewCount(options: RouteOption[], q: RouteQuery, draft: { on: SlotId[]; ret: SlotId[] }): number {
+  return visibleRoutes(options, { ...q, on: draft.on, ret: draft.ret }).length;
 }
 
 /** "Show N options" · "Show 1 option" · "No options in these slots". */
@@ -103,13 +112,13 @@ export function applyLabel(n: number): string {
   return ROUTE_COPY.time.apply(n);
 }
 
-export function visibleCabs(filt: "all" | CabOption["kind"]): CabOption[] {
-  return filt === "all" ? CAB_OPTIONS : CAB_OPTIONS.filter((c) => c.kind === filt);
+export function visibleCabs(options: CabOption[], filt: "all" | CabOption["kind"]): CabOption[] {
+  return filt === "all" ? options : options.filter((c) => c.kind === filt);
 }
 
 /** The picked cab if visible, else the first visible one. Silent: `pick` itself is unchanged. */
-export function chosenCab(shown: CabOption[], pick: string): CabOption {
-  return shown.find((c) => c.id === pick) ?? shown[0];
+export function chosenCab(shown: CabOption[], pick: string | null): CabOption | null {
+  return shown.find((c) => c.id === pick) ?? shown[0] ?? null;
 }
 
 export function cabCountLine(n: number): string {

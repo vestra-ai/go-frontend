@@ -1,4 +1,5 @@
-// Domain model for the Go prototype (plans/PLAN.md §9.1, refined by the "Data bindings" of plans/screens/*.md).
+// View models: the shapes the components draw. They are built from the Server's contract objects (src/api/contract.ts)
+// by the adapters in src/state/*View.ts, so labels the design shows are computed there, never stored.
 // Pure types only: no React, no store. Class-name fields hold full Tailwind literals so the source scan finds them.
 
 export type Id = string;
@@ -7,7 +8,7 @@ export type Id = string;
 // People, trips, invites
 // ---------------------------------------------------------------------------
 
-export type UserId = "aarav" | "rahul" | "priya" | "arjun" | "kabir";
+export type UserId = string; // a `person_id`: opaque, never parsed (CONTRACT-APP §1.3)
 export type UserTone = "amber" | "info" | "success" | "go" | "peach";
 
 export interface User {
@@ -22,7 +23,7 @@ export interface User {
   avatar?: string;
 }
 
-export type TripId = "goa" | "college" | "bali";
+export type TripId = string; // a `trip_id`: opaque, never parsed
 export type TripStage = "new" | "deciding" | "planned";
 
 export interface TripDates {
@@ -53,7 +54,8 @@ export interface Trip {
   memberIds: UserId[];
   organizerId: UserId;
   inviteCode: string;
-  inviteUrl: string; // without scheme: "go.vestra.ai/t/goa-k7q"
+  inviteUrl: string; // without scheme, as the link field shows it: "go.example/invite/8fK2xQ"
+  inviteHref?: string; // the Server's `invite_url`, exactly as sent (what is shared and copied)
   whatsappGroup: string;
   stage: TripStage;
   budgetLabel?: string; // "₹21.8k" | "₹55k"
@@ -106,81 +108,12 @@ export interface CityRef {
   region?: string;
 }
 export type Vibe = "beach" | "hills" | "city" | "any";
-export type Spend = "lt15" | "15to25" | "gt25";
-export interface QuickStartAnswers {
-  vibe: Vibe | null;
-  spend: Spend | null;
-}
-export type QuickStartState = "pending" | "done" | "dismissed";
 
 // ---------------------------------------------------------------------------
-// Scenario (PLAN §9.3)
+// Chat rows and cards
 // ---------------------------------------------------------------------------
-
-export type StageId =
-  | "kickoff"
-  | "places"
-  | "dates-talk"
-  | "dates-poll"
-  | "budget"
-  | "stays"
-  | "pay"
-  | "book"
-  | "travel"
-  | "route-confirm"
-  | "private"
-  | "plan"
-  | "visa";
-
-export type Author = UserId | "go" | "system";
-
-export type TriggerId =
-  | "place-asked"
-  | "place-voted"
-  | "dates-asked"
-  | "dates-answered"
-  | "budget-saved"
-  | "stay-voted"
-  | "stay-claimed"
-  | "stay-paid"
-  | "booking-done"
-  | "route-booked"
-  | "cab-booked"
-  | "lands-asked"
-  | "private-viewed"
-  | "plan-asked"
-  | "visa-sent";
 
 export type ChipKey = "where" | "when" | "stay" | "budget" | "from";
-
-export interface ChipState {
-  label: string; // the ✓ is the chip's CheckBadge, never part of the label
-  state: "unset" | "set";
-  active?: boolean; // budget chip through the whole `budget` stage until saved
-}
-
-export type CardKind =
-  | "quick-replies"
-  | "go-nudge"
-  | "place-poll"
-  | "dates-poll"
-  | "budget-ask"
-  | "stay-poll"
-  | "pay-ask"
-  | "booking-progress"
-  | "travel-ask"
-  | "progress-pill"
-  | "who-lands"
-  | "private-teaser"
-  | "plan"
-  | "visa-ask"
-  | "visa-status";
-
-export interface GoAskPayload {
-  text: string; // "\n" = line break
-  cta: string;
-  caption: string;
-}
 
 export interface WhoLandsRow {
   userId: UserId;
@@ -202,132 +135,11 @@ export interface Reaction {
   count: number;
 }
 
-export interface CardPayloads {
-  "quick-replies": { eyebrow: string; chips: string[] };
-  "go-nudge": { label: string };
-  "place-poll": { placeIds: PlaceOption["id"][]; countdown: string; more: { title: string; sub: string } };
-  "dates-poll": {
-    title: string;
-    countdown: string;
-    dateIds: DateOption["id"][];
-    flexible: { off: string; on: string };
-    of: number;
-  };
-  "budget-ask": GoAskPayload;
-  "stay-poll": { stayIds: Stay["id"][]; more: { title: string; sub: string } };
-  "pay-ask": {
-    stayId: Stay["id"];
-    badge: string;
-    total: string;
-    sub: string;
-    assurance: { title: string; sub: string };
-    cta: string;
-    helper: string;
-    booker: { title: string; sub: string };
-  };
-  "booking-progress": {
-    stayId: Stay["id"];
-    title: string;
-    watch: string;
-    url: string;
-    line: string;
-    lineSub: string;
-    cardLabel: string;
-    amount: string;
-    paying: string;
-    paid: string;
-    ticket: { eyebrow: string; title: string; dates: string; stub: string; reaction: Reaction };
-    late: { text: string; maxWidth: 64 };
-    receipt: { label: string; title: string; payer: UserId; amount: string; split: string; cta: string; href: string };
-  };
-  "travel-ask": GoAskPayload;
-  "progress-pill": { text: string };
-  "who-lands": {
-    title: string;
-    status: string;
-    rows: WhoLandsRow[];
-    suggestion: { emoji: string; text: string; cta: string };
-  };
-  "private-teaser": { label: string; lines: string[]; cta: string };
-  plan: {
-    eyebrow: string;
-    place: { emoji: string; label: string };
-    dates: { emoji: string; label: string };
-    countdown: { emoji: string; label: string };
-    hero: { src: string; alt: string };
-    seal: { ring: string; month: string; days: string };
-    memberIds: UserId[];
-    days: PlanDay[];
-    footer: { label: string; cta: string; href: string };
-    reaction?: Reaction; // floating chip under the card
-  };
-  "visa-ask": GoAskPayload;
-  "visa-status": { tripId: TripId }; // rows come from seed/visa.ts + store
-}
-
-export type MessageCard = { [K in CardKind]: { kind: K; payload: CardPayloads[K] } }[CardKind];
-
-// Serializable visibility rules (replace PLAN §9.1's `visibleWhen` function).
-export type MessageCondition = "qs-done" | "qs-dismissed" | "booking-claimed-by-rahul";
-
-/**
- * What a sent message carries besides text. Photos keep a small downscaled data URL (they survive a reload); PDFs and
- * voice notes keep an object URL that only lives for this session (`persist.ts` drops it).
- */
+/** What a message carries besides text, as the bubble draws it: a photo, a file, a voice note (state/roomView.ts). */
 export type Attachment =
   | { kind: "image"; src: string; width: number; height: number }
-  | { kind: "file"; name: string; size: number; src?: string }
+  | { kind: "file"; name: string; size: number; src?: string; mime?: string }
   | { kind: "voice"; seconds: number; src?: string };
-
-export interface Message {
-  id: Id;
-  stage: StageId;
-  author: Author;
-  kind: "text" | "system" | "card";
-  text?: string; // "\n" = line break, "**x**" = bold
-  attachment?: Attachment; // my photo / PDF / voice note
-  card?: MessageCard;
-  mention?: boolean; // me only → MentionChip "Go" before the text
-  quote?: { author: string; text: string };
-  reaction?: Reaction;
-  maxWidth?: BubbleMaxWidth;
-  showIf?: MessageCondition;
-  live?: true; // renders only while its stage is the current stage
-  replyDraft?: string;
-  askGoSuggestions?: string[];
-}
-
-// When a stage's NextStepPill becomes visible (E-deciding.md §1.6 selectNextPill).
-export type PillReady =
-  | "entry"
-  | "place-vote"
-  | "dates-nudge" // DATES_NUDGE_MS after the stage is current with no composer mode
-  | "date-vote-or-flexible"
-  | "budget-saved"
-  | "stay-vote"
-  | "claimed-by-rahul";
-
-export interface StageNext {
-  to: StageId;
-  trigger: TriggerId; // advance(trigger) moves stageIndex to `to`
-  pill?: { label: string; ready: PillReady; inSheet?: "budget" }; // absent = direct transition (no pill)
-}
-
-export interface StageHeader {
-  subtitle: string;
-  memberIds: UserId[];
-}
-
-export interface ScenarioStage {
-  id: StageId;
-  subtitle: string;
-  memberIds: UserId[];
-  headerByQuickStart?: Record<QuickStartState, StageHeader>;
-  chips: Record<ChipKey, ChipState>;
-  messages: Message[];
-  next: StageNext[];
-  setsTripPlanned?: true; // entering this stage sets trip.stage = 'planned'
-}
 
 // ---------------------------------------------------------------------------
 // Decisions & polls
@@ -356,7 +168,9 @@ export type PlaceDetails =
     };
 
 export interface PlaceOption {
-  id: "goa" | "gokarna" | "udaipur";
+  id: string; // the option's index in its vote, or an options card's `option_id`
+  /** `img` is a real photo (covers the tile) rather than a centred illustration. */
+  photo?: boolean;
   name: string;
   meta: string;
   est: string;
@@ -368,10 +182,11 @@ export interface PlaceOption {
 }
 
 export interface DateOption {
-  id: "diwali" | "xmas" | "rday";
+  id: string;
   name: string;
-  month: string;
-  range: string;
+  /** Calendar tile ("NOV" / "6–9"): only when the option's label reads as dates. */
+  month?: string;
+  range?: string;
   meta: string;
   fit: string;
   fitTone: "success" | "go" | "muted";
@@ -379,7 +194,7 @@ export interface DateOption {
 }
 
 export interface Stay {
-  id: "sol" | "azul" | "palms";
+  id: string;
   name: string;
   area: string;
   areaLong: string;
@@ -394,19 +209,6 @@ export interface Stay {
   yourShare: string;
   cancellation: string;
   voters: UserId[];
-}
-
-export interface StayBookingState {
-  status: "open" | "claimed";
-  by?: UserId;
-  paid: boolean;
-  done: boolean;
-}
-
-export interface BudgetRange {
-  lo: number;
-  hi: number;
-  saved: boolean;
 }
 
 // ---------------------------------------------------------------------------
@@ -424,7 +226,9 @@ export interface RouteLeg {
   meta: string;
   stop?: string;
   h: number; // departure hour used for slot filtering
-  carrier?: "indigo" | "airindia";
+  /** The carrier's wordmark from the option, when Go sent one. */
+  logoUrl?: string;
+  carrierName?: string;
 }
 
 export interface RouteOption {
@@ -437,7 +241,8 @@ export interface RouteOption {
   roundOnly?: boolean;
   /** Flight whose tag adds nothing ("Same airline"): the row hides it. */
   quiet?: boolean;
-  legs: [RouteLeg, RouteLeg];
+  /** Onward, then the return when the option has one. */
+  legs: RouteLeg[];
 }
 
 export interface RouteFilter {
@@ -464,11 +269,6 @@ export interface CabOption {
   round: number;
 }
 
-export interface TravelSelection {
-  optionId: string;
-  trip: TripType;
-}
-
 // ---------------------------------------------------------------------------
 // Trip plan: bookings, itinerary, map
 // ---------------------------------------------------------------------------
@@ -484,6 +284,13 @@ export interface TicketDoc {
   flight: string; // PDF centre label "6E 5313 · Economy"
   from: { code: string; place: string; time: string };
   to: { code: string; place: string; time: string };
+  /** The stored file behind it: fetched through `GET …/bookings/:id/documents/:document_id` for Download / Save / Share. */
+  bookingId?: Id;
+  documentId?: Id;
+  mime?: string;
+  /** The carrier's wordmark, when the booking has one. */
+  logoUrl?: string;
+  carrier?: string;
 }
 
 export interface DetailRow {
@@ -498,7 +305,7 @@ export interface Booking {
   title: string;
   sub: string;
   memberIds: UserId[];
-  media: { kind: "logo" | "photo" | "emoji"; src?: string; emoji?: string; bg: "indigo" | "stay-tint" | "none" };
+  media: { kind: "logo" | "photo" | "emoji"; src?: string; alt?: string; emoji?: string; bg: "indigo" | "stay-tint" | "none" };
   accent: "info" | "success";
   stub: { kind: "count"; n: number } | { kind: "booked" };
   href: string;
@@ -517,7 +324,8 @@ export interface PrivateDetails {
   boards: string;
   pnr: string;
   bookingId: string; // the travel-out booking (ticket viewer target)
-  ret: { emoji: string; title: string; sub: string };
+  /** The way back, when the booking has one. */
+  ret?: { emoji: string; title: string; sub: string };
 }
 
 export type ItineraryDay = "fri" | "sat" | "sun" | "mon";
@@ -562,53 +370,11 @@ export interface MapCard {
 // Trip home calls (J-triphome-calls.md §1.3)
 // ---------------------------------------------------------------------------
 
-export type VendorId = "villa" | "indigo" | "cab";
 export type AskKey = "main" | "stay" | "fly";
 
 export interface TranscriptLine {
   speaker: "go" | "vendor";
   text: string;
-}
-
-export interface RecordingLine extends TranscriptLine {
-  t: string;
-  current?: boolean;
-}
-
-export interface CallRecording {
-  title: string;
-  meta: string;
-  outcome: { headline: string; body: string };
-  durationS: number;
-  positionS: number;
-  transcript: RecordingLine[];
-}
-
-export interface VendorCall {
-  id: VendorId;
-  who: string;
-  phone: string;
-  emoji: string;
-  bg: string; // vendor tint class
-  defaultAsk: string;
-  line: string; // design quote, curly quotes included
-  time: string; // seed elapsed "01:12"
-  elapsedS: number; // same value in seconds (startedAt = now − elapsedS × 1000)
-  transcriptLive: TranscriptLine[] | null; // null = template from asking/line (seed/calls.ts)
-  recording: CallRecording | null; // null = template from asking/line (seed/calls.ts)
-}
-
-export interface ActiveCall {
-  id: VendorId; // id === vendor (one live call per vendor)
-  vendor: VendorId;
-  asking: string;
-  startedAt: number; // epoch ms
-}
-
-export interface LastCall {
-  vendor: VendorId;
-  asking: string;
-  endedAt: number;
 }
 
 export interface ChipOption {
@@ -630,7 +396,7 @@ export interface Transaction {
   verb: "paid" | "booked with";
   to: { kind: "user"; id: UserId } | { kind: "merchant"; name: string; emoji?: string; img?: string };
   amount: number;
-  method: PaymentMethod;
+  method?: PaymentMethod; // absent when the Server knows none (an expense added by hand)
   note: string;
   kind: "payback" | "booking";
   mine: boolean;
@@ -643,26 +409,22 @@ export interface Settlement {
   status: "open" | "settled";
 }
 
-export interface SpendTotals {
-  crew: { stay: number; travel: number };
-  me: { stay: number; travel: number };
-  budget: number;
-}
-
 // ---------------------------------------------------------------------------
 // Check-in (K-checkin.md §1.5)
 // ---------------------------------------------------------------------------
 
-export type SeatCol = "A" | "B" | "C" | "D" | "E" | "F";
+export type SeatCol = string; // the airline's own column letters (`seat_map.columns`)
 
 export interface Seat {
   id: string;
   row: number;
   col: SeatCol;
   state: "free" | "paid" | "taken" | "friend";
+  /** Pre-formatted price of a paid seat: "₹450". */
+  price?: string;
 }
 
-export type CheckinStatus = "not-open" | "open" | "done";
+export type CheckinStatus = "not-open" | "open" | "working" | "done" | "failed" | "closed";
 
 export interface CheckIn {
   flight: string;
@@ -674,15 +436,19 @@ export interface CheckIn {
   digiYatra: boolean;
   declaration: boolean;
   seat: string;
-  friendId: UserId;
+  status: CheckinStatus;
+  /** The friend on the same booking, when there is one. */
+  friendId: UserId | null;
   friendSeat: string;
   nextToFriend: string[];
-  seatPrice: string;
-  paidRows: number[];
+  /** Columns left and right of the aisle, in the airline's order. */
+  colsLeft: SeatCol[];
+  colsRight: SeatCol[];
   rows: number[];
-  cols: SeatCol[];
+  frontLabel: string;
   seats: Seat[];
-  pass: { passenger: string; boarding: string; departs: string; gate: string; zone: string; seq: string; qr: string[] };
+  /** Null until the check-in is done. `qr` is drawn only when the pass carries a bitmap. */
+  pass: { passenger: string; boarding: string; departs: string; gate: string; zone: string; seq: string; qr: string[] | null } | null;
 }
 
 // ---------------------------------------------------------------------------

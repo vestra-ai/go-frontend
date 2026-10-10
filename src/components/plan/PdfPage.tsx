@@ -1,6 +1,5 @@
 import { BOOKINGS_COPY } from "@/data/seed/bookings";
 import type { TicketDoc } from "@/data/types";
-import { assets } from "@/lib/assets";
 
 const copy = BOOKINGS_COPY.viewer;
 
@@ -13,10 +12,12 @@ export function PdfPage({ ticket }: { ticket: TicketDoc }) {
   return (
     <div className="box-border flex aspect-[360/509] w-full max-w-[360px] flex-col gap-3.5 bg-white p-[22px] font-serif shadow-page">
       <div className="flex items-center justify-between">
-        <span className="flex h-[26px] items-center bg-indigo px-2">
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG brand wordmark */}
-          <img src={assets.indigo.src} alt="IndiGo" width={50} height={15} />
-        </span>
+        {ticket.logoUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element -- the carrier's wordmark from the booking
+          <img src={ticket.logoUrl} alt={ticket.carrier ?? ""} className="h-[26px] w-auto max-w-[110px] object-contain" />
+        ) : (
+          <span className="flex h-[26px] items-center bg-ink px-2 font-sans text-11 font-bold text-white">{ticket.carrier ?? ""}</span>
+        )}
         <span className="text-11 font-bold tracking-badge">{copy.header}</span>
       </div>
       <div className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-10 leading-[1.35]">

@@ -5,22 +5,22 @@ import { Eyebrow } from "@/components/common/Eyebrow";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { quickStart as copy } from "@/data/seed/copy";
-import type { CityRef, QuickStartAnswers, Spend, Vibe } from "@/data/types";
+import type { CityRef, Vibe } from "@/data/types";
 import { ChoiceChipGroup } from "./ChoiceChipGroup";
 import { CityPicker } from "./CityPicker";
 
 type QuickStartSheetProps = {
   open: boolean;
-  /** First open: {vibe:'beach', spend:null} + Bengaluru. */
-  initial: { answers: QuickStartAnswers; from: CityRef | null };
-  onDone: (answers: QuickStartAnswers, from: CityRef | null) => void;
+  /** What I already answered in this trip. */
+  initial: { vibe: Vibe | null; from: CityRef | null };
+  /** `PUT …/me/join-answers` (CONTRACT-APP §4.4). There is no spend band: the group agrees one budget in the chat. */
+  onDone: (vibe: Vibe | null, from: CityRef | null) => void;
   /** Not now, X, scrim, drag-down, Back. */
   onDismiss: () => void;
 };
 
 export function QuickStartSheet({ open, initial, onDone, onDismiss }: QuickStartSheetProps) {
-  const [vibe, setVibe] = useState<Vibe | null>(initial.answers.vibe);
-  const [spend, setSpend] = useState<Spend | null>(initial.answers.spend);
+  const [vibe, setVibe] = useState<Vibe | null>(initial.vibe);
   const [from, setFrom] = useState<CityRef | null>(initial.from);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -30,8 +30,7 @@ export function QuickStartSheet({ open, initial, onDone, onDismiss }: QuickStart
   if (open !== wasOpen) {
     setWasOpen(open);
     if (open) {
-      setVibe(initial.answers.vibe);
-      setSpend(initial.answers.spend);
+      setVibe(initial.vibe);
       setFrom(initial.from);
       setSearchOpen(false);
       setQuery("");
@@ -56,13 +55,6 @@ export function QuickStartSheet({ open, initial, onDone, onDismiss }: QuickStart
           onChange={setVibe}
           allowDeselect
         />
-        <ChoiceChipGroup
-          label={copy.spendLabel}
-          options={copy.spends}
-          value={spend}
-          onChange={setSpend}
-          allowDeselect
-        />
         <div role="group" aria-label={copy.fromGroupLabel} className="flex flex-col gap-2">
           <div className="flex justify-between px-1">
             <Eyebrow>{copy.fromLabel}</Eyebrow>
@@ -81,7 +73,7 @@ export function QuickStartSheet({ open, initial, onDone, onDismiss }: QuickStart
         <p className="px-1 text-13 tracking-caption text-muted">{copy.footnote}</p>
       </SheetBody>
       <SheetFooter>
-        <Button variant="primary" size="xl" onClick={() => onDone({ vibe, spend }, from)}>
+        <Button variant="primary" size="xl" onClick={() => onDone(vibe, from)}>
           {copy.done}
         </Button>
         <Button variant="link" size="base" onClick={onDismiss}>

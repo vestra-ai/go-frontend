@@ -1,17 +1,17 @@
 import { CheckBadge } from "@/components/common/CheckBadge";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { toasts } from "@/data/seed/copy";
 import { MONEY_COPY } from "@/data/seed/money";
-import { USERS } from "@/data/seed/users";
 import type { Settlement, User } from "@/data/types";
 import { inr } from "@/lib/format";
-import { toastGo } from "@/lib/toast";
 import { cn } from "@/lib/utils";
+import { userOf } from "@/state/view";
 
 type SettleRowProps = {
   settlement: Settlement;
-  /** Your own debt: "Record" instead of "Nudge". */
+  /** Everyone in the trip, by person id. */
+  users: Record<string, User>;
+  /** Your own debt: shows "Record". Other people's debts have no button (there is no Nudge, CONTRACT-APP §6). */
   isYou: boolean;
   /** "Record" tapped (opens the record-payment sheet). */
   onRecord: () => void;
@@ -20,9 +20,9 @@ type SettleRowProps = {
 const avatarOf = (u: User) => <Avatar size={36} name={u.name} src={u.avatar} tone={u.tone} />;
 
 /** Settle-up row: payer → payee arrow with the amount and an action, or an "is settled up" line. */
-export function SettleRow({ settlement, isYou, onRecord }: SettleRowProps) {
-  const from = USERS[settlement.fromId];
-  const to = USERS[settlement.toId];
+export function SettleRow({ settlement, users, isYou, onRecord }: SettleRowProps) {
+  const from = userOf(users, settlement.fromId);
+  const to = userOf(users, settlement.toId);
   const rowClass = "flex items-center gap-2.5 py-3 not-first:border-t not-first:border-line";
 
   if (settlement.status === "settled") {
@@ -35,7 +35,6 @@ export function SettleRow({ settlement, isYou, onRecord }: SettleRowProps) {
     );
   }
 
-  const nudge = toasts.nudge[settlement.fromId] ?? `Go nudged ${from.firstName} about ${inr(settlement.amount)}`;
   return (
     <div className={rowClass}>
       {avatarOf(from)}
@@ -52,13 +51,9 @@ export function SettleRow({ settlement, isYou, onRecord }: SettleRowProps) {
       </div>
       {avatarOf(to)}
       <div className="flex w-[92px] justify-end">
-        {isYou ? (
+        {isYou && (
           <Button variant="primary" className="h-[34px] px-[18px] text-13" onClick={onRecord}>
             {MONEY_COPY.record}
-          </Button>
-        ) : (
-          <Button variant="secondary" className="h-[34px] px-3.5 text-13 tracking-sm" onClick={() => toastGo(nudge)}>
-            {MONEY_COPY.nudge}
           </Button>
         )}
       </div>

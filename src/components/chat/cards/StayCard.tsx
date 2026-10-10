@@ -4,7 +4,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { polls as copy } from "@/data/seed/copy";
-import { USERS } from "@/data/seed/users";
+import { useRoomUsers } from "@/components/chat/RoomContext";
+import { stackAvatar } from "@/lib/avatars";
 import type { Stay, UserId } from "@/data/types";
 import { splitEmoji } from "@/lib/emoji";
 
@@ -15,10 +16,18 @@ type StayCardProps = {
   mine: boolean;
   onDetails: () => void;
   onVote: () => void;
+  /** The button's words when this is not a vote (an options card's own action). */
+  voteLabel?: string;
+  votedLabel?: string;
+  /** No tally line (an options card has no votes). */
+  hideVotes?: boolean;
+  /** The vote is closed, or a tap is on its way. */
+  disabled?: boolean;
 };
 
 /** 236px stay poll card in the E8 rail: photo with price/rating pill, area, tags, voters, Details / Vote. */
-export function StayCard({ stay, voters, mine, onDetails, onVote }: StayCardProps) {
+export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false }: StayCardProps) {
+  const userOf = useRoomUsers();
   // Seed tags lead with an emoji ("🏊 Private pool · 3 rooms"); it stays text, hidden from screen readers.
   const tag = splitEmoji(stay.tags);
 
@@ -29,9 +38,13 @@ export function StayCard({ stay, voters, mine, onDetails, onVote }: StayCardProp
         <img src={stay.img} alt={stay.name} className="size-full object-cover" />
         <Badge variant="glass" size="md-bold" className="absolute top-2.5 left-2.5 gap-1.5 px-2.5 text-13 tabular-nums">
           {stay.priceLabel}
-          <span aria-hidden className="h-3 w-px bg-line-2" />
-          <span className="text-amber">★</span>
-          {stay.rating}
+          {stay.priceLabel && stay.rating && <span aria-hidden className="h-3 w-px bg-line-2" />}
+          {stay.rating && (
+            <>
+              <span className="text-amber">★</span>
+              {stay.rating}
+            </>
+          )}
         </Badge>
       </div>
       <div className="flex flex-col gap-1 px-3 pt-2.5 pb-3">
@@ -49,14 +62,14 @@ export function StayCard({ stay, voters, mine, onDetails, onVote }: StayCardProp
         <div className="flex items-center gap-1.5 text-13 font-semibold text-ink">
           {voters.length > 0 && (
             <AvatarStack
-              avatars={voters.map((id) => ({ name: USERS[id].name, src: USERS[id].avatar, tone: USERS[id].tone }))}
+              avatars={voters.map((id) => stackAvatar(userOf(id)))}
               size={20}
               overlap={6}
               ring="white"
               max={3}
             />
           )}
-          {copy.votes(voters.length)}
+          {!hideVotes && copy.votes(voters.length)}
         </div>
         <div className="mt-1.5 flex gap-1.5">
           <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onDetails}>
@@ -70,9 +83,10 @@ export function StayCard({ stay, voters, mine, onDetails, onVote }: StayCardProp
             weight="semibold"
             aria-pressed={mine}
             className="flex-1"
+            disabled={disabled}
             onClick={onVote}
           >
-            {mine ? copy.voted : copy.vote}
+            {mine ? (votedLabel ?? copy.voted) : (voteLabel ?? copy.vote)}
           </Button>
         </div>
       </div>

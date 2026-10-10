@@ -1,16 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Phone } from "@/components/icons/generated";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
-import { CALL_COPY, liveTranscriptFor } from "@/data/seed/calls";
-import { FLIGHT_DETAILS, STAY_DETAILS } from "@/data/seed/bookings";
-import type { TripId, VendorId } from "@/data/types";
+import { CALL_COPY } from "@/data/seed/calls";
+import type { DetailRow } from "@/data/types";
 import { splitEmoji } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
-import { useHydrated, useLiveCalls, useStore } from "@/store";
-import type { LiveCall } from "@/store/selectors";
+import type { CallModel } from "@/state/homeView";
 import { BookingDetailsAccordion } from "./BookingDetailsAccordion";
 import { CallHeroCard } from "./CallHeroCard";
 import { LiveTranscript } from "./LiveTranscript";
@@ -36,39 +34,39 @@ const muteLabel = {
 };
 
 type ListenSheetProps = {
-  callId: VendorId;
+  /** The live `call` card (kept by the caller while the sheet animates out). */
+  call: CallModel | null;
+  /** The booking this call is about, when there is one. */
+  details?: DetailRow[] | null;
   open: boolean;
   onOpenChange(open: boolean): void;
-  /** Defaults to the one populated trip. */
-  tripId?: TripId;
+  /** "End call": the card action `stop`. */
+  onEnd(): void;
+  /** "Take over" / the mute control: those live on Go's listen-in page (the card action `listen`, CONTRACT-APP §4.11). */
+  onGoPage(): void;
 };
 
-/** J5 "Listening in": hero (with mute), live transcript, booking details, take over / end (J-triphome-calls.md §1.4). */
-export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: ListenSheetProps) {
-  const hydrated = useHydrated();
-  const live = useLiveCalls(tripId).find((c) => c.id === callId);
-  const { muted, takenOver, detailsOpen } = useStore((s) => s.home[tripId].listen);
-  const setListen = useStore((s) => s.setListen);
-  const endCall = useStore((s) => s.endCall);
-
-  // Keep the last call on screen while the sheet animates closed after "End call".
-  const [lastCall, setLastCall] = useState<LiveCall | undefined>(live);
-  if (live && live !== lastCall) setLastCall(live);
-  const call = live ?? lastCall;
-
+/**
+ * "Listening in": hero, the call's lines so far, booking details, take over / end. Not mounted today: Listen in opens
+ * Go's own page, which carries the audio, mute, take over and hand back. This sheet draws what the card itself says.
+ */
+export function ListenSheet({ call, details, open, onOpenChange, onEnd, onGoPage }: ListenSheetProps) {
+  const [detailsOpen, setDetailsOpen] = useState(false);
   // Fresh state each time the sheet opens.
-  useEffect(() => {
-    if (open) setListen(tripId, { muted: false, takenOver: false, detailsOpen: false });
-  }, [open, tripId, setListen]);
-
-  // Not a live call: close ourselves.
-  useEffect(() => {
-    if (open && hydrated && !live) onOpenChange(false);
-  }, [open, hydrated, live, onOpenChange]);
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (open) setDetailsOpen(false);
+  }
 
   if (!call) return null;
   const { who } = call;
-  const details = call.id === "villa" ? STAY_DETAILS : call.id === "indigo" ? FLIGHT_DETAILS : null;
+  const muted = false;
+  const takenOver = false;
+  const lines = (call.card.transcript ?? (call.card.last_line ? [call.card.last_line] : [])).map((line) => ({
+    speaker: line.who === "go" ? ("go" as const) : ("vendor" as const),
+    text: line.text,
+  }));
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} top={0} minTop={48} aria-label={copy.title}>
@@ -85,21 +83,21 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
               who={who}
               rows={details}
               open={detailsOpen}
-              onToggle={() => setListen(tripId, { detailsOpen: !detailsOpen })}
+              onToggle={() => setDetailsOpen((v) => !v)}
             />
           </div>
         )}
         <CallHeroCard
           who={who}
-          emoji={call.emoji}
-          tint={call.bg}
-          startedAt={call.startedAt}
+          emoji="📞"
+          tint="bg-amber-soft"
+          startedAt={call.startedAt ?? 0}
           action={
             <button
               type="button"
               aria-pressed={muted}
               aria-label={muted ? muteLabel.unmute : muteLabel.mute}
-              onClick={() => setListen(tripId, { muted: !muted })}
+              onClick={onGoPage}
               className={cn(
                 "grid size-9 cursor-pointer place-items-center rounded-full text-16 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white/50",
                 muted ? "bg-white/90" : "bg-white/15 hover:bg-white/25",
@@ -109,7 +107,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
             </button>
           }
         />
-        <LiveTranscript lines={liveTranscriptFor(call.id, call.asking)} who={who} className="min-h-[120px] flex-1 shrink!" />
+        <LiveTranscript lines={lines} who={who} className="min-h-[120px] flex-1 shrink!" />
       </SheetBody>
       <SheetFooter className="relative shrink-0 pt-3">
         <div className="flex gap-2">
@@ -119,7 +117,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
             size="lg"
             className="flex-1 text-15 font-semibold"
             aria-pressed={takenOver}
-            onClick={() => setListen(tripId, { takenOver: !takenOver })}
+            onClick={onGoPage}
           >
             <EmojiLabel text={takenOver ? copy.handBack : copy.takeOver} />
           </Button>
@@ -129,7 +127,7 @@ export function ListenSheet({ callId, open, onOpenChange, tripId = "goa" }: List
             size="lg"
             className="flex-1 gap-1.5 font-semibold"
             onClick={() => {
-              endCall(tripId, call.id, { withOutcome: true });
+              onEnd();
               onOpenChange(false);
             }}
           >

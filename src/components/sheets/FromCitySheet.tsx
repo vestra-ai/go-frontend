@@ -11,8 +11,8 @@ import { CityPicker } from "./CityPicker";
 
 type FromCitySheetProps = {
   open: boolean;
-  /** fromCity ?? seed Bengaluru. */
-  initialCity: CityRef;
+  /** My answer in this trip, if any. */
+  initialCity: CityRef | null;
   onSave: (city: CityRef) => void;
   /** X, scrim, drag, Back: nothing saved. */
   onClose: () => void;
@@ -22,7 +22,7 @@ type FromCitySheetProps = {
 const SHEET_TOP = 447;
 
 export function FromCitySheet({ open, initialCity, onSave, onClose }: FromCitySheetProps) {
-  const [city, setCity] = useState<CityRef>(initialCity);
+  const [city, setCity] = useState<CityRef | null>(initialCity);
   const [searchOpen, setSearchOpen] = useState(false);
   const [query, setQuery] = useState("");
 
@@ -65,7 +65,7 @@ export function FromCitySheet({ open, initialCity, onSave, onClose }: FromCitySh
         <InfoNote>{copy.privacy}</InfoNote>
       </SheetBody>
       <SheetFooter>
-        <Button variant="primary" size="xl" onClick={() => onSave(city)}>
+        <Button variant="primary" size="xl" disabled={!city} onClick={() => city && onSave(city)}>
           {copy.save}
         </Button>
       </SheetFooter>

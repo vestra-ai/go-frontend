@@ -7,8 +7,8 @@ import { Eyebrow } from "@/components/common/Eyebrow";
 import { Separator } from "@/components/ui/separator";
 import { BOOKINGS_COPY } from "@/data/seed/bookings";
 import type { Booking } from "@/data/types";
+import type { User } from "@/data/types";
 import { cn } from "@/lib/utils";
-import { useStore } from "@/store/store";
 
 const MEDIA_BG = {
   indigo: "bg-indigo",
@@ -19,8 +19,7 @@ const MEDIA_BG = {
 const ACCENT = { info: "border-info", success: "border-success" } as const;
 
 /** M1 ticket-stub card: media, details, avatars, dashed-torn stub. Links to the booking's `href`. */
-export function BookingTicketCard({ booking }: { booking: Booking }) {
-  const members = useStore((s) => s.trips.members);
+export function BookingTicketCard({ booking, members }: { booking: Booking; members: Record<string, User> }) {
   const { media, stub } = booking;
   return (
     <Link
@@ -30,7 +29,7 @@ export function BookingTicketCard({ booking }: { booking: Booking }) {
       <div className={cn("flex w-[92px] shrink-0 overflow-hidden rounded-l-5xl", MEDIA_BG[media.bg], media.kind !== "photo" && "items-center justify-center")}>
         {media.kind === "logo" && (
           // eslint-disable-next-line @next/next/no-img-element -- SVG brand wordmark
-          <img src={media.src} alt="IndiGo" className="h-auto w-16" />
+          <img src={media.src} alt={media.alt ?? ""} className="h-auto w-16" />
         )}
         {media.kind === "photo" && (
           // eslint-disable-next-line @next/next/no-img-element -- design photo, decorative

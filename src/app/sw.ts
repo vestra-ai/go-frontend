@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 import { defaultCache } from "@serwist/turbopack/worker";
-import { CacheFirst, ExpirationPlugin, Serwist, type PrecacheEntry, type SerwistGlobalConfig } from "serwist";
+import { CacheFirst, ExpirationPlugin, NetworkOnly, Serwist, type PrecacheEntry, type SerwistGlobalConfig } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -16,6 +16,14 @@ const serwist = new Serwist({
   clientsClaim: true,
   navigationPreload: true,
   runtimeCaching: [
+    {
+      // The Server's answers are per person and say so (`private, no-store` / `no-cache`, CONTRACT-APP §1.6), and
+      // Supabase carries the sign-in and signed file links that expire. Neither may ever be answered from this cache:
+      // without this rule the default cross-origin route would keep a copy and serve it when the network is slow.
+      matcher: ({ url, sameOrigin }) =>
+        !sameOrigin && (url.pathname.startsWith("/app/v1/") || url.hostname.endsWith(".supabase.co") || url.hostname.endsWith(".supabase.in")),
+      handler: new NetworkOnly(),
+    },
     {
       matcher: ({ url }) => url.pathname.startsWith("/images/") || url.pathname.startsWith("/icons/"),
       handler: new CacheFirst({

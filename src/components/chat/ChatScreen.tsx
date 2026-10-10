@@ -1,13 +1,16 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import type { CallCard, OptionsCard, Transfer } from "@/api/contract";
+import { errorMessage } from "@/api/http";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Composer } from "@/components/chat/Composer";
 import { ComposerTray } from "@/components/chat/ComposerTray";
 import { FactChipRow, type FactChipData } from "@/components/chat/FactChipRow";
 import { LongPressOverlay } from "@/components/chat/LongPressOverlay";
 import { MessageList } from "@/components/chat/MessageList";
-import { NextStepPill } from "@/components/chat/NextStepPill";
+import { RoomUsersProvider } from "@/components/chat/RoomContext";
 import { useLongPress } from "@/components/chat/useLongPress";
 import { useScrollToEnd } from "@/components/chat/useScrollToEnd";
 import { Screen } from "@/components/shell/Screen";
@@ -17,33 +20,54 @@ import { BoardSheet } from "@/components/sheets/BoardSheet";
 import { BudgetSheet } from "@/components/sheets/BudgetSheet";
 import { CabSheet } from "@/components/sheets/CabSheet";
 import { FromCitySheet } from "@/components/sheets/FromCitySheet";
-import { PaySheet } from "@/components/sheets/PaySheet";
 import { PlaceDetailsSheet } from "@/components/sheets/PlaceDetailsSheet";
 import { PrivateSheet } from "@/components/sheets/PrivateSheet";
 import { QuickStartSheet } from "@/components/sheets/QuickStartSheet";
+import { RecordPaymentSheet, type RecordTarget } from "@/components/sheets/RecordPaymentSheet";
 import { RouteSheet } from "@/components/sheets/RouteSheet";
 import { StayDetailsSheet } from "@/components/sheets/StayDetailsSheet";
 import { TicketSheet } from "@/components/sheets/TicketSheet";
-import { VisaSheet } from "@/components/sheets/VisaSheet";
-import { stageIndexOf } from "@/data/scenario/engine";
-import { BOOKINGS, PRIVATE_COPY, PRIVATE_DETAILS } from "@/data/seed/bookings";
-import { DEFAULT_CITY } from "@/data/seed/cities";
-import { baliToasts, chat as chatCopy, paySheet, staySheet, toasts } from "@/data/seed/copy";
-import { PLACES } from "@/data/seed/places";
-import { STAYS } from "@/data/seed/stays";
-import { TRIPS } from "@/data/seed/trips";
-import { baliVisa } from "@/data/seed/visa";
-import { AUTO_SCROLL_DONE_MS, DATES_NUDGE_MS, GO_TYPING_MS, RAHUL_CLAIMS_MS } from "@/data/timing";
-import type { CardKind, ChipKey, FrameRect, StageId, TripId, UserId } from "@/data/types";
+import { useCardTap } from "@/components/sheets/useCardTap";
+import { useGroupBudget } from "@/components/sheets/useGroupBudget";
+import { recordTargetFor } from "@/components/sheets/useRecordTarget";
+import { RecordingSheet } from "@/components/trip/RecordingSheet";
+import { Button } from "@/components/ui/button";
+import { PRIVATE_COPY } from "@/data/seed/bookings";
+import { CIT } from "@/data/seed/cities";
+import { board as boardCopy, cards as cardCopy, chat as chatCopy, fromSheet, polls, staySheet } from "@/data/seed/copy";
+import { ROUTE_COPY } from "@/data/seed/routes";
+import type { Attachment, ChipKey, CityRef, FrameRect, TripId, TripType, Vibe } from "@/data/types";
+import { dropQueryParams } from "@/lib/query";
 import { scrollBehavior } from "@/lib/motion";
 import { toastGo } from "@/lib/toast";
-import { useChatHeader, useChips, useMessages, useNextPill, useStage, useStore, useVisaRows } from "@/store";
-import { MessageRenderer, userAvatar, type CardActions } from "./MessageRenderer";
+import {
+  answerMandate,
+  castVote,
+  loadBookings,
+  loadMoney,
+  loadOlderMessages,
+  loadRoom,
+  markRead,
+  react,
+  retractVote,
+  retrySend,
+  saveJoinAnswers,
+  sendMessage,
+  useGo,
+  useTripGate,
+  type TripData,
+} from "@/state";
+import { buildBoard, type BoardTarget } from "@/state/boardView";
+import { toPrivateDetails, toTicketDoc } from "@/state/bookingView";
+import { toCall, type CallModel } from "@/state/homeView";
+import { toCabCard, toPlaceOption, toRouteCard, toStay, voteShape } from "@/state/optionView";
+import { buildRoom } from "@/state/roomView";
+import { fromMinor, toTripDates, toUser, tripFromView, usersById } from "@/state/view";
+import { kFormat } from "@/lib/format";
+import type { OptionRef, RoomModel } from "./CardView";
+import { MessageRenderer, userAvatar, type MessageActions } from "./MessageRenderer";
 import { useChatSheets } from "./useChatSheets";
 import { useComposerModes } from "./useComposerModes";
-
-// G-bali.md §1.3 / §1.7 #6: the Bali header, board and settled chips toast and Back goes home, as designed.
-const TOAST_HEADER_TRIPS: ReadonlySet<TripId> = new Set<TripId>(["bali"]);
 
 /** Bubble-row rect relative to #app-frame's top-left, i.e. in page coordinates (the long-press overlay is absolute inside the page). */
 function frameRect(el: HTMLElement): FrameRect {
@@ -52,88 +76,161 @@ function frameRect(el: HTMLElement): FrameRect {
   return { top: r.top - (f?.top ?? 0), left: r.left - (f?.left ?? 0), width: r.width, height: r.height };
 }
 
+/** "Quick start" was closed without answering: remembered per trip on this device, so it does not come back. */
+const quickStartKey = (tripId: string) => `go-quickstart-dismissed:${tripId}`;
+function wasDismissed(tripId: string): boolean {
+  try {
+    return window.localStorage.getItem(quickStartKey(tripId)) === "1";
+  } catch {
+    return false;
+  }
+}
+
+const VIBE_PREFIX = "Vibe: ";
+const VIBES: readonly Vibe[] = ["beach", "hills", "city", "any"];
+
+/** A city I answered in words, as the picker's value (the strip's own id when it is one of its chips). */
+function cityRef(name: string | null | undefined): CityRef | null {
+  if (!name) return null;
+  const known = CIT.find((c) => c.name.toLowerCase() === name.toLowerCase());
+  return known ?? { id: name.toLowerCase(), name };
+}
+
 /**
- * The trip chat (`/trips/[tripId]/chat`): scenario thread, fact chips, composer modes, every chat sheet.
- * Artboards C1–C5, D1–D3, E1–E15, F1–F8, G2–G3 and H1–H3 are states of this screen (PLAN §8, §9.3).
- * Mount it after the store has hydrated: first-render messages count as history (no rise-in).
+ * The trip chat (`/trips/[tripId]/chat`, CONTRACT-APP §4.6–§4.8): the room is `GET …/messages` plus live frames. Go's
+ * messages, chips and cards come from Go; votes, the mandate and money are the Server's own rows.
  */
 export function ChatScreen({ tripId }: { tripId: TripId }) {
+  const data = useTripGate(tripId);
+  const ready = data !== null;
+
+  useEffect(() => {
+    if (ready) void loadRoom(tripId).catch((err) => toastGo(errorMessage(err)));
+  }, [ready, tripId]);
+
+  // First-render messages count as history (no rise-in), so the room mounts once its first page is in.
+  if (!data?.view || data.room !== "ready") return <Screen>{null}</Screen>;
+  return <Room tripId={tripId} data={data} />;
+}
+
+function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
+  const view = data.view!;
   const anchorRef = useRef<HTMLSpanElement>(null);
+  const params = useSearchParams();
+  const features = useGo((s) => s.config?.features);
 
-  const storedTrip = useStore((s) => s.trips.trips[tripId]);
-  const trip = storedTrip ?? TRIPS[tripId]; // before the trip exists (Bali invite) the seed still renders
-  const me = useStore((s) => s.session.userId);
-  const users = useStore((s) => s.trips.members);
-  const chat = useStore((s) => s.chat[tripId]);
-  const stage = useStage(tripId);
-  const header = useChatHeader(tripId);
-  const chips = useChips(tripId);
-  const messages = useMessages(tripId);
-  const pill = useNextPill(tripId);
-  const visaRows = useVisaRows(tripId);
-  const stageIndex = chat.stageIndex;
-  const toastHeader = TOAST_HEADER_TRIPS.has(tripId);
+  const trip = tripFromView(view);
+  const users = usersById(view.people);
+  const me = toUser(view.me.person);
+  const room: RoomModel = { tripId, view, data, users, me, features };
+  const rows = buildRoom(data, users, me.id);
 
-  // Go posts the next stage after a typing delay (PLAN §9.3): a newly entered stage's block and its pill
-  // stay hidden for GO_TYPING_MS. History on mount (and a store reset to an earlier stage) shows at once.
-  const [shownIndex, setShownIndex] = useState(stageIndex);
-  if (stageIndex < shownIndex) setShownIndex(stageIndex);
-  useEffect(() => {
-    if (stageIndex <= shownIndex) return;
-    const t = window.setTimeout(() => setShownIndex(stageIndex), GO_TYPING_MS);
-    return () => window.clearTimeout(t);
-  }, [stageIndex, shownIndex]);
-  const revealed = Math.min(shownIndex, stageIndex);
-  const settled = revealed === stageIndex;
-  const visible = messages.filter((m) => stageIndexOf(tripId, m.stage) <= revealed);
+  // Messages already in the thread on first render don't rise in.
+  const [historyIds] = useState(() => new Set(rows.map((m) => m.id)));
 
-  // Messages already in the thread on first render don't rise in (C-chat-kickoff.md §1.2 Bubble `enter`).
-  const [historyIds] = useState(() => new Set(messages.map((m) => m.id)));
+  // -- Quick start: asked once, until it is answered or dismissed -------------------------------------------------
+  const vibe = VIBES.find((v) => view.me.person.know.includes(`${VIBE_PREFIX}${v}`)) ?? null;
+  const from = cityRef(view.me.person.from_city);
+  const [dismissed, setDismissed] = useState(() => wasDismissed(tripId));
+  const autoQuickStart = !dismissed && !from && !vibe && view.stage !== "planned";
 
-  // Chip / board deep links scroll their card into view once it is on screen (H-board.md §1.4).
-  const [scrollTarget, setScrollTarget] = useState<CardKind | null>(null);
-  useEffect(() => {
-    if (!scrollTarget || !settled) return;
-    const t = window.setTimeout(() => {
-      document.querySelector(`[data-card="${scrollTarget}"]`)?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
-      setScrollTarget(null);
-    }, AUTO_SCROLL_DONE_MS);
-    return () => window.clearTimeout(t);
-  }, [scrollTarget, settled]);
-
-  const sheets = useChatSheets(tripId, { onScrollToCard: setScrollTarget });
-  const modes = useComposerModes(tripId, stage.id, visible);
+  const sheets = useChatSheets(autoQuickStart);
+  const modes = useComposerModes(tripId, rows);
   const sheet = sheets.sheet;
+  const budget = useGroupBudget(tripId);
 
-  // E12 → E13: Rahul claims the open booking after RAHUL_CLAIMS_MS; cleared while the pay sheet is open,
-  // re-armed when it closes unpaid (E-deciding.md §1.2 `pay`). Not persisted: a reload re-arms from zero.
-  const rahulArmed = stage.id === "pay" && chat.stayBooking.status === "open" && sheet !== "pay";
+  // Sheet payloads: each keeps its last value so the content stays put while the sheet animates out.
+  const [option, setOption] = useState<OptionRef | null>(null);
+  const [routeCard, setRouteCard] = useState<OptionsCard | null>(null);
+  const [cabCard, setCabCard] = useState<OptionsCard | null>(null);
+  const [privateBookingId, setPrivateBookingId] = useState<string | null>(null);
+  const [ticketBookingId, setTicketBookingId] = useState<string | null>(null);
+  const [attachment, setAttachment] = useState<Extract<Attachment, { kind: "image" | "file" }> | null>(null);
+  const [recordTarget, setRecordTarget] = useState<RecordTarget | null>(null);
+  const [recording, setRecording] = useState<CallModel | null>(null);
+
+  /** The latest card of a kind in the room: what a `go://…/sheet/route` link, or the Board's travel row, opens. */
+  const latestOptions = (kinds: string[]): OptionsCard | null => {
+    for (let i = data.order.length - 1; i >= 0; i--) {
+      const card = data.messages[data.order[i]].card;
+      if (card?.kind === "options" && kinds.includes((card as OptionsCard).option_kind)) return card as OptionsCard;
+    }
+    return null;
+  };
+  const openBudget = () => {
+    budget.reset();
+    sheets.open("budget");
+  };
+  const openRoute = (card: OptionsCard | null) => {
+    if (!card) return false;
+    setRouteCard(card);
+    sheets.open("route");
+    return true;
+  };
+  const openCab = (card: OptionsCard | null) => {
+    if (!card) return false;
+    setCabCard(card);
+    sheets.open("cab");
+    return true;
+  };
+  const openPrivate = (bookingId: string) => {
+    // My seat, PNR and ticket only come with the bookings read (covered people only, §1.7).
+    void loadBookings(tripId).catch(() => {});
+    setPrivateBookingId(bookingId);
+    sheets.open("private");
+  };
+
+  const cardTap = useCardTap(tripId, (route) => {
+    if (route.kind === "booking") openPrivate(route.bookingId);
+    else if (route.sheet === "budget") openBudget();
+    else if (route.sheet === "route") openRoute(latestOptions(["flight", "train", "bus"]));
+    else openCab(latestOptions(["cab"]));
+  });
+
+  // -- Reading: mark the room read while it is on screen ------------------------------------------------------------
+  const lastId = rows.length > 0 ? rows[rows.length - 1].id : "";
   useEffect(() => {
-    if (!rahulArmed) return;
-    const t = window.setTimeout(() => useStore.getState().claimBooking(tripId), RAHUL_CLAIMS_MS);
-    return () => window.clearTimeout(t);
-  }, [rahulArmed, tripId]);
+    if (document.visibilityState !== "visible") return;
+    const timer = window.setTimeout(() => void markRead(tripId).catch(() => {}), 400);
+    return () => window.clearTimeout(timer);
+  }, [tripId, lastId]);
 
-  // DESIGN-ASSUMPTION (C-chat-kickoff.md §1.7 #14): the `dates-talk` fallback nudge shows DATES_NUDGE_MS after the
-  // stage is current with no composer mode; a mode clears the timer; once shown it stays until the stage changes.
-  const [nudgeFor, setNudgeFor] = useState<number | null>(null);
-  const nudgeArmed = pill?.ready === "dates-nudge" && settled && modes.mode === null && nudgeFor !== stageIndex;
-  useEffect(() => {
-    if (!nudgeArmed) return;
-    const t = window.setTimeout(() => setNudgeFor(stageIndex), DATES_NUDGE_MS);
-    return () => window.clearTimeout(t);
-  }, [nudgeArmed, stageIndex]);
-
-  const chatPill =
-    pill && settled && pill.inSheet !== sheet && (pill.ready !== "dates-nudge" || nudgeFor === stageIndex) ? pill : null;
-
-  // The 3A contract: useLongPress cancels on any scroll, so auto-scroll holds while a press is armed and
-  // catches up on release.
-  const liveScrollKey = `${visible.length}|${chatPill?.label ?? ""}`;
+  // -- Scrolling --------------------------------------------------------------------------------------------------
+  // The 3A contract: useLongPress cancels on any scroll, so auto-scroll holds while a press is armed and catches up
+  // on release. The key follows the newest row, so reading back older pages never yanks the thread to its end.
+  const liveScrollKey = lastId;
   const [heldScrollKey, setHeldScrollKey] = useState<string | null>(null);
   useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey, modes.bottomPadding]);
 
-  // Long-press (D1): one gesture for every member bubble; the bubble's `[data-msg-id]` row names the message.
+  // "Earlier messages" adds a page above: keep what was on screen where it was.
+  const firstId = rows[0]?.id ?? "";
+  const fromBottom = useRef<number | null>(null);
+  useLayoutEffect(() => {
+    if (fromBottom.current === null) return;
+    window.scrollTo(0, document.documentElement.scrollHeight - fromBottom.current);
+    fromBottom.current = null;
+  }, [firstId]);
+  const loadEarlier = () => {
+    fromBottom.current = document.documentElement.scrollHeight - window.scrollY;
+    void loadOlderMessages(tripId).catch((err) => {
+      fromBottom.current = null;
+      toastGo(errorMessage(err));
+    });
+  };
+
+  // `?focus=<message>` (a "Pending on you" row, the Board's Vote): scroll to that message once, then drop the param.
+  const [focus, setFocus] = useState<string | null>(() => params.get("focus"));
+  useEffect(() => {
+    if (!focus) return;
+    const timer = window.setTimeout(() => {
+      document.querySelector(`[data-message="${CSS.escape(focus)}"]`)?.scrollIntoView({ behavior: scrollBehavior(), block: "center" });
+      dropQueryParams("focus");
+      setFocus(null);
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [focus]);
+
+  // -- Long-press (one gesture for every member bubble; the bubble's `[data-msg-id]` row names the message) -----------
   const [anchor, setAnchor] = useState<{ id: string; rect: FrameRect } | null>(null);
   const pressHandlers = useLongPress((target) => {
     const row = target.closest<HTMLElement>("[data-msg-id]");
@@ -144,7 +241,7 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     modes.setMode("longpress", id);
   });
 
-  // `?mode=longpress&msg=…` on load (D1 preset): measure the row once it has been laid out and scrolled.
+  // `?mode=longpress&msg=…` on load: measure the row once it has been laid out and scrolled.
   const overlayTarget = modes.mode === "longpress" ? modes.target : null;
   const measureId = overlayTarget && anchor?.id !== overlayTarget.id ? overlayTarget.id : null;
   useEffect(() => {
@@ -156,172 +253,221 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
     return () => cancelAnimationFrame(raf);
   }, [measureId]);
 
-  const store = () => useStore.getState();
-
-  function goToCard(stageId: StageId, card: CardKind) {
-    store().ensureStage(tripId, stageId);
-    setScrollTarget(card);
-  }
-
-  // Fact chips (PLAN §8.1, E-deciding.md §1.2; Bali: G-bali.md §1.3). Opening the budget sheet fast-forwards to `budget`.
-  function onChip(key: ChipKey, isSet: boolean) {
-    if (toastHeader) {
-      if (key === "budget" || key === "from") sheets.open(key);
-      else toastGo(baliToasts.settled);
-      return;
-    }
-    switch (key) {
-      case "where":
-        return isSet ? sheets.open("board") : goToCard("places", "place-poll");
-      case "when":
-        return isSet ? sheets.open("board") : goToCard("dates-poll", "dates-poll");
-      case "stay":
-        return isSet ? sheets.open("board") : goToCard("stays", "stay-poll");
-      case "budget":
-        return sheets.open("budget");
-      case "from":
-        return sheets.open("from");
-    }
-  }
-
-  // While QuickStart is open no chip is active; From / Budget are active while their sheet is open, and the
-  // budget chip through the whole unsaved `budget` stage (store `active`).
+  // -- Fact chips: derived from the trip itself, never from a message ---------------------------------------------------
+  const stayBooking = view.bookings.find((b) => b.kind === "stay" && b.status === "confirmed");
+  const stayWinner = view.decisions.find((d) => d.status === "closed" && d.result_index != null && !d.cancels_booking_id && voteShape(d) === "stay");
+  const budgetMinor = view.budget?.per_person_minor;
+  const facts: Record<ChipKey, string | null> = {
+    where: view.destination?.name ?? null,
+    when: view.dates ? toTripDates(view.dates).chip : null,
+    // The stay the group chose (a booking, else the vote's winner): not `TripView.stay`, which is "the kind of stay".
+    stay: stayBooking?.place?.name ?? stayBooking?.title ?? (stayWinner ? stayWinner.options[stayWinner.result_index!]?.label : null) ?? null,
+    budget: budgetMinor ? kFormat(fromMinor(budgetMinor)) : null,
+    from: view.me.person.from_city ?? null,
+  };
+  const onChip = (key: ChipKey) => {
+    if (key === "budget") openBudget();
+    else if (key === "from") sheets.open("from");
+    else openBoard();
+  };
   const quickStartOpen = sheet === "quickstart";
-  const chipData: FactChipData[] = chips.map((c) => ({
-    key: c.key,
-    emoji: c.emoji,
-    label: c.label,
-    state: c.state,
-    active: !quickStartOpen && (Boolean(c.active) || ((c.key === "from" || c.key === "budget") && sheet === c.key)),
-    onPress: () => onChip(c.key, c.state === "set"),
+  const chipData: FactChipData[] = (["where", "when", "stay", "budget", "from"] as const).map((key) => ({
+    key,
+    emoji: chatCopy.chipEmoji[key],
+    label: facts[key] ?? chatCopy.chipUnset[key],
+    state: facts[key] ? "set" : "unset",
+    // While QuickStart is open no chip is active; From / Budget are active while their sheet is open.
+    active: !quickStartOpen && (key === "from" || key === "budget") && sheet === key,
+    onPress: () => onChip(key),
   }));
 
-  const actions: CardActions = {
-    askPlaces: () => store().advance(tripId, "place-asked"),
-    votePlace: (id) => store().votePlace(tripId, id),
-    openPlace: (id) => sheets.open("place", id),
-    openAttachment: (id) => sheets.open("attachment", id),
-    morePlaces: () => toastGo(toasts.morePlaces),
-    voteDate: (id) => store().voteDate(tripId, id),
-    toggleFlexible: () => store().setFlexible(tripId),
-    openBudget: () => sheets.open("budget"),
-    voteStay: (id) => store().voteStay(tripId, id),
-    openStay: (id) => sheets.open("stay", id),
-    moreStays: () => toastGo(toasts.moreStays),
-    openPay: () => sheets.open("pay"),
-    watchCheckout: () => toastGo(toasts.watchCheckout),
-    completeBooking: () => store().completeBooking(tripId),
-    openRoute: () => sheets.open("route"),
-    openCab: () => sheets.open("cab"),
-    viewPrivate: () => {
-      store().markPrivateViewed(tripId);
-      sheets.open("private");
-    },
-    openVisa: () => sheets.open("visa"),
+  // -- Board ------------------------------------------------------------------------------------------------------
+  function openBoard() {
+    // "Your spend vs the budget" needs my share of the money.
+    void loadMoney(tripId).catch(() => {});
+    sheets.open("board");
+  }
+  const board = buildBoard(view, data.money, users);
+  const boardAction = (target: BoardTarget) => {
+    if (target === "budget") return openBudget();
+    const boardRow = board.rows.find((r) => r.key === target);
+    if (boardRow?.kind === "poll") {
+      // The vote is cast on its card in the room.
+      const at = data.order.find((id) => {
+        const card = data.messages[id].card;
+        return card?.kind === "vote" && (card as { decision_id?: string }).decision_id === boardRow.decisionId;
+      });
+      sheets.close();
+      if (at) setFocus(at);
+      return;
+    }
+    if (target === "travel" && openRoute(latestOptions(["flight", "train", "bus"]))) return;
+    // Everything else is asked of Go in the room: the row's ask is put in the composer, ready to send.
+    const set = boardRow?.kind === "row" && boardRow.trailing.kind !== "ask";
+    const asks = boardCopy.asks;
+    const text =
+      target === "where"
+        ? set ? asks.changeWhere : asks.where
+        : target === "when"
+          ? set ? asks.changeWhen : asks.when
+          : target === "stay"
+            ? set ? asks.changeStay : asks.stay
+            : board.reminder ? asks.returnTrip : asks.travel;
+    sheets.close();
+    modes.setDraft(text);
   };
 
-  // Pill after the current stage's seed messages, before anything sent in this stage (E-deciding.md §1.2).
-  const sentIds = new Set(chat.sent.map((m) => m.id));
-  const firstSent = visible.findIndex((m) => m.stage === stage.id && sentIds.has(m.id));
-  const pillAt = chatPill ? (firstSent < 0 ? visible.length : firstSent) : -1;
-  const pillNode = chatPill && (
-    <NextStepPill key={chatPill.label} label={chatPill.label} onPress={() => store().advance(tripId, chatPill.trigger)} />
-  );
+  // -- Card and message actions -----------------------------------------------------------------------------------
+  const fail = (fallback: string) => (err: unknown) => toastGo(errorMessage(err, fallback));
+  const actions: MessageActions = {
+    vote: (decisionId, index) => {
+      const job = index === null ? retractVote(tripId, decisionId) : castVote(tripId, decisionId, { option_index: index });
+      void job.catch(fail(polls.failed));
+    },
+    flexible: (decisionId) => {
+      const mine = data.myVotes[decisionId];
+      const isFlexible = Boolean(mine && "flexible" in mine);
+      // Tapping it again takes the answer back, where taking a vote back is allowed.
+      if (isFlexible && !features?.vote_retract) return;
+      const job = isFlexible ? retractVote(tripId, decisionId) : castVote(tripId, decisionId, { flexible: true });
+      void job.catch(fail(polls.failed));
+    },
+    mandate: (decisionId, answer) => void answerMandate(tripId, decisionId, answer).catch(fail(cardCopy.mandate.failed)),
+    tap: (cardId, actionId, opts) => void cardTap.tap(cardId, actionId, opts),
+    pending: cardTap.pending,
+    openOption: (ref) => {
+      setOption(ref);
+      sheets.open(ref.shape);
+    },
+    openRoute: (card) => void openRoute(card),
+    openCab: (card) => void openCab(card),
+    openRecord: (transfer: Transfer) => {
+      setRecordTarget(recordTargetFor(view, transfer));
+      sheets.open("record");
+    },
+    openRecording: (card: CallCard) => {
+      setRecording(toCall(card));
+      sheets.open("recording");
+    },
+    openAttachment: (a) => {
+      if (a.kind === "voice") return;
+      setAttachment(a);
+      sheets.open("attachment");
+    },
+    // A quick reply is my own message: Go hears it as an ordinary `message.created`.
+    quickReply: (text) => void sendMessage(tripId, { text }),
+    retry: (clientId) => retrySend(tripId, clientId),
+  };
 
-  // Sheet payloads. Place / stay keep their last id so the content stays put while the sheet animates out.
-  const [lastPlaceId, setLastPlaceId] = useState<string | null>(null);
-  const placeId = sheet === "place" ? sheets.sheetId : null;
-  if (placeId && placeId !== lastPlaceId) setLastPlaceId(placeId);
-  const place = PLACES.find((p) => p.id === (placeId ?? lastPlaceId)) ?? null;
+  // -- Details sheet payloads -----------------------------------------------------------------------------------------
+  const optionDecision = option?.source === "vote" ? view.decisions.find((d) => d.decision_id === option.decisionId) : undefined;
+  const optionVoters =
+    option?.source === "vote" ? (optionDecision?.votes ?? []).filter((v) => v.option_index === option.index).map((v) => v.person_id) : [];
+  const cardOption = option?.source === "card" ? option.card.options.find((o) => o.option_id === option.optionId) : undefined;
+  const cardPick = option?.source === "card" ? (option.card.actions ?? []).find((a) => a.per_option && (!a.only_for_person_ids || a.only_for_person_ids.includes(me.id))) : undefined;
+  const stayCtx = { dates: view.dates, people: view.people.length, seed: option?.source === "vote" ? option.decisionId : (option?.card.card_id ?? "") };
+  const raw = option?.source === "vote" ? optionDecision?.options[option.index] : cardOption;
+  const optionId = option ? (option.source === "vote" ? String(option.index) : option.optionId) : "";
+  const place = option?.shape === "place" && raw ? toPlaceOption(raw, optionId, optionVoters, stayCtx.seed, option.source === "vote" ? option.index : 0) : null;
+  const stayDetails = option?.shape === "stay" && raw ? toStay(raw, optionId, optionVoters, stayCtx) : null;
+  // The sheet's button: my vote while the vote is open, or the options card's own per-option action.
+  const pressOption = !option
+    ? undefined
+    : option.source === "vote"
+      ? optionDecision?.status === "open"
+        ? () => {
+            actions.vote(option.decisionId, option.index);
+            sheets.close();
+          }
+        : undefined
+      : cardPick
+        ? () => {
+            actions.tap(option.card.card_id, cardPick.action_id, { optionId: option.optionId });
+            sheets.close();
+          }
+        : undefined;
+  const optionLabel = option?.source === "card" ? cardPick?.label : undefined;
 
-  const [lastStayId, setLastStayId] = useState<string | null>(null);
-  const stayId = sheet === "stay" ? sheets.sheetId : null;
-  if (stayId && stayId !== lastStayId) setLastStayId(stayId);
-  const stayDetails = STAYS.find((s) => s.id === (stayId ?? lastStayId)) ?? null;
+  const bookings = data.bookings ?? view.bookings;
+  const privateBooking = bookings.find((b) => b.booking_id === privateBookingId);
+  const ticketBooking = bookings.find((b) => b.booking_id === ticketBookingId);
+  const ticket = ticketBooking ? toTicketDoc(ticketBooking, undefined, me) : null;
 
-  const [lastTicketId, setLastTicketId] = useState<string | null>(null);
-  const ticketId = sheet === "ticket" ? sheets.sheetId : null;
-  if (ticketId && ticketId !== lastTicketId) setLastTicketId(ticketId);
-  const ticket = BOOKINGS.find((b) => b.id === (ticketId ?? lastTicketId))?.ticket ?? null;
-
-  // Attachment viewer: the message's photo or PDF, kept while the sheet animates out.
-  const [lastAttachmentId, setLastAttachmentId] = useState<string | null>(null);
-  const attachmentId = sheet === "attachment" ? sheets.sheetId : null;
-  if (attachmentId && attachmentId !== lastAttachmentId) setLastAttachmentId(attachmentId);
-  const sentAttachment = chat.sent.find((m) => m.id === (attachmentId ?? lastAttachmentId))?.attachment;
-  const viewable = sentAttachment?.kind === "image" || sentAttachment?.kind === "file" ? sentAttachment : null;
-
-  const payStayId = messages.flatMap((m) => (m.card?.kind === "pay-ask" ? [m.card.payload.stayId] : []))[0];
-  const payStay = STAYS.find((s) => s.id === payStayId);
+  const book = (cardId: string, actionId: string) => (optionId: string, tripType: TripType) =>
+    void cardTap.tap(cardId, actionId, { optionId, payload: { trip: tripType } }).then((result) => {
+      if (!result || result.result === "refused") return;
+      sheets.close();
+      if (result.result === "done" && !result.toast) toastGo(ROUTE_COPY.booked);
+    });
+  const routeModel = routeCard ? toRouteCard(routeCard, me.id) : null;
+  const cabModel = cabCard ? toCabCard(cabCard, me.id) : null;
 
   const closeOnFalse = (open: boolean) => {
     if (!open) sheets.close();
   };
+  const dismissQuickStart = () => {
+    try {
+      window.localStorage.setItem(quickStartKey(tripId), "1");
+    } catch {
+      // Storage blocked: it stays dismissed for this visit.
+    }
+    setDismissed(true);
+    sheets.close();
+  };
+  const saveAnswers = (answers: { vibe?: Vibe; from_city?: string | null }) =>
+    saveJoinAnswers(tripId, answers).catch(fail(fromSheet.failed));
 
   // Composer / tray / overlay.
   const target = modes.target;
-  const targetUser = target ? users[target.author as UserId] : null;
+  const targetUser = target?.author.kind === "person" ? users[target.author.id] : null;
   const trayMode = modes.mode === "reply" || modes.mode === "askGo" ? modes.mode : null;
+  const subtitle = view.dates ? toTripDates(view.dates).short : chatCopy.subtitle.people(view.people.length);
 
   return (
-    <>
+    <RoomUsersProvider value={users}>
       <Screen>
         <ChatHeader
           trip={{ name: trip.name, avatar: trip.illustration, tint: trip.tint }}
-          subtitle={header.subtitle}
-          members={header.memberIds.map((id) => userAvatar(users[id]))}
-          backHref={toastHeader ? "/home" : `/trips/${tripId}`}
-          onTitlePress={toastHeader ? () => toastGo(baliToasts.tripPage) : undefined}
-          onBoard={() => {
-            if (toastHeader) toastGo(baliToasts.board);
-            else if (sheet === "board") sheets.close();
-            else sheets.open("board");
-          }}
+          subtitle={subtitle}
+          members={view.people.slice(0, 4).map((p) => userAvatar(toUser(p)))}
+          backHref={`/trips/${tripId}`}
+          onBoard={() => (sheet === "board" ? sheets.close() : openBoard())}
           onShare={() => sheets.open("share")}
         >
           <FactChipRow chips={chipData} />
         </ChatHeader>
 
         <MessageList bottomPadding={modes.bottomPadding} anchorRef={anchorRef}>
-          {visible.map((m, i) => (
-            <Fragment key={m.id}>
-              {i === pillAt && pillNode}
-              <MessageRenderer
-                message={m}
-                me={me}
-                users={users}
-                chat={chat}
-                visaRows={visaRows}
-                enter={!historyIds.has(m.id)}
-                // F-travel.md §1.4: the row after the plan card clears its floating 🔥 chip.
-                className={i > 0 && visible[i - 1].card?.kind === "plan" ? "mt-[26px]" : undefined}
-                pressHandlers={pressHandlers}
-                onPressStart={() => setHeldScrollKey(liveScrollKey)}
-                onPressEnd={() => setHeldScrollKey(null)}
-                actions={actions}
-              />
-            </Fragment>
+          {data.hasMoreHistory && (
+            <Button variant="white" size="sm" className="self-center shadow-bubble" aria-busy={data.loadingHistory} disabled={data.loadingHistory} onClick={loadEarlier}>
+              {chatCopy.earlier}
+            </Button>
+          )}
+          {rows.map((m) => (
+            <MessageRenderer
+              key={m.id}
+              message={m}
+              room={room}
+              enter={!historyIds.has(m.id)}
+              pressHandlers={pressHandlers}
+              onPressStart={() => setHeldScrollKey(liveScrollKey)}
+              onPressEnd={() => setHeldScrollKey(null)}
+              actions={actions}
+            />
           ))}
-          {pillAt === visible.length && pillNode}
         </MessageList>
 
         {trayMode && target && targetUser ? (
           <ComposerTray
             mode={trayMode}
             banner={{
-              title:
-                trayMode === "reply"
-                  ? chatCopy.tray.replyingTo(targetUser.firstName)
-                  : chatCopy.tray.askGoAbout(targetUser.firstName),
-              snippet: target.text ?? "",
+              title: trayMode === "reply" ? chatCopy.tray.replyingTo(targetUser.firstName) : chatCopy.tray.askGoAbout(targetUser.firstName),
+              snippet: target.text,
               accent: trayMode === "reply" ? "go" : "ink",
             }}
-            suggestions={trayMode === "askGo" ? target.askGoSuggestions : undefined}
             value={modes.trayDraft}
             onChange={modes.setTrayDraft}
-            placeholder={
-              trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetUser.firstName) : chatCopy.tray.askGoPlaceholder
-            }
+            placeholder={trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetUser.firstName) : chatCopy.tray.askGoPlaceholder}
             onSend={modes.sendTray}
             onCancel={() => modes.setMode(null)}
           />
@@ -342,23 +488,17 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
 
         {overlayTarget && targetUser && anchor?.id === overlayTarget.id && (
           <LongPressOverlay
-            message={{
-              id: overlayTarget.id,
-              name: targetUser.firstName,
-              text: overlayTarget.text ?? "",
-              avatar: userAvatar(targetUser),
-              maxWidth: overlayTarget.maxWidth,
-            }}
+            message={{ id: overlayTarget.id, name: targetUser.firstName, text: overlayTarget.text, avatar: userAvatar(targetUser) }}
             anchorRect={anchor.rect}
             onReact={(emoji) => {
-              store().react(tripId, overlayTarget.id, emoji);
+              // One reaction per person per message: the same emoji again takes it back.
+              void react(tripId, overlayTarget.id, overlayTarget.myReaction === emoji ? null : emoji).catch(fail(chatCopy.toasts.reactFailed));
               modes.setMode(null);
-              toastGo(chatCopy.toasts.reacted(emoji, targetUser.firstName));
             }}
             onMore={() => toastGo(chatCopy.toasts.emojiKeyboard)}
             onReply={() => modes.setMode("reply", overlayTarget.id)}
             onAskGo={() => modes.setMode("askGo", overlayTarget.id)}
-            // The overlay has already copied the text and toasted "Message copied" (3A contract).
+            // The overlay has already copied the text and toasted "Message copied".
             onCopy={() => modes.setMode(null)}
             onClose={() => modes.setMode(null)}
           />
@@ -367,99 +507,70 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
 
       <QuickStartSheet
         open={sheet === "quickstart"}
-        initial={{ answers: chat.quickStartAnswers, from: chat.fromCity ?? DEFAULT_CITY }}
-        onDone={(answers, from) => {
-          store().completeQuickStart(tripId, answers, from);
-          sheets.close();
+        initial={{ vibe, from }}
+        onDone={(nextVibe, nextFrom) => {
+          const answers = { ...(nextVibe ? { vibe: nextVibe } : {}), ...(nextFrom ? { from_city: nextFrom.name.slice(0, 60) } : {}) };
+          if (Object.keys(answers).length > 0) void saveAnswers(answers);
+          dismissQuickStart();
         }}
-        onDismiss={() => {
-          if (chat.quickStart === "pending") store().dismissQuickStart(tripId);
-          sheets.close();
-        }}
+        onDismiss={dismissQuickStart}
       />
       <FromCitySheet
         open={sheet === "from"}
-        initialCity={chat.fromCity ?? DEFAULT_CITY}
+        initialCity={from}
         onSave={(city) => {
-          store().setFromCity(tripId, city);
+          void saveAnswers({ from_city: city.name.slice(0, 60) });
           sheets.close();
         }}
         onClose={sheets.close}
       />
-      <PlaceDetailsSheet
-        open={sheet === "place"}
-        onOpenChange={closeOnFalse}
-        place={place}
-        voters={place?.voters ?? []}
-        onVote={(id) => {
-          store().votePlace(tripId, id);
-          sheets.close();
-        }}
-      />
-      <BudgetSheet
-        open={sheet === "budget"}
-        onOpenChange={closeOnFalse}
-        lo={chat.budget.lo}
-        hi={chat.budget.hi}
-        saved={chat.budget.saved}
-        onChange={(lo, hi) => store().setBudget(tripId, lo, hi)}
-        onSave={() => store().saveBudget(tripId)}
-      />
+      <PlaceDetailsSheet open={sheet === "place"} onOpenChange={closeOnFalse} place={place} voters={optionVoters} onVote={pressOption} actionLabel={optionLabel} />
       <StayDetailsSheet
         open={sheet === "stay"}
         onOpenChange={closeOnFalse}
         stay={stayDetails}
         subtitle={staySheet.subtitle}
-        dates={staySheet.dates}
-        onVote={(id) => {
-          store().voteStay(tripId, id);
-          sheets.close();
-        }}
+        dates={stayDetails?.dates ?? ""}
+        onVote={pressOption}
+        actionLabel={optionLabel}
       />
-      {payStay && (
-        <PaySheet
-          open={sheet === "pay"}
-          onOpenChange={closeOnFalse}
-          stay={payStay}
-          summary={paySheet.summary}
-          methods={paySheet.methods}
-          split={paySheet.split}
-          cta={paySheet.cta}
-          trust={paySheet.trust}
-          onPay={() => {
-            sheets.close();
-            store().payBooking(tripId);
-          }}
-        />
-      )}
-      <RouteSheet tripId={tripId} open={sheet === "route"} onOpenChange={closeOnFalse} />
-      <CabSheet tripId={tripId} open={sheet === "cab"} onOpenChange={closeOnFalse} />
+      <BudgetSheet open={sheet === "budget"} onOpenChange={closeOnFalse} {...budget} />
+      <RouteSheet
+        open={sheet === "route"}
+        onOpenChange={closeOnFalse}
+        card={routeModel}
+        pending={cardTap.pending !== null}
+        onBook={routeModel?.action ? book(routeModel.cardId, routeModel.action.actionId) : () => {}}
+      />
+      <CabSheet
+        open={sheet === "cab"}
+        onOpenChange={closeOnFalse}
+        card={cabModel}
+        pending={cardTap.pending !== null}
+        onBook={cabModel?.action ? book(cabModel.cardId, cabModel.action.actionId) : () => {}}
+      />
       <PrivateSheet
         open={sheet === "private"}
         onOpenChange={closeOnFalse}
         title={PRIVATE_COPY.title}
         sub={PRIVATE_COPY.sub}
-        details={PRIVATE_DETAILS}
-        // Private sheet -> ticket viewer in one URL replace, so closing the viewer lands back on the chat.
-        onOpenTicket={() => sheets.swap("ticket", PRIVATE_DETAILS.bookingId)}
+        details={privateBooking ? toPrivateDetails(privateBooking, me.id) : null}
+        // Private sheet -> ticket viewer in one swap, so closing the viewer lands back on the chat.
+        onOpenTicket={
+          privateBooking?.documents?.length
+            ? () => {
+                setTicketBookingId(privateBooking.booking_id);
+                sheets.swap("ticket");
+              }
+            : undefined
+        }
       />
-      <AttachmentSheet tripId={tripId} open={sheet === "attachment"} onOpenChange={closeOnFalse} attachment={viewable} />
+      <AttachmentSheet open={sheet === "attachment"} onOpenChange={closeOnFalse} attachment={attachment} />
       <TicketSheet tripId={tripId} open={sheet === "ticket"} onOpenChange={closeOnFalse} ticket={ticket} />
-      <VisaSheet
-        open={sheet === "visa"}
-        onOpenChange={closeOnFalse}
-        copy={baliVisa.sheet}
-        uploads={chat.visa.uploads}
-        fields={chat.visa.fields}
-        onUpload={(key) => store().setVisaUpload(tripId, key)}
-        onFieldChange={(key, value) => store().setVisaField(tripId, key, value)}
-        onSend={() => {
-          store().sendVisa(tripId);
-          sheets.close();
-        }}
-      />
-      <BoardSheet tripId={tripId} open={sheet === "board"} onOpenChange={closeOnFalse} onAction={sheets.boardAction} />
+      <BoardSheet board={board} open={sheet === "board"} onOpenChange={closeOnFalse} onAction={boardAction} />
+      <RecordPaymentSheet open={sheet === "record"} onOpenChange={closeOnFalse} target={recordTarget} />
+      <RecordingSheet tripId={tripId} call={recording} open={sheet === "recording"} onOpenChange={closeOnFalse} />
       <ShareInviteSheet trip={trip} open={sheet === "share"} onOpenChange={closeOnFalse} />
-    </>
+    </RoomUsersProvider>
   );
 }

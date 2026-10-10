@@ -21,15 +21,30 @@ type InviteSheetProps = {
   members: User[];
   media: { kind: "photo" | "illustration"; src: string; alt: string };
   onAccept: () => void;
+  /** Accept is on its way: the button waits. */
+  pending?: boolean;
   /** X, Not now, scrim tap and drag-down. */
   onDismiss: () => void;
+  /** The "Not now" link. An invite link joins directly (CONTRACT-APP §4.3), so the landing page leaves it out. */
+  notNow?: boolean;
 };
 
 // The design's sheet is 536px tall (top 376 on the 912px artboard).
 const TOP = 376;
 
 /** Invite landing sheet: who invited you, the trip card, what happens on join, Accept / Not now. */
-export function InviteSheet({ open, invite, trip, inviter, members, media, onAccept, onDismiss }: InviteSheetProps) {
+export function InviteSheet({
+  open,
+  invite,
+  trip,
+  inviter,
+  members,
+  media,
+  onAccept,
+  pending = false,
+  onDismiss,
+  notNow = true,
+}: InviteSheetProps) {
   return (
     <BottomSheet
       open={open}
@@ -91,12 +106,14 @@ export function InviteSheet({ open, invite, trip, inviter, members, media, onAcc
         </ListCard>
       </SheetBody>
       <SheetFooter>
-        <Button variant="primary" size="xl" className="w-full" onClick={onAccept}>
-          {copy.accept}
+        <Button variant="primary" size="xl" className="w-full" aria-busy={pending} disabled={pending} onClick={onAccept}>
+          {pending ? copy.joining : copy.accept}
         </Button>
-        <Button variant="link" className="h-12 w-full text-16" onClick={onDismiss}>
-          {copy.notNow}
-        </Button>
+        {notNow && (
+          <Button variant="link" className="h-12 w-full text-16" onClick={onDismiss}>
+            {copy.notNow}
+          </Button>
+        )}
       </SheetFooter>
     </BottomSheet>
   );

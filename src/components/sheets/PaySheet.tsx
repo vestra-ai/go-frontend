@@ -11,8 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { RadioGroup } from "@/components/ui/radio-group";
 import { paySheet as copy } from "@/data/seed/copy";
-import { USERS } from "@/data/seed/users";
-import type { Stay, UserId } from "@/data/types";
+import type { Stay, User } from "@/data/types";
 
 type PayMethod = "upi" | "card";
 
@@ -23,7 +22,7 @@ type PaySheetProps = {
   /** 'Villa Sol · 3 nights' / 'Fri 6 → Mon 9 Nov · 4 guests' / '₹43,200' */
   summary: { title: string; sub: string; amount: string };
   methods: readonly { id: PayMethod; emoji: string; title: string; sub: string; tint: string }[];
-  split: { text: string; members: readonly UserId[] };
+  split: { text: string; members: readonly User[] };
   /** 'Pay ₹43,200 & book' */
   cta: string;
   /** 'Paid straight to Villa Sol · free cancellation till 1 Nov' */
@@ -77,7 +76,7 @@ export function PaySheet({ open, onOpenChange, stay, summary, methods, split, ct
           variant="peach"
           icon={
             <AvatarStack
-              avatars={split.members.map((id) => ({ name: USERS[id].name, src: USERS[id].avatar, tone: USERS[id].tone }))}
+              avatars={split.members.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
               size={22}
               overlap={7}
               ring="white"

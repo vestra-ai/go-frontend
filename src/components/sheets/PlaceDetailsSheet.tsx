@@ -13,8 +13,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Chip } from "@/components/ui/chip";
 import { placeSheet as copy, polls } from "@/data/seed/copy";
+import { useRoomUsers } from "@/components/chat/RoomContext";
 import type { PlaceOption, UserId } from "@/data/types";
-import { userStackAvatar } from "@/lib/avatars";
+import { stackAvatar } from "@/lib/avatars";
 import { splitEmoji } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
 
@@ -23,14 +24,17 @@ type PlaceDetailsSheetProps = {
   onOpenChange: (open: boolean) => void;
   /** `place.details.layout` picks the layout. */
   place: PlaceOption | null;
-  /** Rich voters row: place.voters (seed). */
+  /** Rich voters row: who picked this option (left out of an anonymous vote). */
   voters: UserId[];
-  /** votePlace(id), then close: the caller closes the sheet. */
-  onVote: (id: PlaceOption["id"]) => void;
+  /** The footer button: votes for the option, or presses an options card's own action. Absent: nothing to press (a closed vote). */
+  onVote?: (id: PlaceOption["id"]) => void;
+  /** The button's words when it is not a vote ("I'll take this"). */
+  actionLabel?: string;
 };
 
 /** E2 (rich, Goa) and E3/E4 (light, Gokarna/Udaipur) place details (E-deciding.md §1.3). */
-export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }: PlaceDetailsSheetProps) {
+export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, actionLabel }: PlaceDetailsSheetProps) {
+  const userOf = useRoomUsers();
   // Keep the last place so the sheet keeps its content while it animates out after the query clears.
   const [last, setLast] = useState(place);
   if (place && place !== last) setLast(place);
@@ -55,9 +59,11 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }:
                 <span className="text-30 font-bold tracking-title">{shown.name}</span>
                 <span className="text-14 font-medium">{details.caption}</span>
               </span>
-              <Badge variant="glass" size="md" className="absolute top-3 right-3 font-bold">
-                {details.price}
-              </Badge>
+              {details.price && (
+                <Badge variant="glass" size="md" className="absolute top-3 right-3 font-bold">
+                  {details.price}
+                </Badge>
+              )}
             </div>
 
             <ListCard variant="outline" radius="2xl" className="px-4 py-1">
@@ -72,66 +78,76 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote }:
               </ul>
             </ListCard>
 
-            <Card variant="outline" radius="2xl" className="flex flex-col gap-2.5 px-4 py-3.5">
-              <Eyebrow>{copy.cost}</Eyebrow>
-              {details.cost.map((row) => (
-                <div key={row.label} className="flex justify-between text-15">
-                  <span className="flex items-center gap-2">
-                    <span aria-hidden className="w-[18px]">
-                      {row.emoji}
+            {details.cost.length > 0 && (
+              <Card variant="outline" radius="2xl" className="flex flex-col gap-2.5 px-4 py-3.5">
+                <Eyebrow>{copy.cost}</Eyebrow>
+                {details.cost.map((row) => (
+                  <div key={row.label} className="flex justify-between text-15">
+                    <span className="flex items-center gap-2">
+                      <span aria-hidden className="w-[18px]">
+                        {row.emoji}
+                      </span>
+                      {row.label}
                     </span>
-                    {row.label}
-                  </span>
-                  <span className="font-semibold tabular-nums">{row.value}</span>
+                    <span className="font-semibold tabular-nums">{row.value}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between border-t-[1.5px] border-dashed border-line-2 pt-2.5 text-16 font-bold">
+                  <span>{copy.about}</span>
+                  <span className="tabular-nums">{details.total}</span>
                 </div>
-              ))}
-              <div className="flex justify-between border-t-[1.5px] border-dashed border-line-2 pt-2.5 text-16 font-bold">
-                <span>{copy.about}</span>
-                <span className="tabular-nums">{details.total}</span>
-              </div>
-            </Card>
+              </Card>
+            )}
 
-            <div className="flex flex-col gap-2">
-              <Eyebrow className="px-1">{copy.activities}</Eyebrow>
-              <div className="flex flex-wrap gap-1.5">
-                {details.activities.map((activity) => {
-                  const { emoji, label } = splitEmoji(activity);
-                  return (
-                    <Chip key={activity} size="sm" variant="plain" emoji={emoji || undefined} className="border-line-2">
-                      {label}
-                    </Chip>
-                  );
-                })}
+            {details.activities.length > 0 && (
+              <div className="flex flex-col gap-2">
+                <Eyebrow className="px-1">{copy.activities}</Eyebrow>
+                <div className="flex flex-wrap gap-1.5">
+                  {details.activities.map((activity) => {
+                    const { emoji, label } = splitEmoji(activity);
+                    return (
+                      <Chip key={activity} size="sm" variant="plain" emoji={emoji || undefined} className="border-line-2">
+                        {label}
+                      </Chip>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            )}
 
-            <Card variant="outline" radius="lg" className="flex items-center gap-2.5 px-3.5 py-3">
-              {voters.length > 0 && <AvatarStack avatars={voters.map(userStackAvatar)} size={26} overlap={8} ring="white" />}
-              <span className="flex-1 text-14">{details.votersLine}</span>
-            </Card>
+            {voters.length > 0 && (
+              <Card variant="outline" radius="lg" className="flex items-center gap-2.5 px-3.5 py-3">
+                <AvatarStack avatars={voters.map((id) => stackAvatar(userOf(id)))} size={26} overlap={8} ring="white" />
+                <span className="flex-1 text-14">{copy.votersLine(voters.map((id) => userOf(id).firstName), shown.name)}</span>
+              </Card>
+            )}
           </>
         ) : (
           <>
             <div className={cn("flex h-[150px] items-center justify-center rounded-5xl", details.tint)}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={details.img} alt={shown.name} className="size-[110px]" />
+              <img src={details.img} alt={shown.name} className={shown.photo ? "size-full rounded-5xl object-cover" : "size-[110px]"} />
             </div>
 
-            <ListCard variant="outline" radius="lg" className="px-3.5 py-1">
-              {details.facts.map((fact) => (
-                <KVRow key={fact.label} label={fact.label} value={fact.value} size={14} />
-              ))}
-            </ListCard>
+            {details.facts.length > 0 && (
+              <ListCard variant="outline" radius="lg" className="px-3.5 py-1">
+                {details.facts.map((fact) => (
+                  <KVRow key={fact.label} label={fact.label} value={fact.value} size={14} />
+                ))}
+              </ListCard>
+            )}
 
-            <GoNote>{details.goNote}</GoNote>
+            {details.goNote && <GoNote>{details.goNote}</GoNote>}
           </>
         )}
       </SheetBody>
 
       <SheetFooter>
-        <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
-          {polls.voteFor(shown.name)}
-        </Button>
+        {onVote && (
+          <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
+            {actionLabel ?? polls.voteFor(shown.name)}
+          </Button>
+        )}
         {rich && (
           <Button type="button" variant="link" className="h-11 text-16" onClick={() => onOpenChange(false)}>
             {copy.backToAll}

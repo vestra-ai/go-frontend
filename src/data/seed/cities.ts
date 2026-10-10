@@ -12,7 +12,6 @@ export const CIT: CityRef[] = [
   { id: "amd", name: "Ahmedabad" },
 ];
 
-export const DEFAULT_CITY: CityRef = CIT[0];
 
 // Default "Other city" dropdown (empty query, and the filter below MIN_SEARCH_CHARS): the biggest Indian cities by
 // population, hardcoded so the list opens instantly. Ids match what the live search returns (the strip's id for a
@@ -29,29 +28,3 @@ export const TOP_CITIES: CityRef[] = [
   { id: "pnq", name: "Pune", region: "Maharashtra, India" },
   { id: "jaipur|rajasthan", name: "Jaipur", region: "Rajasthan, India" },
 ];
-
-// "Other city" search list. Filter (kept as designed): name startsWith q || region includes q, first 6.
-export const MORE: { name: string; region: string }[] = [
-  { name: "Indore", region: "Madhya Pradesh, India" },
-  { name: "Indapur", region: "Maharashtra, India" },
-  { name: "Indi", region: "Karnataka, India" },
-  { name: "Imphal", region: "Manipur, India" },
-  { name: "Kochi", region: "Kerala, India" },
-  { name: "Kozhikode", region: "Kerala, India" },
-  { name: "Mangaluru", region: "Karnataka, India" },
-  { name: "Mysuru", region: "Karnataka, India" },
-  { name: "Nagpur", region: "Maharashtra, India" },
-  { name: "Nashik", region: "Maharashtra, India" },
-  { name: "Jaipur", region: "Rajasthan, India" },
-  { name: "Lucknow", region: "Uttar Pradesh, India" },
-  { name: "Surat", region: "Gujarat, India" },
-  { name: "Dubai", region: "Dubai, UAE" },
-  { name: "Singapore", region: "Singapore" },
-];
-
-export function searchCities(query: string): CityRef[] {
-  const q = query.trim().toLowerCase();
-  return MORE.filter((c) => c.name.toLowerCase().startsWith(q) || c.region.toLowerCase().includes(q))
-    .slice(0, 6)
-    .map((c) => ({ id: c.name.toLowerCase(), name: c.name, region: c.region }));
-}

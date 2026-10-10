@@ -1,6 +1,6 @@
 # Go
 
-Go is a mobile-first group-trip planner prototype. A friend group sets up a trip in a chat with "Go", an assistant that proposes dates, places, stays, travel and a budget, and the crew decides together. From there the trip gets a home screen, itinerary and map, bookings, shared expenses and web check-in. Everything runs on seeded mock data and a scripted chat scenario in a local zustand store, with no backend. It is built as an installable PWA that renders inside a 450px phone-width frame, centered on desktop.
+Go is a mobile-first group-trip planner. A friend group sets up a trip in a chat with "Go", an assistant that proposes dates, places, stays, travel and a budget, and the crew decides together. From there the trip gets a home screen, itinerary, bookings, shared expenses and web check-in. The app talks to the Go Server over HTTP plus one WebSocket, exactly as `docs/CONTRACT-APP.md` (rev 4) describes; sign-in is Supabase Auth. It is built as an installable PWA that renders inside a 450px phone-width frame, centered on desktop.
 
 ## Stack
 
@@ -19,6 +19,8 @@ Go is a mobile-first group-trip planner prototype. A friend group sets up a trip
 | pnpm | 12.8.1 |
 
 ## Getting started
+
+Copy `.env.example` to `.env.local` and fill in the Supabase project URL and anon key (and, for the dev stack, the Server's base URL). The origin you run on must be in the Server's `APP_ORIGINS`, and `<origin>/auth/callback` must be an allowed redirect URL in the Supabase project.
 
 ```bash
 pnpm install
@@ -53,13 +55,14 @@ Icons that depend on state (animated or data-driven, such as `AudioBars`, `Spinn
 | Route | File |
 | --- | --- |
 | `/` | `page.tsx` (welcome / sign-in) |
-| `/home` | `home/page.tsx` (app home; handles `?preset=`) |
-| `/profile` | `profile/page.tsx` (includes Prototype controls) |
-| `/invite/[code]` | `invite/[code]/page.tsx` |
+| `/auth/callback` | where Supabase sends the browser back after Google |
+| `/home` | `home/page.tsx` (app home) |
+| `/profile` | `profile/page.tsx` |
+| `/invite/[code]` | the invite link (`/j/[code]`, the shape the contract names, opens the same screen) |
 | `/trips/new` | `trips/new/page.tsx` (invite the crew) |
 | `/trips/[tripId]` | `trips/[tripId]/page.tsx` (trip home) |
 | `/trips/[tripId]/chat` | chat with Go |
-| `/trips/[tripId]/itinerary` | itinerary and map |
+| `/trips/[tripId]/itinerary` | itinerary |
 | `/trips/[tripId]/bookings` | bookings |
 | `/trips/[tripId]/bookings/[bookingId]/ticket` | ticket |
 | `/trips/[tripId]/expenses` | expenses |
@@ -76,9 +79,10 @@ Icons that depend on state (animated or data-driven, such as `AudioBars`, `Spinn
 - `src/components/common`: shared composites used across screens.
 - `src/components/chat`, `sheets`, `trip`, `home`, `plan`, `money`, `checkin`, `board`: per-feature sections.
 - `src/components/icons`: `generated/` (svgr output) and `custom/` (hand-written).
-- `src/store`: zustand + immer store (slices, selectors, persistence, timers, presets).
-- `src/data`: types, seed data, the chat scenario engine, timing constants, demo presets.
-- `src/lib`: helpers (`auth`, `share`, `assets`, `format`, `dates`, `routes`, `toast`, `utils`).
+- `src/api`: the Server contract. `contract.ts` (wire shapes), `http.ts` (bearer token, `Idempotency-Key`, error body, one refresh on 401), `endpoints.ts` (all 70 routes), `live.ts` (the WebSocket: ticket, subscribe, reconnect), `env.ts`.
+- `src/state`: what the app holds of the Server's data. `store.ts` (zustand + immer, nothing persisted), `actions.ts` (every read and write), `sync.ts` (session, live frames, re-read on resume), `hooks.ts`, and the `*View.ts` adapters that turn contract objects into what the components draw.
+- `src/data`: view-model types, UI copy and static config (`seed/*`), timing constants. No trip data lives here.
+- `src/lib`: helpers (`auth`, `supabase`, `links`, `share`, `assets`, `format`, `dates`, `routes`, `toast`, `utils`).
 
 ## Design rules
 
@@ -87,34 +91,14 @@ Icons that depend on state (animated or data-driven, such as `AudioBars`, `Spinn
 - `src/app/globals.css` holds tokens (`@theme`), base resets and a few global utilities only. No component styling.
 - Mobile only. The app lives in `#app-frame`, max 450px wide, at least one viewport tall, and it grows with its content: the document (body) is the only page scroller. Headers are `sticky top-0` (z-30); bottom docks (`FadeDock`, FABs, action bars) go in a `StickyDock`, a zero-height `sticky bottom-0` rail at the end of the `Screen`. Only a long list of cards may own a scroll (a horizontal rail, a sheet body), and a rail bleeds through the page padding (`-mx-4 px-4`). Sheets, menus, tooltips and toasts portal into `#overlay-layer`, a fixed 450px column whose transform contains them. Top insets use `pt-safe` / `pt-safe-hero` (safe-area inset + a small gap), never a fixed 46–60px. Use `min-h-dvh`, not `h-full`. At 451px and wider the frame is centered with a shadow and hairline borders on the `frame-bg` background.
 
-## Demo presets
-
-Open `/home?preset=<ID>` (handled once), or use Profile, Prototype controls, "Jump to artboard" (and "Reset demo" to clear the persisted store). Every preset resets to the initial store, then applies its state and redirects to its route. Defined in `src/data/presets.ts`; the id letter is the group:
-
-- A Sign in and app home
-- B Invite the crew
-- C Chat kickoff
-- D Message actions
-- E Deciding together
-- F Travel, private answer, plan
-- G Bali invite
-- H Trip board
-- I Trip plan, nothing decided
-- J Trip home and calls
-- K Web check-in
-- L Itinerary and map
-- M Bookings and expenses
-
-Example: `/home?preset=J1`.
-
 ## Auth and sharing
 
-- `src/lib/auth.ts`: `signInWithGoogle()` is a stub that resolves after a short delay. TODO: real Google OAuth. Keep the signature; callers await it and then route to `/home`.
+- `src/lib/auth.ts`: the one place that touches the Supabase session. `signInWithGoogle(next)` starts the PKCE redirect; the browser comes back to `/auth/callback`, which routes on to `next`. Every Server call carries the session's access token; a 401 refreshes once, then signs out.
 - `src/lib/share.ts`: invites use the Web Share API (`navigator.share`) when available and fall back to `https://wa.me/?text=...`; copy-link uses the Clipboard API.
 
 ## Assets to replace
 
-All images are SVG placeholders under `public/images`, mapped in `src/lib/assets.ts`. Swap files in place and keep the key and dimensions (update the extension in `assets.ts` if you switch to PNG/JPG).
+The app's own art (Go's mascot, the destination illustrations used when a trip has no photo) is SVG under `public/images`, mapped in `src/lib/assets.ts`. People's photos, destination and stay photos and carrier wordmarks come from the Server. Swap files in place and keep the key and dimensions (update the extension in `assets.ts` if you switch to PNG/JPG).
 
 - `go-mascot` (80x182) and `go-avatar` (96): Go's mascot and chat avatar.
 - `avatars/aarav|rahul|priya|arjun|kabir` (128).
@@ -127,4 +111,4 @@ All images are SVG placeholders under `public/images`, mapped in `src/lib/assets
 
 ## PWA
 
-Serwist (`@serwist/turbopack`) serves the worker from `/serwist/sw.js` (`src/app/sw.ts`), with an offline fallback at `/~offline`. The `SerwistProvider` is disabled outside production, so the service worker only runs after `pnpm build && pnpm start`.
+Serwist (`@serwist/turbopack`) serves the worker from `/serwist/sw.js` (`src/app/sw.ts`), with an offline fallback at `/~offline`. The Server's answers and Supabase are never cached by the worker. The `SerwistProvider` is disabled outside production, so the service worker only runs after `pnpm build && pnpm start`.

@@ -11,10 +11,9 @@ import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover"
 import { cityPicker as copy } from "@/data/seed/copy";
 import { CIT } from "@/data/seed/cities";
 import type { CityRef } from "@/data/types";
-import { MIN_SEARCH_CHARS } from "@/lib/geocode";
 import { scrollBehavior } from "@/lib/motion";
 import { cn } from "@/lib/utils";
-import { useCityResults } from "./useCityResults";
+import { MIN_SEARCH_CHARS, useCityResults } from "./useCityResults";
 
 /** How close to the strip's edge a chip may sit before it counts as clipped (px). */
 const EDGE = 8;

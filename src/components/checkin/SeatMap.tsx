@@ -1,51 +1,42 @@
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { SeatCell } from "@/components/checkin/SeatCell";
-import { CHECKIN_COPY } from "@/data/seed/checkin";
-import type { Seat, SeatCol, UserId } from "@/data/types";
+import type { CheckIn, SeatCol, User } from "@/data/types";
 
-const LEFT: SeatCol[] = ["A", "B", "C"];
-const RIGHT: SeatCol[] = ["D", "E", "F"];
 const colHead = "w-10 text-center text-12 font-bold text-muted";
 
 type SeatMapProps = {
-  seats: Seat[];
+  /** The airline's own layout: columns either side of the aisle, the rows, and each seat's state. */
+  checkin: Pick<CheckIn, "seats" | "rows" | "colsLeft" | "colsRight" | "frontLabel">;
   selected: string;
   friendSeat: string;
-  friendId: UserId;
+  friend: User | null;
   onPick: (id: string) => void;
 };
 
-/** Front-of-plane label, A B C · D E F header and one row per seat row; the aisle column carries the row number. */
-export function SeatMap({ seats, selected, friendSeat, friendId, onPick }: SeatMapProps) {
-  const rows = [...new Set(seats.map((s) => s.row))].sort((a, b) => a - b);
+/** Front-of-plane label, the column letters and one row per seat row; the aisle column carries the row number. */
+export function SeatMap({ checkin, selected, friendSeat, friend, onPick }: SeatMapProps) {
+  const { seats, rows, colsLeft, colsRight, frontLabel } = checkin;
   const cells = (row: number, cols: SeatCol[]) => (
     <div className="flex gap-1.5">
       {cols.map((col) => {
-        const seat = seats.find((s) => s.row === row && s.col === col)!;
-        return (
-          <SeatCell
-            key={seat.id}
-            seat={seat}
-            selected={seat.id === selected && seat.id !== friendSeat}
-            friendId={friendId}
-            onPick={onPick}
-          />
-        );
+        const seat = seats.find((s) => s.row === row && s.col === col);
+        // A gap in the airline's map (an exit row, a missing seat) keeps its slot.
+        if (!seat) return <span key={col} aria-hidden className="size-10" />;
+        return <SeatCell key={seat.id} seat={seat} selected={seat.id === selected && seat.id !== friendSeat} friend={friend} onPick={onPick} />;
       })}
     </div>
   );
-
   return (
     <div className="flex flex-col gap-2">
-      <Eyebrow className="self-center">{CHECKIN_COPY.seat.front}</Eyebrow>
+      <Eyebrow className="self-center">{frontLabel}</Eyebrow>
       <div aria-hidden className="flex justify-center gap-1.5">
-        {LEFT.map((c) => (
+        {colsLeft.map((c) => (
           <span key={c} className={colHead}>
             {c}
           </span>
         ))}
         <span className="w-7" />
-        {RIGHT.map((c) => (
+        {colsRight.map((c) => (
           <span key={c} className={colHead}>
             {c}
           </span>
@@ -53,9 +44,9 @@ export function SeatMap({ seats, selected, friendSeat, friendId, onPick }: SeatM
       </div>
       {rows.map((row) => (
         <div key={row} className="flex items-center justify-center gap-1.5">
-          {cells(row, LEFT)}
+          {cells(row, colsLeft)}
           <span className="w-7 text-center text-12 font-bold text-faint tabular-nums">{row}</span>
-          {cells(row, RIGHT)}
+          {cells(row, colsRight)}
         </div>
       ))}
     </div>

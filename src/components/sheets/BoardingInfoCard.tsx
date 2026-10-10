@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { PRIVATE_COPY } from "@/data/seed/bookings";
 import type { PrivateDetails } from "@/data/types";
 
-type BoardingInfoCardProps = { details: PrivateDetails; onOpenTicket: () => void };
+type BoardingInfoCardProps = { details: PrivateDetails; onOpenTicket?: () => void };
 
 /** Flight, route, seat / boards / PNR and the ticket link (F-travel.md §1.4). No money. */
 export function BoardingInfoCard({ details, onOpenTicket }: BoardingInfoCardProps) {
@@ -18,10 +18,14 @@ export function BoardingInfoCard({ details, onOpenTicket }: BoardingInfoCardProp
   return (
     <Card variant="float-sm" radius="2xl" className="flex flex-col gap-3 p-4">
       <div className="flex items-center justify-between">
-        <span className="grid h-8 place-items-center rounded-lg bg-indigo px-2.5">
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG brand logo */}
-          <img src={details.airline.logo} alt={details.airline.name} className="h-auto w-14" />
-        </span>
+        {details.airline.logo ? (
+          <span className="grid h-8 place-items-center rounded-lg border border-line bg-white px-2.5">
+            {/* eslint-disable-next-line @next/next/no-img-element -- the carrier's wordmark from the booking */}
+            <img src={details.airline.logo} alt={details.airline.name} className="h-auto max-h-5 w-14 object-contain" />
+          </span>
+        ) : (
+          <span className="text-15 font-semibold">{details.airline.name}</span>
+        )}
         <span className="text-13 font-semibold text-muted">{details.flight}</span>
       </div>
       <div className="flex items-end justify-between gap-2">
@@ -43,10 +47,12 @@ export function BoardingInfoCard({ details, onOpenTicket }: BoardingInfoCardProp
           </div>
         ))}
       </div>
-      <Button type="button" variant="secondary" size="sm" className="h-[42px] w-full gap-1.5" onClick={onOpenTicket}>
-        <FileText className="size-4" />
-        {PRIVATE_COPY.openTicket}
-      </Button>
+      {onOpenTicket && (
+        <Button type="button" variant="secondary" size="sm" className="h-[42px] w-full gap-1.5" onClick={onOpenTicket}>
+          <FileText className="size-4" />
+          {PRIVATE_COPY.openTicket}
+        </Button>
+      )}
     </Card>
   );
 }

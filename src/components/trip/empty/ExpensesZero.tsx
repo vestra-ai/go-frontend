@@ -5,22 +5,20 @@ import { ZeroAmount } from "@/components/trip/ZeroAmount";
 import { ScopeToggle, type ScopeValue } from "@/components/common/ScopeToggle";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { planZero } from "@/data/seed/copy";
-import type { TripId } from "@/data/types";
-
-// DESIGN-ASSUMPTION (I-plan-empty.md §1.6 #13): `college` has no chat scenario, so its links go to the bare chat route.
-const chatHref = (tripId: TripId, query?: string) =>
-  tripId === "college" || !query ? `/trips/${tripId}/chat` : `/trips/${tripId}/chat?${query}`;
 
 const copy = planZero.expenses;
 
 type ExpensesZeroProps = {
-  tripId: TripId;
   scope: ScopeValue;
   onScopeChange: (scope: ScopeValue) => void;
+  /** The group already has a budget: the "Set the budget" card is not shown. */
+  budgetSet: boolean;
+  /** Opens the group budget sheet over the page. */
+  onSetBudget: () => void;
 };
 
 /** Expenses tab with no spend: scope toggle, zero headline, category tiles, empty settle-up and transactions. */
-export function ExpensesZero({ tripId, scope, onScopeChange }: ExpensesZeroProps) {
+export function ExpensesZero({ scope, onScopeChange, budgetSet, onSetBudget }: ExpensesZeroProps) {
   const everyone = scope === "everyone";
   return (
     <>
@@ -34,12 +32,8 @@ export function ExpensesZero({ tripId, scope, onScopeChange }: ExpensesZeroProps
         </div>
         {everyone ? (
           <p className="px-1 text-13 text-muted">{copy.footnote}</p>
-        ) : (
-          <GoStatusCard
-            title={copy.budget.title}
-            sub={copy.budget.sub}
-            cta={{ label: copy.budget.cta, href: chatHref(tripId, "stage=budget") }}
-          />
+        ) : budgetSet ? null : (
+          <GoStatusCard title={copy.budget.title} sub={copy.budget.sub} cta={{ label: copy.budget.cta, onPress: onSetBudget }} />
         )}
       </div>
       <SectionHeader className="mt-2.5" title={copy.settle.title} />

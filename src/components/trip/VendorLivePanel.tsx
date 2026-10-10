@@ -12,10 +12,10 @@ const listen = splitEmoji(CALL_COPY.card.listen); // "🎧 Listen in"
 type VendorLivePanelProps = {
   who: string;
   asking: string;
-  /** "🎧 Listen in" opens the Listen sheet for this vendor. */
-  onListen(): void;
-  /** "End call" → `endCall(vendor)`. */
-  onEnd(): void;
+  /** "🎧 Listen in" opens Go's listen-in page (the card action `listen`). Absent: the button is not shown. */
+  onListen?: () => void;
+  /** "End call" is the card action `stop`. Absent when the card has no such button. */
+  onEnd?: () => void;
 };
 
 /** Green "Go is on a call with …" panel inside an opened Stay/Flights done row (§1.2 E.1.1). */
@@ -44,13 +44,17 @@ export function VendorLivePanel({ who, asking, onListen, onEnd }: VendorLivePane
       <div className="flex flex-wrap items-center gap-2">
         <AudioBars className="h-[26px] shrink-0" />
         <div className="ml-auto flex items-center gap-2">
-          <Button variant="success-ink" size="38" weight="semibold" className="gap-1" onClick={onListen}>
-            <span aria-hidden>{listen.emoji}</span>
-            {listen.label}
-          </Button>
-          <Button variant="white" size="38" className="text-danger shadow-none" onClick={onEnd}>
-            {CALL_COPY.card.end}
-          </Button>
+          {onListen && (
+            <Button variant="success-ink" size="38" weight="semibold" className="gap-1" onClick={onListen}>
+              <span aria-hidden>{listen.emoji}</span>
+              {listen.label}
+            </Button>
+          )}
+          {onEnd && (
+            <Button variant="white" size="38" className="text-danger shadow-none" onClick={onEnd}>
+              {CALL_COPY.card.end}
+            </Button>
+          )}
         </div>
       </div>
     </div>

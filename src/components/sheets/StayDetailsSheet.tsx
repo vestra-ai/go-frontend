@@ -18,12 +18,14 @@ type StayDetailsSheetProps = {
   subtitle: string;
   /** 'Fri 6 → Mon 9 Nov · 3 nights' */
   dates: string;
-  /** The parent votes (`voteStay(id)`) and closes the sheet. */
-  onVote: (id: Stay["id"]) => void;
+  /** The footer button: votes for the stay, or presses an options card's own action. Absent: nothing to press. */
+  onVote?: (id: Stay["id"]) => void;
+  /** The button's words when it is not a vote ("I'll take this"). */
+  actionLabel?: string;
 };
 
 /** E9–E11 stay details sheet (48px below the top of the screen): hero, name + rating, amenities, facts, "Vote for {name}". */
-export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, onVote }: StayDetailsSheetProps) {
+export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, onVote, actionLabel }: StayDetailsSheetProps) {
   // Keep the last stay on screen while the sheet animates closed (the parent clears `stay` with the query).
   const [lastStay, setLastStay] = useState(stay);
   if (stay && stay !== lastStay) setLastStay(stay);
@@ -40,15 +42,19 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
           <div className="flex flex-col gap-0.5">
             {/* Repeats the sheet title, as designed. */}
             <span className="text-22 font-semibold tracking-h2">{shown.name}</span>
-            <span className="flex items-center gap-1 text-13 text-muted">
-              <MapPin className="size-[13px] shrink-0" />
-              {shown.areaLong}
-            </span>
+            {shown.areaLong && (
+              <span className="flex items-center gap-1 text-13 text-muted">
+                <MapPin className="size-[13px] shrink-0" />
+                {shown.areaLong}
+              </span>
+            )}
           </div>
-          <Badge variant="white" size="rating" className="shrink-0 gap-1">
-            ★ {shown.rating}
-            <span className="font-medium text-muted">· {shown.reviews}</span>
-          </Badge>
+          {shown.rating && (
+            <Badge variant="white" size="rating" className="shrink-0 gap-1">
+              ★ {shown.rating}
+              {shown.reviews && <span className="font-medium text-muted">· {shown.reviews}</span>}
+            </Badge>
+          )}
         </div>
         <AmenityChips items={shown.amenities} />
         <FactRows
@@ -57,13 +63,15 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
             { label: copy.facts.total, value: shown.totalFor4 },
             { label: copy.facts.share, value: shown.yourShare },
             { label: copy.facts.cancellation, value: shown.cancellation },
-          ]}
+          ].filter((row) => row.value)}
         />
       </SheetBody>
       <SheetFooter>
-        <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
-          {polls.voteFor(shown.name)}
-        </Button>
+        {onVote && (
+          <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
+            {actionLabel ?? polls.voteFor(shown.name)}
+          </Button>
+        )}
       </SheetFooter>
     </BottomSheet>
   );

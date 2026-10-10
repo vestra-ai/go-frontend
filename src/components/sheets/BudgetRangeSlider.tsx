@@ -4,8 +4,9 @@ import { BUDGET_RANGE } from "@/data/seed/money";
 import { kFormat } from "@/lib/format";
 
 type BudgetRangeSliderProps = {
-  value: [number, number];
-  onValueChange: (value: [number, number]) => void;
+  /** One thumb (the group's budget per person) or two (a range). */
+  value: number[];
+  onValueChange: (value: number[]) => void;
 };
 
 /**
@@ -16,7 +17,7 @@ export function BudgetRangeSlider({ value, onValueChange }: BudgetRangeSliderPro
   return (
     <Slider
       value={value}
-      onValueChange={([lo, hi]) => onValueChange([lo, hi])}
+      onValueChange={(next) => onValueChange(next)}
       min={BUDGET_RANGE.min}
       max={BUDGET_RANGE.max}
       step={BUDGET_RANGE.step}

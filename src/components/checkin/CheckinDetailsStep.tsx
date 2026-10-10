@@ -12,36 +12,40 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { CHECKIN, CHECKIN_COPY } from "@/data/seed/checkin";
-import { SESSION_USER_ID, USERS } from "@/data/seed/users";
-import type { TripId } from "@/data/types";
-import { useStore } from "@/store";
+import { errorMessage } from "@/api/http";
+import { CHECKIN_COPY } from "@/data/seed/checkin";
+import type { CheckIn, TripId, User } from "@/data/types";
+import { toastGo } from "@/lib/toast";
+import { patchCheckin } from "@/state";
 
 const copy = CHECKIN_COPY.details;
 
 type CheckinDetailsStepProps = {
   tripId: TripId;
+  bookingId: string;
+  checkin: CheckIn;
+  me: User;
+  /** The friend on the same booking, when there is one. */
+  friend: User | null;
   onContinue: () => void;
   /** The step replaced another inside the open sheet: its content slides in. */
   swapped: boolean;
 };
 
 /**
- * K2 web check-in step 1: read-only passenger details, DigiYatra switch and the restricted-items declaration.
+ * Web check-in step 1: read-only passenger details, DigiYatra switch and the restricted-items declaration. Each answer
+ * is a `PATCH …/checkin`; nothing reaches the airline until "Check in" (CONTRACT-APP §4.12).
  * Content only: CheckinSheet owns the sheet, so moving between steps never closes and reopens it.
  */
-export function CheckinDetailsStep({ tripId, onContinue, swapped }: CheckinDetailsStepProps) {
-  const digiYatra = useStore((s) => s.home[tripId].checkin.digiYatra);
-  const declaration = useStore((s) => s.home[tripId].checkin.declaration);
-  const setDigiYatra = useStore((s) => s.setDigiYatra);
-  const setDeclaration = useStore((s) => s.setDeclaration);
-  const { route, passenger } = CHECKIN;
-  const me = USERS[SESSION_USER_ID];
+export function CheckinDetailsStep({ tripId, bookingId, checkin, me, friend, onContinue, swapped }: CheckinDetailsStepProps) {
+  const { route, passenger, digiYatra, declaration } = checkin;
+  const save = (body: { digi_yatra?: boolean; declaration?: boolean }) =>
+    void patchCheckin(tripId, bookingId, body).catch((err) => toastGo(errorMessage(err, copy.failed)));
 
   return (
     <>
       <SheetBody className={swapped ? "animate-page-in" : undefined}>
-        <SheetHeader title={copy.title} subtitle={copy.sub} closeLabel={copy.close} />
+        <SheetHeader title={copy.title(checkin.flight)} subtitle={copy.sub(checkin.date)} closeLabel={copy.close} />
         <StepIndicator step={1} labels={CHECKIN_COPY.steps} />
         <Card variant="outline" radius="lg" className="p-[12px_14px]">
           <RouteRow
@@ -61,8 +65,8 @@ export function CheckinDetailsStep({ tripId, onContinue, swapped }: CheckinDetai
             sub={passenger.sub}
             trailing={<CheckBadge size={22} />}
           />
-          <KVRow label={copy.mobileLabel} value={passenger.mobile} className="py-3" />
-          <KVRow label={copy.bagsLabel} value={passenger.bags} className="py-3" />
+          {passenger.mobile && <KVRow label={copy.mobileLabel} value={passenger.mobile} className="py-3" />}
+          {passenger.bags && <KVRow label={copy.bagsLabel} value={passenger.bags} className="py-3" />}
         </Card>
         <Card variant="outline" radius="lg" className="flex items-center gap-3 p-[12px_14px]">
           <span aria-hidden className="text-20">
@@ -70,11 +74,11 @@ export function CheckinDetailsStep({ tripId, onContinue, swapped }: CheckinDetai
           </span>
           <div className="flex min-w-0 flex-1 flex-col">
             <span className="text-15 font-semibold tracking-sub">{copy.digiYatraTitle}</span>
-            <span className="text-13 text-muted">{copy.digiYatraSub}</span>
+            <span className="text-13 text-muted">{copy.digiYatraSub(route.fromSub)}</span>
           </div>
           <Switch
             checked={digiYatra}
-            onCheckedChange={(on) => setDigiYatra(tripId, on)}
+            onCheckedChange={(on) => save({ digi_yatra: on })}
             aria-label={copy.digiYatraTitle}
           />
         </Card>
@@ -82,10 +86,10 @@ export function CheckinDetailsStep({ tripId, onContinue, swapped }: CheckinDetai
           title={copy.declarationTitle}
           sub={copy.declarationSub}
           checked={declaration}
-          onCheckedChange={(c) => setDeclaration(tripId, c === true)}
+          onCheckedChange={(c) => save({ declaration: c === true })}
           className="p-[12px_14px]"
         />
-        <GoNote variant="peach">{copy.goNote}</GoNote>
+        <GoNote variant="peach">{copy.goNote(friend?.firstName ?? null)}</GoNote>
       </SheetBody>
       <SheetFooter>
         <Button variant="primary" size="xl" className="w-full" disabled={!declaration} onClick={onContinue}>

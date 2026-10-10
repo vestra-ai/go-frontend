@@ -1,73 +1,112 @@
 "use client";
 
 import Link from "next/link";
-import { useShallow } from "zustand/react/shallow";
+import type { Attention, Home, PastTripSummary } from "@/api/contract";
 import { ListCard } from "@/components/common/ListCard";
+import { ListRow } from "@/components/common/ListRow";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { StickyDock } from "@/components/shell/StickyDock";
-import { InviteCard } from "@/components/home/InviteCard";
 import { PastTripRow } from "@/components/home/PastTripRow";
 import { TripCard } from "@/components/home/TripCard";
 import { Plus } from "@/components/icons/generated";
+import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { home as copy } from "@/data/seed/copy";
-import { assets } from "@/lib/assets";
-import { toastGo } from "@/lib/toast";
-import { selectTripCardStatus, selectTripMembers, useMyTrips, usePendingInvites, useStore } from "@/store";
+import { HOME_CARD_STATUS } from "@/data/seed/homeCards";
+import type { PastTrip } from "@/data/types";
+import { parseDay } from "@/lib/dates";
+import { inr } from "@/lib/format";
+import { fromMinor, illustrationFor, toUser, tripFromSummary } from "@/state/view";
 
-/** A6: returning Home body (invites, your trips, past trips) plus the New-trip FAB. */
-export function AppHomeView() {
-  const trips = useMyTrips();
-  const invites = usePendingInvites();
-  const tripsById = useStore((s) => s.trips.trips);
-  const pastTrips = useStore((s) => s.trips.pastTrips);
-  const users = useStore((s) => s.trips.members);
-  // Same stack as the trip home hero (A6 Goa shows Arjun too); memoised per trip, so shallow-equal between renders.
-  const tripMembers = useStore(useShallow((s) => trips.map((trip) => selectTripMembers(s, trip.id))));
-  // Live status lines (pending count, visa) built from the seed templates; memoised per trip like the stacks.
-  const tripStatus = useStore(useShallow((s) => trips.map((trip) => selectTripCardStatus(s, trip.id))));
-  const declineInvite = useStore((s) => s.declineInvite);
+/** The trip card's status line. `attention` is computed by the Server (CONTRACT-APP §4.2); the words are the app's. */
+function statusOf(attention: Attention): { text: string; tone: "go" | "muted" } {
+  switch (attention.kind) {
+    case "needs_you":
+      return { text: HOME_CARD_STATUS.pending(attention.count), tone: "go" };
+    case "task":
+      return { text: attention.label, tone: "go" };
+    case "all_set":
+      return { text: HOME_CARD_STATUS.allSet, tone: "muted" };
+    default:
+      return { text: HOME_CARD_STATUS.collecting, tone: "muted" };
+  }
+}
+
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"] as const;
+const PAST_TINTS = ["bg-amber-tint", "bg-green-tint", "bg-info-tint", "bg-peach-tint"] as const;
+
+/** "Aug 2026 · 5 people · all settled" */
+function pastTrip(trip: PastTripSummary, index: number): PastTrip {
+  const start = trip.dates ? parseDay(trip.dates.start) : null;
+  const parts = [
+    ...(start ? [`${MONTHS[start.getMonth()]} ${start.getFullYear()}`] : []),
+    copy.pastPeople(trip.people_count),
+    ...(trip.all_settled ? [copy.pastSettled] : []),
+  ];
+  return {
+    id: trip.trip_id,
+    title: trip.title,
+    sub: parts.join(" · "),
+    tintClass: PAST_TINTS[index % PAST_TINTS.length],
+    img: illustrationFor(trip.trip_id, trip.title),
+  };
+}
+
+/** Returning Home body (what I owe, your trips, past trips) plus the New-trip FAB. */
+export function AppHomeView({ home }: { home: Home }) {
+  const now = new Date();
 
   return (
     <>
       <div className="flex flex-col gap-2.5 px-4 pt-2.5 pb-[130px]">
-        {invites.length > 0 && <SectionHeader title={copy.invitesTitle} meta={copy.invitesMeta(invites.length)} />}
-        {invites.map((invite) => (
-          <InviteCard
-            key={invite.code}
-            title={tripsById[invite.tripId]?.name ?? invite.tripId}
-            sub={invite.cardSub}
-            members={invite.memberIds.map((id) => users[id])}
-            membersLine={invite.membersLine}
-            thumb={{ src: assets.illustrations.gokarna.src, tintClass: "bg-info-tint" }}
-            acceptHref={`/invite/${invite.code}`}
-            onDecline={() => {
-              declineInvite(invite.code);
-              toastGo(copy.toasts.decline);
-            }}
-          />
-        ))}
-        <SectionHeader title={copy.tripsTitle} meta={copy.tripsMeta(trips.length)} className="mt-3.5" />
-        {trips.map((trip, i) => (
-          <TripCard
-            key={trip.id}
-            href={`/trips/${trip.id}`}
-            name={trip.name}
-            cover={trip.cover ? { kind: "photo", ...trip.cover } : { kind: "gradient" }}
-            coverTitle={trip.homeCard.coverTitle}
-            coverSub={trip.homeCard.coverSub}
-            members={tripMembers[i].slice(0, 4)}
-            status={tripStatus[i]?.text}
-            statusTone={tripStatus[i]?.tone}
-          />
-        ))}
-        {pastTrips.length > 0 && (
+        {home.owes.length > 0 && (
+          <>
+            <SectionHeader title={copy.owesTitle} />
+            <ListCard padding="tight">
+              {home.owes.map((owed) => {
+                const to = toUser(owed.to);
+                return (
+                  <ListRow
+                    key={`${owed.trip_id}|${owed.to.person_id}`}
+                    dense
+                    href={`/trips/${owed.trip_id}/expenses`}
+                    chevron
+                    leading={<Avatar size={44} name={to.name} src={to.avatar} tone={to.tone} />}
+                    title={copy.owes(to.firstName, inr(fromMinor(owed.amount_minor)))}
+                    sub={owed.trip_title}
+                  />
+                );
+              })}
+            </ListCard>
+          </>
+        )}
+        {home.trips.length > 0 && (
+          <SectionHeader title={copy.tripsTitle} meta={copy.tripsMeta(home.trips.length)} className={home.owes.length > 0 ? "mt-3.5" : undefined} />
+        )}
+        {home.trips.map((summary) => {
+          const trip = tripFromSummary(summary, now);
+          const status = statusOf(summary.attention);
+          return (
+            <TripCard
+              key={trip.id}
+              href={`/trips/${trip.id}`}
+              name={trip.name}
+              cover={trip.cover ? { kind: "photo", ...trip.cover } : { kind: "gradient" }}
+              coverTitle={trip.homeCard.coverTitle}
+              coverSub={trip.homeCard.coverSub}
+              members={summary.people_preview.slice(0, 4).map((p) => toUser(p))}
+              status={status.text}
+              statusTone={status.tone}
+            />
+          );
+        })}
+        {home.past_trips.length > 0 && (
           <>
             <SectionHeader title={copy.pastTitle} className="mt-3.5" />
             <ListCard padding="tight">
-              {pastTrips.map((trip) => (
-                <PastTripRow key={trip.id} trip={trip} />
+              {home.past_trips.map((trip, i) => (
+                <PastTripRow key={trip.trip_id} trip={pastTrip(trip, i)} settled={trip.all_settled} />
               ))}
             </ListCard>
           </>

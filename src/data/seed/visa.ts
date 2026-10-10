@@ -1,18 +1,8 @@
-import type { VisaMember, VisaStatus } from "@/data/types";
+import type { VisaStatus } from "@/data/types";
 
-// G2/G3 (G-bali.md §1.2). Roster kept as designed (You/Rahul/Priya/Arjun), see G-bali.md §1.7 #11.
+// Checklist card labels (a visa, a document: who has theirs ready), and the copy of the in-app visa form. That form is
+// not mounted: passport and ID data never pass through the app (CONTRACT-APP §1.7); the form is Go's vault page.
 export const baliVisa = {
-  tripId: "bali",
-  emoji: "🛂",
-  title: "Indonesia e-VOA",
-  due: "due 10 Dec",
-  members: [
-    { userId: "aarav", sub: "Passport, photo", status: "not-yet" },
-    { userId: "rahul", sub: "Submitted yesterday", status: "sent" },
-    { userId: "priya", sub: "Started, not sent", status: "started" },
-    { userId: "arjun", sub: "Submitted today", status: "sent" },
-  ] satisfies readonly VisaMember[],
-  youSentSub: "Submitted today", // DESIGN-ASSUMPTION: You row sub after sendVisa()
   you: "You",
   statusLabel: { "not-yet": "Not yet", sent: "Sent ✓", started: "Started" } satisfies Record<VisaStatus, string>,
   sheet: {

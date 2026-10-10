@@ -3,12 +3,12 @@ import { SplitBar } from "@/components/common/SplitBar";
 import { Card } from "@/components/ui/card";
 import { board as copy } from "@/data/seed/copy";
 import { inr } from "@/lib/format";
-import type { BoardSpend } from "@/store/selectors";
+import type { BoardSpend } from "@/state/boardView";
 
 const round1 = (x: number) => Math.round(x * 10) / 10;
 
-export function SpendVsBudgetCard({ spend }: { spend: BoardSpend }) {
-  const c = copy.spend;
+export function SpendVsBudgetCard({ spend, eyebrow }: { spend: BoardSpend; /** Overrides "YOUR SPEND VS THE BUDGET" (the room's budget card is the whole trip's money). */ eyebrow?: string }) {
+  const c = { ...copy.spend, eyebrow: eyebrow ?? copy.spend.eyebrow };
 
   if (spend.kind === "empty") {
     return (

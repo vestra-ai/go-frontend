@@ -2,17 +2,7 @@ import { TicketStubPlaceholder } from "@/components/trip/TicketStubPlaceholder";
 import { planZero } from "@/data/seed/copy";
 import type { TripId } from "@/data/types";
 
-// DESIGN-ASSUMPTION (I-plan-empty.md §1.6 #13): `college` has no chat scenario, so its links go to the bare chat route.
-const chatHref = (tripId: TripId, query?: string) =>
-  tripId === "college" || !query ? `/trips/${tripId}/chat` : `/trips/${tripId}/chat?${query}`;
-
 const copy = planZero.bookings;
-
-const STUB_QUERY: Record<(typeof copy.stubs)[number]["key"], string> = {
-  out: "stage=travel",
-  back: "stage=travel",
-  stay: "stage=stays",
-};
 
 /** Bookings tab with nothing booked: intro plus three ticket-stub placeholders. */
 export function BookingsZero({ tripId }: { tripId: TripId }) {
@@ -29,7 +19,8 @@ export function BookingsZero({ tripId }: { tripId: TripId }) {
           emoji={stub.emoji}
           eyebrow={stub.eyebrow}
           title={stub.title}
-          action={{ label: stub.action, href: chatHref(tripId, STUB_QUERY[stub.key]) }}
+          // Bookings are made with Go in the room: every stub opens the trip chat.
+          action={{ label: stub.action, href: `/trips/${tripId}/chat` }}
         />
       ))}
     </>

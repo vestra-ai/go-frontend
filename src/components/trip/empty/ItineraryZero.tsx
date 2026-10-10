@@ -2,9 +2,8 @@ import { EmptyHeroCard } from "@/components/trip/EmptyHeroCard";
 import { planZero } from "@/data/seed/copy";
 import type { TripId } from "@/data/types";
 
-// DESIGN-ASSUMPTION (I-plan-empty.md §1.6 #13): `college` has no chat scenario, so its links go to the bare chat route.
-const chatHref = (tripId: TripId, query?: string) =>
-  tripId === "college" || !query ? `/trips/${tripId}/chat` : `/trips/${tripId}/chat?${query}`;
+// Both buttons open the trip chat: the plan is drafted with Go in the room.
+const chatHref = (tripId: TripId) => `/trips/${tripId}/chat`;
 
 const copy = planZero.itinerary;
 
@@ -16,7 +15,7 @@ export function ItineraryZero({ tripId }: { tripId: TripId }) {
       title={copy.title}
       body={copy.body}
       primary={{ label: copy.primary, href: chatHref(tripId), goAvatar: true }}
-      secondary={{ label: copy.secondary, href: chatHref(tripId, "stage=dates-poll") }}
+      secondary={{ label: copy.secondary, href: chatHref(tripId) }}
     />
   );
 }

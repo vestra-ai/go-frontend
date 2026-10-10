@@ -1,41 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { AppHomeView } from "@/components/home/AppHomeView";
 import { HomeZeroView } from "@/components/home/HomeZeroView";
 import { Screen } from "@/components/shell/Screen";
 import { ScreenTitle } from "@/components/shell/ScreenTitle";
 import { Avatar } from "@/components/ui/avatar";
 import { home as copy } from "@/data/seed/copy";
-import { selectMyTrips, useHydrated, useStore } from "@/store";
+import { loadHome, useGo, useRequireSession } from "@/state";
+import { toUser } from "@/state/view";
 
+/** App home (CONTRACT-APP §4.2): the whole screen is one `GET /home`; `home_changed` re-reads it. */
 export default function HomePage() {
-  const router = useRouter();
-  const hydrated = useHydrated();
-  const signedIn = useStore((s) => s.session.signedIn);
-  const user = useStore((s) => s.trips.members[s.session.userId]);
-  const hasTrips = useStore((s) => selectMyTrips(s).length > 0);
+  const session = useRequireSession();
+  const home = useGo((s) => s.home);
+  const fromCity = useGo((s) => s.me?.from_city ?? null);
 
-  const presetApplied = useRef(false);
-
-  // `?preset=<id>` (PLAN §9.6): reset to the artboard's state, strip the query and go to its route.
   useEffect(() => {
-    if (!hydrated) return;
-    const id = new URLSearchParams(window.location.search).get("preset");
-    if (id) {
-      if (presetApplied.current) return;
-      presetApplied.current = true;
-      router.replace(useStore.getState().applyPreset(id));
-    } else if (!signedIn) {
-      router.replace("/");
-    }
-  }, [hydrated, signedIn, router]);
+    if (session === "signedIn") void loadHome().catch(() => {});
+  }, [session]);
 
-  if (!hydrated || !signedIn) {
+  if (session !== "signedIn" || !home) {
     return <Screen>{null}</Screen>;
   }
+
+  const user = toUser(home.me);
+  const hasTrips = home.trips.length > 0 || home.past_trips.length > 0;
 
   return (
     <Screen>
@@ -51,7 +42,7 @@ export default function HomePage() {
           }
         />
       </div>
-      {hasTrips ? <AppHomeView /> : <HomeZeroView city={user.city ?? ""} />}
+      {hasTrips ? <AppHomeView home={home} /> : <HomeZeroView city={fromCity} />}
     </Screen>
   );
 }

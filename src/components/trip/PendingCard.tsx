@@ -1,57 +1,37 @@
 import { Avatar } from "@/components/ui/avatar";
 import { ListCard } from "@/components/common/ListCard";
-import { tripHome as copy } from "@/data/seed/copy";
-import type { User } from "@/data/types";
-import type { PendingItem } from "@/store/selectors";
+import type { PendingRowModel } from "@/state/homeView";
 import { PendingRow } from "./PendingRow";
 
 type PendingCardProps = Omit<React.ComponentProps<typeof ListCard>, "children"> & {
-  /** `selectPending` result; `checkin` is rendered by CheckinCard, not here. */
-  items: PendingItem[];
-  /** The person you owe (settle-up row avatar). */
-  settleWith: User;
-  /** "Record" opens the record-a-payment sheet over this page. */
-  onRecord: () => void;
-  /** "Book" opens the airport-cab sheet over this page. */
-  onBookCab: () => void;
+  /** The Server's needs-you items as rows (check-in is drawn by CheckinCard, not here). */
+  rows: PendingRowModel[];
+  /** The row's button: record a payment, open the vote, open the card. */
+  onAct: (row: PendingRowModel) => void;
 };
 
-/** Settle-up and airport-cab rows under "Pending on you" (J-triphome-calls.md §1.2 A.3). Null when neither is pending. */
-export function PendingCard({ items, settleWith, onRecord, onBookCab, ...props }: PendingCardProps) {
-  const rows = items.filter((i) => i.kind !== "checkin");
+/** The rows under "Pending on you": settle-ups, votes, cards and lines waiting on me. Null when there are none. */
+export function PendingCard({ rows, onAct, ...props }: PendingCardProps) {
   if (rows.length === 0) return null;
-  const { settle, cab } = copy.pending;
-
   return (
     <ListCard padding="rows" data-slot="pending-card" {...props}>
-      {rows.map((item) =>
-        item.kind === "settle" ? (
-          <PendingRow
-            key="settle"
-            leading={<Avatar size={40} src={settleWith.avatar} initials={settleWith.initials} tone={settleWith.tone} />}
-            title={settle.title}
-            sub={settle.sub}
-            cta={{ label: settle.cta, onPress: onRecord }}
-          />
-        ) : (
-          <PendingRow
-            key="cab"
-            leading={
-              <span aria-hidden className="relative size-10 shrink-0">
-                <span className="grid size-[30px] place-items-center rounded-full bg-surface-2 text-14 leading-none">
-                  {cab.emoji}
-                </span>
-                <span className="absolute right-0 bottom-0 grid size-6 place-items-center rounded-full bg-amber-soft text-12 leading-none">
-                  {cab.badgeEmoji}
-                </span>
+      {rows.map((row) => (
+        <PendingRow
+          key={row.key}
+          leading={
+            row.leading.kind === "avatar" ? (
+              <Avatar size={40} src={row.leading.user.avatar} initials={row.leading.user.initials} tone={row.leading.user.tone} />
+            ) : (
+              <span aria-hidden className="grid size-10 shrink-0 place-items-center rounded-full bg-surface-2 text-18 leading-none">
+                {row.leading.emoji}
               </span>
-            }
-            title={cab.title}
-            sub={cab.sub}
-            cta={{ label: cab.cta, onPress: onBookCab }}
-          />
-        ),
-      )}
+            )
+          }
+          title={row.title}
+          sub={row.sub}
+          cta={{ label: row.cta, onPress: () => onAct(row) }}
+        />
+      ))}
     </ListCard>
   );
 }

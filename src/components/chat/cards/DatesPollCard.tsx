@@ -10,15 +10,20 @@ import { PollOptionRow } from "./PollOptionRow";
 type DatesPollCardProps = {
   /** 'Final call: which weekend?' */
   title: string;
-  /** '5 hrs left' */
-  countdown: string;
+  /** '5 hrs left'; absent once the vote has no closing time or is closed. */
+  countdown?: string;
   options: DateOption[];
   vote: DateOption["id"] | null;
   flexible: boolean;
   me: User;
-  /** 4 (literal, PLAN §12.1 #1) */
+  /** How many can vote (`Decision.of`). */
   of: number;
-  flexibleLabels: { off: string; on: string };
+  /** How many have voted, mine included (`Decision.voted`). */
+  voted: number;
+  /** Absent: "I'm flexible" is not offered (`features.vote_flexible` is off). */
+  flexibleLabels?: { off: string; on: string };
+  /** The vote is closed or called off: nothing can be picked. */
+  closed?: boolean;
   /** voteDate */
   onVote: (id: DateOption["id"] | null) => void;
   /** setFlexible */
@@ -34,21 +39,22 @@ export function DatesPollCard({
   flexible,
   me,
   of,
+  voted,
   flexibleLabels,
+  closed = false,
   onVote,
   onFlexible,
 }: DatesPollCardProps) {
-  // Base is the seed voter count (3); flexible does not count, as designed.
-  const seedVotes = options.reduce((n, o) => n + o.voters.length, 0);
 
   return (
     <InChatCard className="flex flex-col gap-1 pt-3.5 pb-3">
       <div className="flex items-start justify-between gap-2 px-4 pb-1">
         <span className="text-18 leading-[1.3] font-semibold tracking-h4">{title}</span>
-        <CountdownMeta text={countdown} />
+        {countdown && <CountdownMeta text={countdown} />}
       </div>
       <RadioGroup
         value={vote ?? ""}
+        disabled={closed}
         onValueChange={(id) => onVote(id as DateOption["id"])}
         aria-label={copy.datesLabel}
         className="gap-0"
@@ -63,13 +69,13 @@ export function DatesPollCard({
               mine={mine}
               first={i === 0}
               // Radix never deselects, so the checked radio un-votes on its own click.
-              onClick={mine ? () => onVote(null) : undefined}
+              onClick={mine && !closed ? () => onVote(null) : undefined}
             />
           );
         })}
       </RadioGroup>
-      <FlexibleButton pressed={flexible} labels={flexibleLabels} onPress={onFlexible} />
-      <PollFooter countLabel={copy.votedCount(seedVotes + (vote ? 1 : 0), of)} me={me} voted={vote !== null} />
+      {flexibleLabels && !closed && <FlexibleButton pressed={flexible} labels={flexibleLabels} onPress={onFlexible} />}
+      <PollFooter countLabel={copy.votedCount(voted, of)} me={me} voted={vote !== null || flexible} />
     </InChatCard>
   );
 }

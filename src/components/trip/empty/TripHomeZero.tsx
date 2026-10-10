@@ -1,3 +1,4 @@
+import type { TripView } from "@/api/contract";
 import { Link as LinkIcon } from "@/components/icons/generated";
 import { emojiTileVariants } from "@/components/common/EmojiTile";
 import { ListCard } from "@/components/common/ListCard";
@@ -6,55 +7,68 @@ import { SectionHeader } from "@/components/common/SectionHeader";
 import { GoStatusCard } from "@/components/trip/GoStatusCard";
 import { NextUpRow } from "@/components/trip/NextUpRow";
 import { planZero } from "@/data/seed/copy";
-import type { TripId } from "@/data/types";
 import { cn } from "@/lib/utils";
 
-// DESIGN-ASSUMPTION (I-plan-empty.md §1.6 #13): `college` has no chat scenario, so its links go to the bare chat route.
-const chatHref = (tripId: TripId, query?: string) =>
-  tripId === "college" || !query ? `/trips/${tripId}/chat` : `/trips/${tripId}/chat?${query}`;
-
 const copy = planZero.home;
+type NextUpKey = (typeof copy.nextUp)[number]["key"];
 
-// Next-up row key -> chat query (I-plan-empty.md §1.5).
-const STAGE_QUERY: Record<(typeof copy.nextUp)[number]["key"], string> = {
-  where: "stage=places",
-  when: "stage=dates-poll",
-  stay: "stage=stays",
-  budget: "stage=budget",
-  travel: "stage=travel",
-};
+/**
+ * Which of the five things are settled, read from the trip itself: a place, dates, a booked stay, the group's budget,
+ * and a ticket that covers me.
+ */
+export function decidedKeys(view: TripView): Set<NextUpKey> {
+  const meId = view.me.person.person_id;
+  const confirmed = view.bookings.filter((b) => b.status === "confirmed");
+  const done = new Set<NextUpKey>();
+  if (view.destination) done.add("where");
+  if (view.dates) done.add("when");
+  if (confirmed.some((b) => b.kind === "stay")) done.add("stay");
+  if (view.budget?.per_person_minor) done.add("budget");
+  if (confirmed.some((b) => (b.kind === "flight" || b.kind === "train" || b.kind === "bus") && b.for_person_ids.includes(meId))) done.add("travel");
+  return done;
+}
 
 type TripHomeZeroProps = {
-  tripId: TripId;
-  /** `college`: opens the share sheet instead of linking to /trips/new. */
-  onInvite?: () => void;
+  view: TripView;
+  /** Opens the share sheet. */
+  onInvite: () => void;
+  /** "Set" on the budget row: opens the group budget sheet over the page. */
+  onSetBudget: () => void;
 };
 
-/** Trip home before anything is decided. Renders the children of TripShell's content column. */
-export function TripHomeZero({ tripId, onInvite }: TripHomeZeroProps) {
-  const inviteProps = tripId === "college" ? { onClick: onInvite } : { href: "/trips/new" };
+/** Trip home before the trip is planned. Renders the children of TripShell's content column. */
+export function TripHomeZero({ view, onInvite, onSetBudget }: TripHomeZeroProps) {
+  const done = decidedKeys(view);
+  const open = copy.nextUp.filter((row) => !done.has(row.key));
+  const total = copy.nextUp.length;
+  const chatHref = `/trips/${view.trip_id}/chat`;
   return (
     <>
       <GoStatusCard
-        title={copy.statusTitle}
+        title={done.size === 0 ? copy.statusTitle : copy.statusTitleSome}
         sub={copy.statusSub}
-        progress={{ filled: 0, total: copy.nextUp.length, label: copy.decided(0, copy.nextUp.length) }}
+        progress={{ filled: done.size, total, label: copy.decided(done.size, total) }}
       />
-      <SectionHeader className="mt-2" title={copy.nextUpTitle} meta={copy.open(copy.nextUp.length)} />
-      <ListCard padding="rows">
-        {copy.nextUp.map((row) => (
-          <NextUpRow
-            key={row.key}
-            emoji={row.emoji}
-            title={row.title}
-            sub={row.sub}
-            action={{ label: row.action, href: chatHref(tripId, STAGE_QUERY[row.key]) }}
-          />
-        ))}
-      </ListCard>
+      {open.length > 0 && (
+        <>
+          <SectionHeader className="mt-2" title={copy.nextUpTitle} meta={copy.open(open.length)} />
+          <ListCard padding="rows">
+            {open.map((row) => (
+              <NextUpRow
+                key={row.key}
+                emoji={row.emoji}
+                title={row.title}
+                sub={row.sub}
+                // Everything is decided with Go in the room; the budget alone has its own sheet.
+                action={row.key === "budget" ? { label: row.action, onPress: onSetBudget } : { label: row.action, href: chatHref }}
+              />
+            ))}
+          </ListCard>
+        </>
+      )}
       <ListCard padding="rows">
         <ListRow
-          {...inviteProps}
+          onClick={onInvite}
           chevron
           leading={
             <span className={cn(emojiTileVariants({ shape: "circle", tint: "go-soft" }), "size-10")}>

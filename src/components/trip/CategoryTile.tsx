@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils"
 const tones = {
   stay: { tint: "stay-soft", dot: "bg-stay" },
   travel: { tint: "travel-soft", dot: "bg-travel" },
+  other: { tint: "surface-2", dot: "bg-line-2" },
 } as const
 
 type CategoryTileProps = Omit<React.ComponentProps<typeof Card>, "children"> & {

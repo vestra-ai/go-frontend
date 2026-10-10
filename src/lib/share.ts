@@ -14,7 +14,7 @@ export interface ShareFile {
 }
 
 export function inviteLink(trip: Trip): string {
-  return "https://" + trip.inviteUrl;
+  return trip.inviteHref ?? "https://" + trip.inviteUrl;
 }
 
 /** What goes out: the file when there is one, else the trip invite. */

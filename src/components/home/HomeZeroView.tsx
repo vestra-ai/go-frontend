@@ -1,15 +1,58 @@
+"use client";
+
+import { useEffect } from "react";
+import type { Idea as ApiIdea } from "@/api/contract";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { AskGoRow } from "@/components/home/AskGoRow";
 import { HeroCard } from "@/components/home/HeroCard";
 import { IdeasCarousel } from "@/components/home/IdeasCarousel";
 import { home as copy } from "@/data/seed/copy";
-import { IDEAS } from "@/data/seed/ideas";
+import type { Idea } from "@/data/types";
 import { assets } from "@/lib/assets";
+import { loadIdeas, useGo } from "@/state";
+import { illustrationFor } from "@/state/view";
 
 const NEW_TRIP = "/trips/new";
 
-/** A4: first-run Home body (no trips yet). */
-export function HomeZeroView({ city }: { city: string }) {
+const TRAVEL: Record<ApiIdea["travel"]["mode"], { emoji: string; word: string }> = {
+  flight: { emoji: "✈️", word: "flight" },
+  car: { emoji: "🚗", word: "drive" },
+  train: { emoji: "🚆", word: "train" },
+  bus: { emoji: "🚌", word: "bus" },
+};
+const TINTS = ["bg-amber-soft", "bg-green-tint", "bg-info-tint", "bg-peach-tint", "bg-amber-tint", "bg-peach-tint-2"] as const;
+
+/** 150 → "2.5h", 60 → "1h", 45 → "45 min". */
+function duration(minutes: number): string {
+  if (minutes < 60) return `${minutes} min`;
+  return `${Math.round((minutes / 60) * 2) / 2}h`;
+}
+
+function toIdea(idea: ApiIdea, index: number): Idea {
+  const travel = TRAVEL[idea.travel.mode] ?? TRAVEL.car;
+  return {
+    id: idea.idea_id,
+    name: idea.name,
+    tag: idea.tag,
+    travelEmoji: travel.emoji,
+    travel: `${duration(idea.travel.duration_minutes)} ${travel.word}`,
+    tintClass: TINTS[index % TINTS.length],
+    // `image_url` may be absent (CONTRACT-APP §4.2): fall back to an illustration.
+    img: idea.image_url ?? illustrationFor(idea.idea_id, idea.name),
+  };
+}
+
+/** First-run Home body (no trips yet). Ideas come from `GET /discover/ideas`; tapping one starts a trip with its hint. */
+export function HomeZeroView({ city }: { city: string | null }) {
+  const ideas = useGo((s) => s.ideas);
+
+  useEffect(() => {
+    void loadIdeas().catch(() => {});
+  }, []);
+
+  const from = ideas?.fromCity ?? city;
+  const hints = new Map((ideas?.items ?? []).map((idea) => [idea.idea_id, idea.destination_hint]));
+
   return (
     <div className="flex flex-col gap-2.5 px-4 pt-4 pb-10">
       <HeroCard
@@ -19,8 +62,15 @@ export function HomeZeroView({ city }: { city: string }) {
         ctaHref={NEW_TRIP}
         mascot={{ src: assets.goMascot.src, alt: assets.goMascot.alt }}
       />
-      <SectionHeader title={copy.ideasTitle} meta={copy.ideasMeta(city)} className="mt-3.5" />
-      <IdeasCarousel ideas={IDEAS} href={NEW_TRIP} />
+      {ideas && ideas.items.length > 0 && (
+        <>
+          <SectionHeader title={copy.ideasTitle} meta={from ? copy.ideasMeta(from) : undefined} className="mt-3.5" />
+          <IdeasCarousel
+            ideas={ideas.items.map(toIdea)}
+            hrefFor={(idea) => `${NEW_TRIP}?hint=${encodeURIComponent(hints.get(idea.id) ?? idea.name)}`}
+          />
+        </>
+      )}
       <AskGoRow title={copy.askGo.title} sub={copy.askGo.sub} href={NEW_TRIP} />
     </div>
   );

@@ -1,9 +1,7 @@
-import Image from "next/image";
 import { Stopwatch } from "@/components/icons/generated";
 import { Badge } from "@/components/ui/badge";
 import { ROUTE_MODES } from "@/data/seed/routes";
 import type { RouteLeg, RouteOption, TripType } from "@/data/types";
-import { assets } from "@/lib/assets";
 import { inr } from "@/lib/format";
 import { priceOf } from "@/lib/routes";
 import { cn } from "@/lib/utils";
@@ -18,18 +16,13 @@ type RouteOptionRowProps = {
 // Static maps: never build class names from template strings.
 const tagTone: Record<string, string> = { mix: "text-info", stop: "text-go" };
 
-/** Leading carrier logo (airline) or mode icon (train/bus): same tile size so every row starts on one edge. */
+/** Leading carrier wordmark (when the option has one) or the mode's icon: same tile size so every row starts on one edge. */
 function CarrierTile({ leg, modeEmoji }: { leg: RouteLeg; modeEmoji: string }) {
-  if (leg.carrier === "indigo")
-    return (
-      <span className="grid h-[30px] w-[52px] shrink-0 place-items-center overflow-hidden rounded-[9px] bg-indigo">
-        <Image src={assets.indigo.src} alt={assets.indigo.alt} width={assets.indigo.width} height={assets.indigo.height} className="h-auto w-10" />
-      </span>
-    );
-  if (leg.carrier === "airindia")
+  if (leg.logoUrl)
     return (
       <span className="grid h-[30px] w-[52px] shrink-0 place-items-center overflow-hidden rounded-[9px] border border-line bg-white">
-        <Image src={assets.airIndia.src} alt={assets.airIndia.alt} width={assets.airIndia.width} height={assets.airIndia.height} className="h-auto w-[34px]" />
+        {/* eslint-disable-next-line @next/next/no-img-element -- the carrier's wordmark from Go's option */}
+        <img src={leg.logoUrl} alt={leg.carrierName ?? ""} className="h-auto max-h-5 w-10 object-contain" />
       </span>
     );
   return (

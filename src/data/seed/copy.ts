@@ -67,34 +67,34 @@ export const home = {
   tripsTitle: "Your trips",
   tripsMeta: (n: number) => `${n} active`,
   pastTitle: "Past trips",
+  pastPeople: (n: number) => `${n} ${n === 1 ? "person" : "people"}`,
+  pastSettled: "all settled",
+  owesTitle: "You owe",
+  owes: (name: string, amount: string) => `${name} · ${amount}`,
   fab: "New trip",
-  toasts: { decline: "Invite declined. Priya won’t be told." },
 } as const;
 
 export const profile = {
   title: "Profile",
   back: "Back",
-  provider: "Signed in with Google",
+  provider: (provider: string | null) => (provider === "google" ? "Signed in with Google" : provider === "email" ? "Signed in with email" : "Signed in"),
   rows: {
-    from: { emoji: "🛫", title: "Travelling from", sub: (city: string) => `${city} · used for your tickets` },
-    trips: { emoji: "🧳", title: "Your trips", sub: "1 active · 2 past · 1 invite" }, // literal (PLAN §12.1 #3)
-    payment: { emoji: "💳", title: "Payment methods", sub: "UPI · HDFC card ••4821" },
-    notifications: { emoji: "🔔", title: "Trip notifications", sub: "Polls, bookings, Go’s calls" },
+    from: { emoji: "🛫", title: "Travelling from", sub: (city: string | null) => (city ? `${city} · used for your tickets` : "Not set · used for your tickets") },
+    trips: { emoji: "🧳", title: "Your trips", sub: (active: number, past: number) => `${active} active · ${past} past` },
+    payment: {
+      emoji: "💳",
+      title: "Payment methods",
+      sub: (upi: string | null) => (upi ? `UPI ${upi} · cards in Go’s vault` : "Cards live in Go’s vault"),
+    },
   },
   signOut: "Sign out",
   toasts: {
-    from: "Change it from the From chip in any trip chat",
-    payment: "Payment methods open here in the real app",
+    fromSaved: "Saved. New trips start from here.",
+    failed: "Couldn’t save that. Try again.",
+    vaultFailed: "Couldn’t open Go’s vault. Try again.",
   },
 } as const;
 
-// Prototype-only copy (PLAN §9.6), not design copy.
-export const prototype = {
-  title: "Prototype controls",
-  meta: "Not in the real app",
-  reset: { emoji: "🔄", title: "Reset demo", sub: "Clears saved progress and signs out" },
-  jump: { emoji: "🧭", title: "Jump to artboard", sub: "Pick one of 72 design states" },
-} as const;
 
 // ---------------------------------------------------------------------------
 // B · Who's coming, invite, share sheet (B-crew.md §1.3–1.5)
@@ -115,7 +115,8 @@ export const crew = {
   listMeta: "Updates live",
   you: "You",
   organizer: "Organizer",
-  joinLabel: { rahul: "Joined via link · 2m ago", priya: "Joined via link · just now" } as Partial<Record<UserId, string>>,
+  joinLabel: (ago: string) => `Joined via link · ${ago}`,
+  createFailed: "Couldn’t start the trip. Try again.",
   next: "Next",
   nextJoined: "Next · open trip chat",
   helper: "Go can share the link for you from the trip chat",
@@ -128,7 +129,12 @@ export const invite = {
   sub: "Join the trip to plan it together with Go.",
   joined: (n: number) => `${n} joined`,
   whenYouJoin: "WHEN YOU JOIN",
+  // "<emoji> <text>", split at the first space.
+  whenYouJoinRows: ["💬 You’re added to the trip chat", "📅 Go asks your dates and where you’re travelling from", "🔒 Your tickets stay private to you"],
   accept: "Accept & join",
+  joining: "Joining…",
+  gone: "This invite link no longer works. Ask for a new one.",
+  failed: "Couldn’t join the trip. Try again.",
   notNow: "Not now",
   close: "Close",
 } as const;
@@ -159,9 +165,13 @@ export const share = {
 
 export const chat = {
   goName: "Go",
-  goAck: "Got it 👍 I’ll factor that into the plan.",
   header: { back: "Back", board: "Trip board", share: "Share trip invite" },
   chipEmoji: { where: "📍", when: "📅", stay: "🏡", budget: "💰", from: "🛫" },
+  /** A fact chip that has no value yet asks its question. */
+  chipUnset: { where: "Where?", when: "When?", stay: "Stay?", budget: "Budget?", from: "From?" },
+  /** The header's second line: the dates once set, else who is in. */
+  subtitle: { people: (n: number) => (n === 1 ? "Just you so far" : `${n} in the trip`) },
+  earlier: "Earlier messages",
   composer: {
     srLabel: "Message",
     placeholder: "Message, or @Go",
@@ -176,17 +186,19 @@ export const chat = {
     micUnavailable: "Voice notes aren’t supported on this device",
     photoFailed: "Couldn’t read that photo",
     fileTooBig: (mb: number) => `That file is over ${mb} MB`,
+    fileType: "Photos and PDFs only",
+    voiceType: "This phone records a format Go can’t take yet",
   },
   attachment: {
     photo: "Photo",
     openPhoto: "Open photo",
     openFile: (name: string) => `Open ${name}`,
-    photoSub: (width: number, height: number) => `Sent by you · ${width} × ${height}`,
+    photoSub: (width: number, height: number) => `${width} × ${height}`,
     photoSaved: "Photo saved",
     photoFile: "photo.jpg",
     fileSub: (size: string) => `PDF · ${size}`,
     fileSaved: "File saved",
-    fileGone: "This file isn’t available any more. Files you send are only kept until you close the app.",
+    fileGone: "This file can’t be shown here. Use Save to open it.",
     viewerLabel: (title: string) => `${title} preview`,
     pdf: "PDF",
     play: "Play voice note",
@@ -215,7 +227,7 @@ export const chat = {
     cancel: "Cancel",
   },
   toasts: {
-    reacted: (emoji: string, name: string) => `You reacted ${emoji} to ${name}`,
+    reactFailed: "Couldn’t save your reaction. Try again.",
     emojiKeyboard: "Your full emoji keyboard opens here",
     copied: "Message copied",
   },
@@ -234,15 +246,9 @@ export const quickStart = {
     { id: "city", label: "🏙️ City" },
     { id: "any", label: "🤷 Surprise us" },
   ],
-  spendLabel: "YOUR BUDGET?",
-  spends: [
-    { id: "lt15", label: "Under ₹15k" },
-    { id: "15to25", label: "₹15–25k" },
-    { id: "gt25", label: "₹25k+" },
-  ],
   fromLabel: "TRAVELLING FROM?",
   fromGroupLabel: "Travelling from",
-  fromNote: "🔒 Just for your tickets",
+  fromNote: "Your crew sees this",
   footnote: "Skip anything. You can set where you’re travelling from anytime with the From chip up top.",
   done: "Done",
   notNow: "Not now",
@@ -254,8 +260,10 @@ export const fromSheet = {
   sub: "Where will you start your trip?",
   close: "Close",
   cityLabel: "YOUR CITY",
-  privacy: "Only you and Go see this. Go uses it for your flights, trains and buses.",
+  // The starting city is visible to the group (CONTRACT-APP §1.7).
+  privacy: "Your crew and Go see this. Go uses it for your flights, trains and buses.",
   save: "Save",
+  failed: "Couldn’t save that. Try again.",
 } as const;
 
 export const cityPicker = {
@@ -289,6 +297,57 @@ export const polls = {
   votedCount: (n: number, of: number) => `${n} of ${of} voted`,
   youVoted: "You voted",
   yetToVote: "yet to vote",
+  flexible: { off: "I’m flexible, any of these work", on: "You’re flexible · any of these work" },
+  /** "3 hrs left" / "Voting closes in 3 hrs" come from `closes_at`; a closed vote says how it ended. */
+  left: (text: string) => `${text} left`,
+  closesIn: (text: string) => `Voting closes in ${text}`,
+  won: (label: string) => `${label} won`,
+  closed: "Vote closed",
+  cancelled: "Vote called off",
+  failed: "Couldn’t save your vote. Try again.",
+} as const;
+
+// Words the app adds around Go's cards and the Server's record cards (CONTRACT-APP §5). What a card itself says
+// (titles, bodies, button labels) is always the card's own.
+export const cards = {
+  quickReplies: "TAP TO REPLY",
+  checked: (ago: string) => `checked ${ago}`,
+  options: { count: (n: number) => `${n} ${n === 1 ? "option" : "options"}`, see: "See options", pending: "Sending…" },
+  mandate: {
+    badge: "✅ READY TO BOOK",
+    upTo: (amount: string) => `Up to ${amount}`,
+    refundable: { title: "Refundable only", sub: "Go books only what can be cancelled" },
+    yes: "Yes, book it",
+    notNow: "Not now",
+    helper: "Only you see these buttons. The payment itself is confirmed on Go’s vault page.",
+    waiting: (name: string) => ({ title: `${name} pays`, sub: "Waiting for their go-ahead" }),
+    confirmed: (name: string) => ({ title: `${name} said yes`, sub: "Go is booking it" }),
+    declined: (name: string) => ({ title: `${name} said not now`, sub: "" }),
+    failed: "Couldn’t save that. Try again.",
+  },
+  pay: {
+    badge: "💳 PAYMENT",
+    freeCancel: (until: string) => `Free cancellation until ${until}`,
+    expires: (when: string) => `Expires ${when}`,
+    helper: "Approve opens Go’s vault page. You confirm there, never in the app.",
+    waiting: (name: string) => `Waiting for ${name}`,
+    state: { paid: "Paid", declined: "Declined", expired: "Expired", failed: "Payment failed", cancelled: "Cancelled" },
+  },
+  claim: { badge: "👤 ONE PERSON BOOKS FOR ALL" },
+  ticket: { booked: (kind: string) => `${kind} · BOOKED`, cancelled: (kind: string) => `${kind} · CANCELLED`, nights: (n: number) => `${n} ${n === 1 ? "NIGHT" : "NIGHTS"}`, stub: "BOOKED" },
+  expense: {
+    label: "ADDED TO TRIP MONEY",
+    split: (each: string, n: number) => (n === 1 ? `${each} · not split` : `${each} each · split ${n} ways`),
+    cta: "Open",
+    removed: "This expense was removed.",
+  },
+  settle: { title: "To square up", allSquare: "Everyone is square." },
+  budget: { eyebrow: "THE MONEY SO FAR" },
+  plan: { eyebrow: "THE PLAN", made: "Made by Go", open: "Open", day: (n: number) => `Day ${n}` },
+  working: { running: "Working…", needsYou: "Needs you", done: "Done", failed: "Stopped", step: (i: number, n: number) => `Step ${i} of ${n}` },
+  call: { failed: (who: string) => `Go couldn’t reach ${who}.` },
+  checklist: { due: (day: string) => `due ${day}`, emoji: "📋", suggestion: "💡" },
+  message: { deleted: "Message deleted", sendFailed: "Not sent. Tap to try again.", sending: "Sending…" },
 } as const;
 
 export const placeSheet = {
@@ -296,26 +355,30 @@ export const placeSheet = {
   cost: "ROUGH COST EACH",
   about: "About",
   activities: "THINGS THE CREW CAN DO",
-  backToAll: "Back to all 3",
+  backToAll: "Back to all options",
+  /** "Priya and Rahul voted for Goa" */
+  votersLine: (names: string[], place: string) =>
+    `${names.length <= 2 ? names.join(" and ") : `${names.slice(0, 2).join(", ")} and ${names.length - 2} more`} voted for ${place}`,
 } as const;
 
+// The group's one budget per person (CONTRACT-APP §4.4): nobody has a private one.
 export const budgetSheet = {
-  label: "Your budget range",
-  title: "Your budget range",
-  sub: "Drag to set a minimum and a maximum.",
-  eyebrow: "YOUR BUDGET",
+  label: "Budget per person",
+  title: "Budget per person",
+  sub: "Drag to set one amount for the whole group.",
+  eyebrow: "PER PERSON",
   minLabel: "₹5k",
   maxLabel: "₹60k",
-  thumbs: { min: "Minimum", max: "Maximum" },
-  note: "Go aims for the low end and never goes past your max. Only you see this.",
-  save: "Save my range",
-  saved: "Saved privately ✓",
+  thumbs: { min: "Budget per person", max: "Maximum" },
+  note: "One budget for everyone in the trip. Anyone can change it, and Go plans within it.",
+  save: "Save budget",
+  saved: "Saved ✓",
+  failed: "Couldn’t save the budget. Try again.",
 } as const;
 
 export const staySheet = {
-  subtitle: "Go checked it’s free for 6–9 Nov and fits everyone’s budget.",
-  dates: "Fri 6 → Mon 9 Nov · 3 nights",
-  facts: { dates: "Dates", total: "Total for 4", share: "Your share", cancellation: "Cancellation" },
+  subtitle: "What Go found for your dates.",
+  facts: { dates: "Dates", total: "Total", share: "Each", cancellation: "Cancellation" },
 } as const;
 
 export const paySheet = {
@@ -353,50 +416,64 @@ export const board = {
   rows: {
     where: {
       emoji: "📍",
-      notSet: { eyebrow: "WHERE", value: "Not decided", sub: "Go suggests places from everyone’s answers", ask: "Ask Go" },
-      decided: { eyebrow: "WHERE", value: "Goa", sub: "All four agreed in the chat" },
+      eyebrow: "WHERE",
+      notSet: { value: "Not decided", sub: "Go suggests places from everyone’s answers", ask: "Ask Go" },
+      decidedSub: "Set for the trip",
     },
     when: {
       emoji: "📅",
-      notSet: { eyebrow: "WHEN", value: "Not set", sub: "No dates shared yet", ask: "Find dates" },
-      decided: { eyebrow: "WHEN", value: "Fri 6 – Mon 9 Nov", sub: "Diwali weekend" },
+      eyebrow: "WHEN",
+      notSet: { value: "Not set", sub: "No dates shared yet", ask: "Find dates" },
+      decidedSub: (countdown: string) => countdown,
     },
     stay: {
       emoji: "🏡",
-      notSet: { eyebrow: "STAY", value: "Not booked", sub: "Needs a place and dates first", ask: "Ask Go" },
+      eyebrow: "STAY",
+      notSet: { value: "Not booked", sub: "Needs a place and dates first", ask: "Ask Go" },
       voteOpen: {
         eyebrow: "STAY · VOTE OPEN",
-        value: "3 villas in the running",
-        sub: (voted: number) => `${voted} of 4 voted · closes in 2 hrs`,
+        value: (n: number) => `${n} ${n === 1 ? "stay" : "stays"} in the running`,
+        sub: (voted: number, of: number, closes: string) => [`${voted} of ${of} voted`, closes].filter(Boolean).join(" · "),
         cta: "Vote",
-        option: (name: string, votes: number) => `${name} · ${votes}`,
       },
-      // DESIGN-ASSUMPTION (H-board.md ⚑): state not drawn in H1–H3.
-      decided: { eyebrow: "STAY", value: "Villa Sol, Anjuna", sub: "Won the vote · booking next" },
-      booked: { eyebrow: "STAY", value: "Villa Sol, Anjuna", sub: "Booked by Rahul · ₹10.8k each", status: "Booked" },
+      decidedSub: "Won the vote · booking next",
+      bookedSub: (payer: string) => `Booked by ${payer}`,
+      status: "Booked",
     },
     budget: {
       emoji: "💰",
-      notSet: { eyebrow: "YOUR BUDGET", value: "Not set", sub: "Only you see it", ask: "Set" },
-      decided: { eyebrow: "YOUR BUDGET", value: "₹21.8k, all-in", sub: "Only you see this" },
+      eyebrow: "BUDGET PER PERSON",
+      notSet: { value: "Not set", sub: "One amount for the whole group", ask: "Set" },
+      decided: (amount: string) => ({ value: `${amount} each`, sub: "The group’s budget · anyone can change it" }),
     },
     travel: {
       emoji: "🧳",
-      notSet: { eyebrow: "YOUR TRAVEL", value: "Not added", sub: "Each person picks their own way in", ask: "Find routes" },
-      partial: { eyebrow: "YOUR TRAVEL", value: "Flight there booked", sub: "BLR → GOX · 6E 5313 · return not booked", status: "1 of 2" },
-      // DESIGN-ASSUMPTION (H-board.md ⚑): borrowed from the J1 flights row.
-      booked: { eyebrow: "YOUR TRAVEL", value: "Your flights booked", sub: "BLR ⇄ GOX · both ways", status: "Booked" },
+      eyebrow: "YOUR TRAVEL",
+      notSet: { value: "Not added", sub: "Each person picks their own way in", ask: "Find routes" },
+      partial: { value: (kind: string) => `${kind} there booked`, sub: (route: string) => `${route} · return not booked`, status: "1 of 2" },
+      booked: { value: "Your travel is booked", sub: (route: string) => `${route} · both ways`, status: "Booked" },
     },
   },
   reminder: {
     eyebrow: "GO · YOUR RETURN ISN’T BOOKED",
-    value: "Book your way back on Mon 9 Nov",
-    sub: "You’re in on Fri. Evening flights back are filling up.",
+    value: (day: string) => (day ? `Book your way back on ${day}` : "Book your way back"),
+    sub: "You’re booked on the way there. The return is still open.",
     cta: "Find return",
   },
+  /** What a row's "Ask Go" / "Change" puts in the composer: the ask is a normal message mentioning Go. */
+  asks: {
+    where: "@Go suggest some places for us",
+    when: "@Go find dates that work for everyone",
+    stay: "@Go find us a stay",
+    travel: "@Go find me ways to get there",
+    changeWhere: "@Go we’d like to change the place",
+    changeWhen: "@Go we’d like to change the dates",
+    changeStay: "@Go we’d like to look at other stays",
+    returnTrip: "@Go find me a way back",
+  },
   spend: {
-    eyebrow: "YOUR SPEND VS YOUR BUDGET",
-    empty: "Shows up once you set your budget. Only you see it.",
+    eyebrow: "YOUR SPEND VS THE BUDGET",
+    empty: "Shows up once the group sets a budget.",
     emptyAria: "No budget yet",
     of: (budget: string) => ` of ${budget}`,
     stay: "Stay",
@@ -425,9 +502,10 @@ export const tripShell = {
 
 export const planZero = {
   hero: { title: "New trip", where: "Where? Not decided yet", joined: (n: number) => `${n} joined` },
-  chatPreview: { text: "Go: What’s the plan, crew? 🌴", unread: 1 },
+  chatPreviewEmpty: "Start the trip chat",
   home: {
     statusTitle: "Nothing’s decided yet",
+    statusTitleSome: "Planning in progress",
     statusSub: "Go fills this page as your crew chats",
     decided: (d: number, t: number) => `${d} of ${t} decided`,
     nextUpTitle: "Next up",
@@ -436,7 +514,7 @@ export const planZero = {
       { key: "where", emoji: "📍", title: "Pick a place", sub: "Go suggests places from everyone’s answers", action: "Ask Go" },
       { key: "when", emoji: "📅", title: "Pick dates", sub: "Go finds a weekend that fits everyone", action: "Ask Go" },
       { key: "stay", emoji: "🏡", title: "Find a stay", sub: "Unlocks once place and dates are set", action: "Ask Go" },
-      { key: "budget", emoji: "💰", title: "Set your budget", sub: "Private to you · Go plans within it", action: "Set" },
+      { key: "budget", emoji: "💰", title: "Set the budget", sub: "One amount per person · Go plans within it", action: "Set" },
       { key: "travel", emoji: "🧳", title: "Sort your travel", sub: "Each person picks their own route", action: "Book" },
     ],
     inviteTitle: "Invite more people",
@@ -468,7 +546,7 @@ export const planZero = {
       { key: "travel", emoji: "🧳", label: "Travel" },
     ],
     footnote: "Travel covers flights, trains and buses.",
-    budget: { title: "Set your budget", sub: "Only you see it. Go plans your tickets and stay within it.", cta: "Set my budget" },
+    budget: { title: "Set the budget", sub: "One amount per person for the whole group. Go plans within it.", cta: "Set the budget" },
     settle: { title: "Settle up", emoji: "🤝", rowTitle: "All square", rowSub: "Shared bills get split here as they come in" },
     tx: { title: "Transactions", emoji: "🧾", rowTitle: "No payments yet", rowSub: "Every booking and payback shows here, for everyone" },
   },
@@ -481,33 +559,22 @@ export const planZero = {
 export const tripHome = {
   pendingTitle: "Pending on you",
   pendingMeta: (n: number) => `${n} left`,
-  pending: {
-    settle: { title: "Settle up with Rahul", sub: "₹5,800 left of your villa share", cta: "Record" },
-    cab: { emoji: "✈️", badgeEmoji: "🏡", title: "Airport cab to Villa Sol", sub: "Fri 9:55 pm · with Arjun", cta: "Book ₹1,600" },
-  },
   allSet: { title: "You’re all set", sub: "Nothing pending on you. Go pings you if plans change." },
   callsTitle: "Go’s calls",
   callCount: (n: number) => (n === 1 ? "1 live" : `${n} live · swipe`),
   doneTitle: "Done",
   doneLabel: (n: number, allSet: boolean) => (allSet ? `All ${n}` : `${n} done`),
   done: {
-    stay: { emoji: "🏡", title: "Villa Sol booked", sub: "Fri 6 → Mon 9 · paid by Rahul", subResolved: "Late check-in confirmed by Go" },
-    fly: {
-      emoji: "✈️",
-      title: "Your flights booked",
-      sub: "BLR ⇄ GOX · both ways",
-      subResolved: "BLR ⇄ GOX · 15 kg extra bag added",
-      subCheckedIn: (seat: string) => `Checked in · seat ${seat}`, // optional deviation (K-checkin.md §1.5)
-    },
-    cab: { emoji: "🚕", title: "Airport cabs booked", sub: "Fri arrival and Mon drop, with Arjun" },
-    settled: { emoji: "🤝", title: "Settled up with Rahul", sub: "Rahul confirmed your payments" },
-    budget: { emoji: "💰", title: "Your budget set", sub: "₹21.8k · only you see it" },
-    dates: { emoji: "📅", title: "Dates locked", sub: "Diwali · Fri 6 – Mon 9 Nov" },
+    booked: (title: string) => `${title} booked`,
+    call: (who: string) => `Go’s call with ${who}`,
+    paidBy: (who: string) => `paid by ${who}`,
+    bothWays: "both ways",
+    lineSub: { decided: "Decided by vote", agreed: "Agreed in the chat", open: "Done", doing: "Done", booked: "Booked" },
+    settled: { emoji: "🤝", title: "Settled up", sub: "You owe nobody right now" },
+    budget: { emoji: "💰", title: "Budget set", sub: (amount: string) => `${amount} per person · for the whole group` },
   },
-  fab: {
-    busy: { preview: "Priya: scuba’s on me 🤿", unread: 3 },
-    allSet: { preview: "Rahul: see you all friday 🌴", unread: 0 },
-  },
+  asked: (who: string) => `Asked Go to call ${who}. Watch the trip chat.`,
+  askFailed: "Couldn’t reach the trip chat. Try again.",
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -517,37 +584,12 @@ export const tripHome = {
 export const scopeToggle = { label: "Whose plan", everyone: "Everyone", me: "Just me" } as const;
 export const viewToggle = { label: "View", list: "List view", map: "Map view" } as const;
 
-// ---------------------------------------------------------------------------
-// G · Bali (G-bali.md §1.2)
-// ---------------------------------------------------------------------------
-
-export const baliToasts = {
-  tripPage: "Bali’s trip page works like Goa’s. The Goa trip shows the full flow.",
-  board: "Bali’s board works like Goa’s. Open the Goa trip to try it.",
-  settled: "Bali is settled for this group. Stay and dates are next.",
-} as const;
-
-// ---------------------------------------------------------------------------
-// Toasts not owned by a namespace above (E, J, M)
-// ---------------------------------------------------------------------------
-
-export const toasts = {
-  morePlaces: "Go is adding 3 more places to the chat",
-  moreStays: "Go is lining up 5 more villas",
-  watchCheckout: "Opens Go’s live view of the checkout page",
-  saved: "Saved to your phone",
-  ticketDownloaded: "Ticket PDF downloaded",
-  ticketShared: "Ticket shared to Goa crew",
-  nudge: { priya: "Go nudged Priya about her ₹10,800 share" } as Partial<Record<UserId, string>>,
-  recorded: "Recorded · Rahul gets a ping to confirm", // DESIGN-ASSUMPTION: the design shows no toast (PLAN §12.1 #17)
-} as const;
 
 export const copy = {
   sheet,
   welcome,
   home,
   profile,
-  prototype,
   crew,
   invite,
   share,
@@ -566,6 +608,4 @@ export const copy = {
   tripHome,
   scopeToggle,
   viewToggle,
-  baliToasts,
-  toasts,
 } as const;

@@ -14,20 +14,22 @@ import { BudgetRangeSlider } from "./BudgetRangeSlider";
 type BudgetSheetProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  lo: number;
-  hi: number;
+  /** Whole rupees per person. */
+  amount: number;
   saved: boolean;
-  /** setBudget (the store clamps and sets saved=false) */
-  onChange: (lo: number, hi: number) => void;
-  /** saveBudget */
-  onSave: () => void;
+  /** The save is on its way. */
+  pending?: boolean;
+  /** Moving the thumb (the caller drops `saved`). */
+  onChange: (amount: number) => void;
+  /** Writes the budget; resolves true once the Server took it. */
+  onSave: () => Promise<boolean>;
 };
 
 /**
- * E7 private min–max budget sheet (E-deciding.md §1.3). Save shows "Saved privately ✓" for SAVED_CLOSE_MS, then the
- * sheet closes itself; the "Saved · see the stays Go found" pill then waits in the chat.
+ * The group's budget sheet: one amount per person for everyone (CONTRACT-APP §4.4). Save shows "Saved ✓" for
+ * SAVED_CLOSE_MS, then the sheet closes itself.
  */
-export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSave }: BudgetSheetProps) {
+export function BudgetSheet({ open, onOpenChange, amount, saved, pending = false, onChange, onSave }: BudgetSheetProps) {
   const closeTimer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(closeTimer.current), []);
   // Moving the slider again (saved → false) or closing the sheet by hand cancels the pending auto-close.
@@ -35,10 +37,11 @@ export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSav
     if (!saved || !open) window.clearTimeout(closeTimer.current);
   }, [saved, open]);
 
-  function save() {
-    onSave();
+  async function save() {
+    if (pending) return;
+    const ok = await onSave();
     window.clearTimeout(closeTimer.current);
-    closeTimer.current = window.setTimeout(() => onOpenChange(false), SAVED_CLOSE_MS);
+    if (ok) closeTimer.current = window.setTimeout(() => onOpenChange(false), SAVED_CLOSE_MS);
   }
 
   return (
@@ -49,8 +52,8 @@ export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSav
 
         <Card variant="outline" radius="2xl" className="flex flex-col gap-2.5 px-4 pt-[18px] pb-3.5">
           <Eyebrow>{copy.eyebrow}</Eyebrow>
-          <span className="text-32 font-bold tracking-title tabular-nums">{`${kFormat(lo)} – ${kFormat(hi)}`}</span>
-          <BudgetRangeSlider value={[lo, hi]} onValueChange={([l, h]) => onChange(l, h)} />
+          <span className="text-32 font-bold tracking-title tabular-nums">{kFormat(amount)}</span>
+          <BudgetRangeSlider value={[amount]} onValueChange={([next]) => onChange(next)} />
           <div className="flex justify-between text-13 font-semibold tracking-caption text-muted">
             <span>{copy.minLabel}</span>
             <span>{copy.maxLabel}</span>
@@ -67,7 +70,7 @@ export function BudgetSheet({ open, onOpenChange, lo, hi, saved, onChange, onSav
             {copy.saved}
           </Button>
         ) : (
-          <Button type="button" variant="primary" size="xl" className="w-full" onClick={save}>
+          <Button type="button" variant="primary" size="xl" className="w-full" aria-busy={pending} disabled={pending} onClick={save}>
             {copy.save}
           </Button>
         )}

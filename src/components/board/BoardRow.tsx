@@ -4,7 +4,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { board as copy } from "@/data/seed/copy";
 import { assets } from "@/lib/assets";
-import type { BoardTrailing } from "@/store/selectors";
+import type { BoardTrailing } from "@/state/boardView";
 
 type BoardRowProps = {
   emoji: string;

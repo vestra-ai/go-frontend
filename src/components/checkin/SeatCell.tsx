@@ -1,36 +1,35 @@
 import { Avatar } from "@/components/ui/avatar";
 import { Toggle, toggleVariants } from "@/components/ui/toggle";
 import { CHECKIN_COPY } from "@/data/seed/checkin";
-import { USERS } from "@/data/seed/users";
-import type { Seat, UserId } from "@/data/types";
+import type { Seat, User } from "@/data/types";
 
 const aria = CHECKIN_COPY.seat.aria;
 
 type SeatCellProps = {
   seat: Seat;
   selected: boolean;
-  friendId: UserId;
+  /** Who sits in a `friend` seat (the companion on the same booking). */
+  friend: User | null;
   onPick: (id: string) => void;
 };
 
 /** One 40px seat. State precedence: selected > taken > paid > free; the friend's seat is a non-interactive image. */
-export function SeatCell({ seat, selected, friendId, onPick }: SeatCellProps) {
+export function SeatCell({ seat, selected, friend, onPick }: SeatCellProps) {
   if (seat.state === "friend") {
-    const friend = USERS[friendId];
     return (
       <span
         role="img"
-        aria-label={aria.friend(seat.id)}
+        aria-label={aria.friend(seat.id, friend?.firstName ?? "")}
         className={toggleVariants({ variant: "seat", seatState: "friend" })}
       >
-        <Avatar size={28} name={friend.name} src={friend.avatar} tone={friend.tone} />
+        {friend && <Avatar size={28} name={friend.name} src={friend.avatar} tone={friend.tone} />}
       </span>
     );
   }
 
   const taken = seat.state === "taken";
   const state = selected ? "selected" : seat.state;
-  const label = aria.seat(seat.id) + (taken ? aria.taken : seat.state === "paid" ? aria.paid : aria.free);
+  const label = aria.seat(seat.id) + (taken ? aria.taken : seat.state === "paid" ? aria.paid(seat.price ?? "") : aria.free);
 
   return (
     <Toggle

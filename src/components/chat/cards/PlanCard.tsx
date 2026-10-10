@@ -6,8 +6,10 @@ import { ReactionChip } from "@/components/common/ReactionChip";
 import { WaxSeal } from "@/components/icons/custom/WaxSeal";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
+import { useRoomUsers } from "@/components/chat/RoomContext";
 import type { PlanDay, UserId } from "@/data/types";
 import { assets } from "@/lib/assets";
+import { stackAvatar } from "@/lib/avatars";
 import { InChatCard } from "../InChatCard";
 import { DayStrip } from "./DayStrip";
 
@@ -16,7 +18,8 @@ type PlanCardProps = {
   place: { emoji: string; label: string };
   dates: { emoji: string; label: string };
   countdown: { emoji: string; label: string };
-  hero: { src: string; alt: string };
+  /** The destination's photo; without one the card keeps its plain hero colour. */
+  hero?: { src: string; alt: string };
   seal: { ring: string; month: string; days: string };
   memberIds: UserId[];
   days: PlanDay[];
@@ -26,12 +29,13 @@ type PlanCardProps = {
 
 /** F8 "Go's final plan": hero with wax seal, day strip, "Made by Go" footer (F-travel.md §1.4). */
 export function PlanCard({ eyebrow, place, dates, countdown, hero, seal, memberIds, days, footer, reaction }: PlanCardProps) {
+  const userOf = useRoomUsers();
   return (
     <div className="relative">
       <InChatCard right={22}>
         <div className="relative h-[176px] bg-plan-hero">
           {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo */}
-          <img src={hero.src} alt={hero.alt} className="size-full object-cover" />
+          {hero && <img src={hero.src} alt={hero.alt} className="size-full object-cover" />}
           <ProgressiveBlur layers="hero" />
           <div className="absolute inset-0 bg-linear-to-b from-ink/0 from-45% via-ink/20 via-65% to-ink/55" />
           <WaxSeal {...seal} className="absolute top-1 right-1 size-[92px] -rotate-12 overflow-visible" />
@@ -61,7 +65,7 @@ export function PlanCard({ eyebrow, place, dates, countdown, hero, seal, memberI
                 overlap={8}
                 ring="white-thin"
                 className="pl-[7px]"
-                avatars={memberIds.map((id) => ({ name: assets.avatars[id].alt, src: assets.avatars[id].src }))}
+                avatars={memberIds.map((id) => stackAvatar(userOf(id)))}
               />
             </div>
           </div>

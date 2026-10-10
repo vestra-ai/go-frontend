@@ -7,7 +7,8 @@ type NextUpRowProps = Omit<React.ComponentProps<"div">, "title"> & {
   emoji: string
   title: string
   sub: string
-  action: { label: string; href: string }
+  /** A link, or a button that acts in place (opening a sheet). */
+  action: { label: string; href: string } | { label: string; onPress: () => void }
 }
 
 /** One "Next up" row; place inside `ListCard padding="rows"` (divider from the second row on). */
@@ -23,9 +24,15 @@ function NextUpRow({ emoji, title, sub, action, className, ...props }: NextUpRow
         <div className="text-16 leading-[1.3] font-semibold tracking-body">{title}</div>
         <div className="text-13 tracking-caption text-muted">{sub}</div>
       </div>
-      <Button variant="tint" size="xs" asChild className="px-3.5 tracking-sm">
-        <Link href={action.href}>{action.label}</Link>
-      </Button>
+      {"href" in action ? (
+        <Button variant="tint" size="xs" asChild className="px-3.5 tracking-sm">
+          <Link href={action.href}>{action.label}</Link>
+        </Button>
+      ) : (
+        <Button variant="tint" size="xs" className="px-3.5 tracking-sm" onClick={action.onPress}>
+          {action.label}
+        </Button>
+      )}
     </div>
   )
 }

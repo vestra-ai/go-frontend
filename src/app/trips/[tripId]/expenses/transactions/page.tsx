@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { notFound, useParams, useSearchParams } from "next/navigation";
-import { Suspense, useState } from "react";
+import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useState } from "react";
+import { errorMessage } from "@/api/http";
 import { ArrowLeft, Plus } from "@/components/icons/generated";
 import { FilterChips, type TransactionFilter } from "@/components/money/FilterChips";
 import { TransactionGroup } from "@/components/money/TransactionGroup";
@@ -10,22 +11,18 @@ import { FadeDock } from "@/components/shell/FadeDock";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Screen } from "@/components/shell/Screen";
 import { RecordPaymentSheet } from "@/components/sheets/RecordPaymentSheet";
+import { recordTargetFor, useRecordSheet } from "@/components/sheets/useRecordTarget";
 import { Button } from "@/components/ui/button";
 import { MONEY_COPY } from "@/data/seed/money";
-import { TRIP_IDS } from "@/data/seed/trips";
 import type { Transaction, TripId } from "@/data/types";
-import { useHydrated, useMoney } from "@/store";
+import { toastGo } from "@/lib/toast";
+import { loadMoney, loadMoreTransactions, loadTransactions, useTripGate } from "@/state";
+import { toTransactionRow } from "@/state/moneyView";
+import { usersById } from "@/state/view";
 
 const T = MONEY_COPY.transactions;
 
-const matches: Record<TransactionFilter, (t: Transaction) => boolean> = {
-  all: () => true,
-  booking: (t) => t.kind === "booking",
-  payback: (t) => t.kind === "payback",
-  mine: (t) => t.mine,
-};
-
-/** Filtered rows grouped by date label, in store order (newest first). */
+/** Rows grouped by date label, in the Server's order (newest first). */
 function groupByDate(rows: Transaction[]) {
   const groups: { label: string; rows: Transaction[] }[] = [];
   for (const t of rows) {
@@ -37,29 +34,49 @@ function groupByDate(rows: Transaction[]) {
 }
 
 export default function TransactionsPage() {
+  const { tripId } = useParams<{ tripId: TripId }>();
   // useSearchParams needs a Suspense boundary for static prerendering.
   return (
-    <Suspense>
-      <TransactionsView />
+    <Suspense fallback={<Screen>{null}</Screen>}>
+      <Transactions key={tripId} tripId={tripId} />
     </Suspense>
   );
 }
 
-function TransactionsView() {
-  const { tripId } = useParams<{ tripId: TripId }>();
-  const hydrated = useHydrated();
-  if (!TRIP_IDS.includes(tripId)) notFound();
-  return hydrated ? <Transactions tripId={tripId} /> : null;
-}
-
+/**
+ * Transactions page (CONTRACT-APP §4.9): `GET …/transactions?filter=`, newest first, paged by an opaque cursor. The
+ * Server filters; `total_count` counts every row whatever the filter (the "All 7" chip).
+ */
 function Transactions({ tripId }: { tripId: TripId }) {
   const fromMe = useSearchParams().get("scope") === "me";
-  const { transactions } = useMoney(tripId, "everyone");
   const [filter, setFilter] = useState<TransactionFilter>("all");
-  const [recordOpen, setRecordOpen] = useState(false);
-  const groups = groupByDate(transactions.filter(matches[filter]));
-  // DESIGN-ASSUMPTION (M-bookings-money.md §1.8 #7): back returns to the scope you came from.
+  const record = useRecordSheet();
+  const data = useTripGate(tripId);
+  const ready = data !== null;
+
+  useEffect(() => {
+    if (!ready) return;
+    void loadTransactions(tripId, filter).catch(() => {});
+  }, [ready, tripId, filter]);
+  useEffect(() => {
+    if (ready) void loadMoney(tripId).catch(() => {});
+  }, [ready, tripId]);
+
+  if (!data?.view) return <Screen>{null}</Screen>;
+  const { view } = data;
+  const list = data.transactions[filter];
+  const total = list?.totalCount ?? data.transactions.all?.totalCount ?? 0;
+  const users = usersById(view.people);
+  const groups = groupByDate((list?.items ?? []).map((tx) => toTransactionRow(tx, view.bookings)));
+  // Back returns to the scope you came from.
   const backHref = `/trips/${tripId}/expenses${fromMe ? "?scope=me" : ""}`;
+
+  const openRecord = () => {
+    // The sheet records a payback for a debt of mine; without one there is nobody to pay.
+    const owe = data.money?.me.i_owe[0];
+    if (owe) record.show(recordTargetFor(view, owe));
+    else toastGo(MONEY_COPY.recordSheet.nobody);
+  };
 
   return (
     <Screen>
@@ -75,24 +92,38 @@ function Transactions({ tripId }: { tripId: TripId }) {
             <p className="text-13 tracking-caption text-muted">{T.sub}</p>
           </div>
         </div>
-        <FilterChips value={filter} onChange={setFilter} count={transactions.length} />
+        <FilterChips value={filter} onChange={setFilter} count={total} />
       </header>
       <div className="flex flex-col gap-2 px-4 pb-[120px] pt-3 [[data-own]_&]:animate-page-in">
-        {groups.length === 0 ? (
+        {!list ? null : groups.length === 0 ? (
           <p className="px-4 py-[30px] text-center text-13 text-muted">{T.empty}</p>
         ) : (
-          groups.map((g) => <TransactionGroup key={g.label} label={g.label} rows={g.rows} />)
+          groups.map((g) => (
+            <TransactionGroup key={g.label} label={g.label} rows={g.rows} users={users} meId={view.me.person.person_id} />
+          ))
+        )}
+        {list?.nextCursor && (
+          <Button
+            variant="white"
+            size="base"
+            className="w-full shadow-card"
+            aria-busy={list.loading}
+            disabled={list.loading}
+            onClick={() => void loadMoreTransactions(tripId, filter).catch((err) => toastGo(errorMessage(err)))}
+          >
+            {T.more}
+          </Button>
         )}
       </div>
       <StickyDock>
         <FadeDock variant="gradient" className="px-4 pt-[30px] [[data-own]_&]:animate-page-in">
-          <Button variant="primary" size="xl" className="w-full gap-2" onClick={() => setRecordOpen(true)}>
+          <Button variant="primary" size="xl" className="w-full gap-2" onClick={openRecord}>
             <Plus className="size-[18px]" />
             {T.record}
           </Button>
         </FadeDock>
       </StickyDock>
-      <RecordPaymentSheet open={recordOpen} onOpenChange={setRecordOpen} />
+      <RecordPaymentSheet open={record.open} onOpenChange={record.onOpenChange} target={record.target} />
     </Screen>
   );
 }

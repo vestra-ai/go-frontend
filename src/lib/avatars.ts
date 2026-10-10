@@ -1,9 +1,7 @@
 import type { StackAvatar } from "@/components/common/AvatarStack";
-import { USERS } from "@/data/seed/users";
-import type { UserId } from "@/data/types";
+import type { User } from "@/data/types";
 
-/** A seed user as an AvatarStack entry: first name (alt), seed photo, initials + tone for the fallback. */
-export function userStackAvatar(id: UserId): StackAvatar {
-  const u = USERS[id];
+/** A person as an AvatarStack entry: first name (alt), photo, initials + tone for the fallback. */
+export function stackAvatar(u: User): StackAvatar {
   return { name: u.firstName, initials: u.initials, src: u.avatar, tone: u.tone, kind: "user" };
 }

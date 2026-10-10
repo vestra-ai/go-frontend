@@ -2,43 +2,48 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { live } from "@/api/live";
 import { chat as chatCopy } from "@/data/seed/copy";
-import { GO_REPLY_MS } from "@/data/timing";
-import type { AttachItem, ComposerMode, StageId, TripId, UserId } from "@/data/types";
-import { downscalePhoto } from "@/lib/media";
+import type { AttachItem, ComposerMode, TripId } from "@/data/types";
 import { toastGo } from "@/lib/toast";
-import { useStore, type ChatMessage } from "@/store";
+import { sendMessage } from "@/state";
+import type { RoomMessage } from "@/state/roomView";
 import { writeChatQuery } from "./useChatSheets";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 
-// Composer state machine (C-chat-kickoff.md §1.2 "State machine", §1.5): default composer (draft, voice note,
-// attach menu), the long-press overlay, and the reply / ask-Go trays. `?mode=longpress|reply|askGo&msg=<id>`
-// mirrors the mode via replaceState (PLAN §8).
+// Composer state machine: default composer (draft, voice note, attach menu), the long-press overlay, and the reply /
+// ask-Go trays. `?mode=longpress|reply|askGo&msg=<id>` mirrors the mode via replaceState. Sending is
+// `POST …/messages` (CONTRACT-APP §4.6); files go to storage first (§4.5).
 
 const MODES: readonly Exclude<ComposerMode, null>[] = ["longpress", "reply", "askGo"];
 
-// Message list bottom padding per mode (C-chat-kickoff.md §1.2 MessageList).
+// Message list bottom padding per mode.
 const PADDING = { none: 96, longpress: 96, reply: 150, askGo: 190 } as const;
 
-/** Largest PDF the composer accepts (MB). */
-const MAX_FILE_MB = 10;
+/** §4.5: at most 25 MB per file. */
+const MAX_FILE_MB = 25;
+const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
+const AUDIO_TYPES = new Set(["audio/mp4", "audio/mpeg", "audio/webm", "audio/ogg"]);
 
-// The stage where a reply / ask-Go send also fires `dates-asked` (C-chat-kickoff.md §1.3).
-const DATES_TALK: StageId = "dates-talk";
+/** The Server sets `mentions_go` itself; this only draws the "Go" chip on the bubble while it is sending. */
+const namesGo = (text: string) => /(^|\s)@go\b/i.test(text) || /^(hey\s+)?go[,:]/i.test(text.trim());
 
-/** Member messages only: any author that is a user other than you. */
-function isMemberMessage(m: ChatMessage, me: UserId): boolean {
-  return m.author !== "go" && m.author !== "system" && m.author !== me && m.kind === "text";
-}
-
-function trayInitial(mode: ComposerMode, target: ChatMessage | null): string {
-  return mode === "reply" ? (target?.replyDraft ?? "") : "";
+/** A photo's pixel size, when the browser can decode it (HEIC often cannot: the upload takes null). */
+async function photoSize(file: Blob): Promise<{ width: number; height: number } | null> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
 }
 
 export interface ComposerModes {
   mode: ComposerMode;
   /** The member message the overlay / tray is about (null when `mode` is null). */
-  target: ChatMessage | null;
+  target: RoomMessage | null;
   bottomPadding: 96 | 150 | 190;
   draft: string;
   setDraft(value: string): void;
@@ -59,19 +64,20 @@ export interface ComposerModes {
   sendTray(text: string): void;
 }
 
-export function useComposerModes(tripId: TripId, stageId: StageId, messages: ChatMessage[]): ComposerModes {
+/** Member messages only: a person other than me, not deleted. */
+const isMemberMessage = (m: RoomMessage) => m.author.kind === "person" && !m.mine && !m.deleted && !m.sending;
+
+export function useComposerModes(tripId: TripId, messages: RoomMessage[]): ComposerModes {
   const params = useSearchParams();
-  const me = useStore((s) => s.session.userId);
-  const users = useStore((s) => s.trips.members);
 
   const rawMode = params.get("mode");
   const msgId = params.get("msg");
   const candidate = MODES.find((m) => m === rawMode) ?? null;
-  const target = candidate ? (messages.find((m) => m.id === msgId && isMemberMessage(m, me)) ?? null) : null;
+  const target = candidate ? (messages.find((m) => m.id === msgId && isMemberMessage(m)) ?? null) : null;
   const mode: ComposerMode = target ? candidate : null;
 
-  // An unknown mode or a target that isn't a visible member message is dropped from the URL.
-  const invalid = rawMode !== null && mode === null;
+  // An unknown mode or a target that isn't a member message in the room is dropped from the URL.
+  const invalid = rawMode !== null && mode === null && messages.length > 0;
   useEffect(() => {
     if (!invalid) return;
     writeChatQuery((p) => {
@@ -80,17 +86,22 @@ export function useComposerModes(tripId: TripId, stageId: StageId, messages: Cha
     });
   }, [invalid]);
 
-  const [draft, setDraft] = useState("");
+  const [draft, setDraftValue] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
 
-  // The tray draft restarts whenever the tray opens on a message (reply: the seed draft; ask Go: empty).
+  // The tray draft restarts whenever the tray opens on a message.
   const trayKey = mode === "reply" || mode === "askGo" ? `${mode}:${target?.id}` : null;
-  const [tray, setTray] = useState(() => ({ key: trayKey, value: trayInitial(mode, target) }));
-  if (tray.key !== trayKey) setTray({ key: trayKey, value: trayInitial(mode, target) });
+  const [tray, setTray] = useState(() => ({ key: trayKey, value: "" }));
+  if (tray.key !== trayKey) setTray({ key: trayKey, value: "" });
 
-  // Reply in `dates-talk`: advance after the Go ack; cleared on unmount.
-  const advanceTimer = useRef<number | undefined>(undefined);
-  useEffect(() => () => window.clearTimeout(advanceTimer.current), []);
+  // My typing line stops when I leave the room.
+  useEffect(() => () => live.typing(tripId, false), [tripId]);
+
+  function setDraft(value: string) {
+    setDraftValue(value);
+    // Fanned out to the others in the room (never to Go); the connection keeps it to one `on` per 2 s.
+    live.typing(tripId, value.trim().length > 0);
+  }
 
   function setMode(next: ComposerMode, id?: string) {
     writeChatQuery((p) => {
@@ -105,19 +116,39 @@ export function useComposerModes(tripId: TripId, stageId: StageId, messages: Cha
   }
 
   function sendDraft(text: string) {
-    useStore.getState().send(tripId, text);
-    setDraft("");
+    sendMessage(tripId, { text, mentionsGo: namesGo(text) });
+    setDraftValue("");
+    live.typing(tripId, false);
   }
 
   const recorder = useVoiceRecorder(() => void sendRecording());
+
   // Stops the recording and sends it as a voice note (also when the length limit is hit).
   async function sendRecording() {
     const clip = await recorder.stop();
     if (!clip) return;
-    useStore.getState().sendAttachment(tripId, { kind: "voice", seconds: clip.seconds, src: URL.createObjectURL(clip.blob) });
+    const mime = clip.blob.type.split(";")[0] || "audio/webm";
+    if (!AUDIO_TYPES.has(mime)) {
+      toastGo(chatCopy.composer.voiceType);
+      return;
+    }
+    const extension = mime.split("/")[1] === "mpeg" ? "mp3" : mime.split("/")[1] === "mp4" ? "m4a" : mime.split("/")[1];
+    sendMessage(tripId, {
+      file: {
+        blob: clip.blob,
+        attachment: {
+          kind: "audio",
+          name: `voice-note.${extension}`,
+          mime,
+          sizeBytes: clip.blob.size,
+          previewUrl: URL.createObjectURL(clip.blob),
+          durationS: clip.seconds,
+        },
+      },
+    });
   }
-  const starting = useRef(false);
 
+  const starting = useRef(false);
   async function mic() {
     if (recorder.recording) return sendRecording();
     if (starting.current) return; // the permission prompt is still open
@@ -136,47 +167,42 @@ export function useComposerModes(tripId: TripId, stageId: StageId, messages: Cha
   }
 
   async function attachFile(item: AttachItem, file: File) {
-    const store = useStore.getState();
-    if (item === "photo") {
-      try {
-        const photo = await downscalePhoto(file);
-        store.sendAttachment(tripId, { kind: "image", ...photo });
-      } catch {
-        toastGo(chatCopy.composer.photoFailed);
-      }
-      return;
-    }
     if (file.size > MAX_FILE_MB * 1024 * 1024) {
       toastGo(chatCopy.composer.fileTooBig(MAX_FILE_MB));
       return;
     }
-    store.sendAttachment(tripId, { kind: "file", name: file.name, size: file.size, src: URL.createObjectURL(file) });
+    const previewUrl = URL.createObjectURL(file);
+    if (item === "photo") {
+      if (!PHOTO_TYPES.has(file.type)) {
+        toastGo(chatCopy.composer.photoFailed);
+        return;
+      }
+      const size = await photoSize(file);
+      sendMessage(tripId, {
+        file: {
+          blob: file,
+          attachment: { kind: "photo", name: file.name || "photo.jpg", mime: file.type, sizeBytes: file.size, previewUrl, ...(size ?? {}) },
+        },
+      });
+      return;
+    }
+    // "Ticket or PDF": a file is a PDF or an image (§4.5).
+    if (file.type !== "application/pdf" && !PHOTO_TYPES.has(file.type)) {
+      toastGo(chatCopy.composer.fileType);
+      return;
+    }
+    sendMessage(tripId, {
+      file: { blob: file, attachment: { kind: "file", name: file.name, mime: file.type, sizeBytes: file.size, previewUrl } },
+    });
   }
 
   function sendTray(text: string) {
     if (!target || (mode !== "reply" && mode !== "askGo")) return;
-    const store = useStore.getState();
-    const author = users[target.author as UserId].firstName;
-    const quote = { author, text: target.text ?? "" };
-    const datesTalk = stageId === DATES_TALK;
-
-    if (mode === "reply") {
-      if (!text) return; // an empty reply does nothing
-      store.send(tripId, text, { quote });
-      setMode(null);
-      // Bubble at t0, Go ack at +GO_REPLY_MS, then the dates poll (the stage reveal adds GO_TYPING_MS → ~+1800).
-      if (datesTalk) {
-        window.clearTimeout(advanceTimer.current);
-        advanceTimer.current = window.setTimeout(() => useStore.getState().advance(tripId, "dates-asked"), GO_REPLY_MS);
-      }
-      return;
-    }
-
-    // Ask Go: DESIGN-ASSUMPTION (C-chat-kickoff.md §1.7 #10) the question is posted (mention + quote). In
-    // `dates-talk` it advances (even with an empty draft) and skips the generic ack; elsewhere it gets the ack.
-    if (text) store.send(tripId, text, { mention: true, quote, ack: !datesTalk });
+    if (!text) return; // a message needs words (or a file)
+    // Reply: `reply_to`. Ask Go about this: `about_message_id`, which makes it a message to Go even without naming it.
+    if (mode === "reply") sendMessage(tripId, { text, replyTo: target.id });
+    else sendMessage(tripId, { text, aboutMessageId: target.id, mentionsGo: true });
     setMode(null);
-    if (datesTalk) store.advance(tripId, "dates-asked"); // the stage reveal adds GO_TYPING_MS
   }
 
   return {

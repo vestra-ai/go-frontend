@@ -5,6 +5,7 @@ import { SerwistProvider } from "@serwist/turbopack/react";
 import { AppFrame } from "@/components/shell/AppFrame";
 import { NavFeedback } from "@/components/shell/NavFeedback";
 import { PageTransition } from "@/components/shell/PageTransition";
+import { SessionBoot } from "@/components/shell/SessionBoot";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
@@ -39,6 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
         {/* Production only: in dev the worker's CacheFirst/defaultCache routes would serve stale assets, and
             @serwist/window's register() throws (unhandled) when register() yields no registration (SW-blocking harness). */}
         <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV !== "production"}>
+          <SessionBoot />
           <TooltipProvider>
             <AppFrame
               overlay={

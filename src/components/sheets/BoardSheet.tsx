@@ -7,20 +7,18 @@ import { SpendVsBudgetCard } from "@/components/board/SpendVsBudgetCard";
 import { BottomSheet, SheetBody, SheetHeader } from "@/components/shell/BottomSheet";
 import { Card } from "@/components/ui/card";
 import { board as copy } from "@/data/seed/copy";
-import type { TripId } from "@/data/types";
-import { useBoard } from "@/store/hooks";
-import type { BoardTarget } from "@/store/selectors";
+import type { BoardModel, BoardTarget } from "@/state/boardView";
 
 type BoardSheetProps = {
-  tripId: TripId;
+  /** `buildBoard(view, money, …)`. */
+  board: BoardModel;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Row / reminder / Vote tap; the host closes the sheet and deep-links into the chat. */
   onAction: (target: BoardTarget) => void;
 };
 
-export function BoardSheet({ tripId, open, onOpenChange, onAction }: BoardSheetProps) {
-  const board = useBoard(tripId);
+export function BoardSheet({ board, open, onOpenChange, onAction }: BoardSheetProps) {
 
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} top={150} aria-label={copy.title}>

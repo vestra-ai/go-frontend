@@ -5,7 +5,8 @@ import { AvatarStack } from "@/components/common/AvatarStack";
 import { RadioGroupItem } from "@/components/ui/radio-group";
 import { polls as copy } from "@/data/seed/copy";
 import type { DateOption, UserId } from "@/data/types";
-import { userStackAvatar } from "@/lib/avatars";
+import { stackAvatar } from "@/lib/avatars";
+import { useRoomUsers } from "@/components/chat/RoomContext";
 import { cn } from "@/lib/utils";
 import { CalendarTile } from "./CalendarTile";
 
@@ -30,6 +31,7 @@ const fitToneClass: Record<DateOption["fitTone"], string> = {
  */
 export function PollOptionRow({ option, voters, mine, first, id, className, ...props }: PollOptionRowProps) {
   const autoId = useId();
+  const userOf = useRoomUsers();
   const itemId = id ?? autoId;
 
   return (
@@ -42,7 +44,7 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
         className,
       )}
     >
-      <CalendarTile month={option.month} range={option.range} />
+      {option.month && option.range && <CalendarTile month={option.month} range={option.range} />}
       <span className="flex min-w-0 flex-1 flex-col gap-px">
         <span className="flex items-center justify-between gap-2">
           <span className="text-15 leading-[1.3] font-semibold">{option.name}</span>
@@ -54,7 +56,7 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
           <span className={cn("font-semibold", fitToneClass[option.fitTone])}>{option.fit}</span>
           <span className="flex items-center gap-1.5">
             {voters.length > 0 && (
-              <AvatarStack aria-hidden avatars={voters.map(userStackAvatar)} size={20} overlap={6} ring="white" max={3} />
+              <AvatarStack aria-hidden avatars={voters.map((id) => stackAvatar(userOf(id)))} size={20} overlap={6} ring="white" max={3} />
             )}
             <span className="font-semibold whitespace-nowrap">{copy.dateVotes(voters.length)}</span>
           </span>

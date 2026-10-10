@@ -9,7 +9,8 @@ type GoStatusCardProps = Omit<React.ComponentProps<typeof Card>, "title" | "chil
   title: string
   sub: string
   progress?: { filled: number; total: number; label: string }
-  cta?: { label: string; href: string }
+  /** A link, or a button that acts in place (opening a sheet). */
+  cta?: { label: string; href: string } | { label: string; onPress: () => void }
 }
 
 /** Go avatar + title/sub, with an optional decided-progress bar or a full-width CTA. */
@@ -39,11 +40,16 @@ function GoStatusCard({ title, sub, progress, cta, className, ...props }: GoStat
           <span className="text-13 text-muted">{progress.label}</span>
         </div>
       )}
-      {cta && (
-        <Button variant="primary" size="lg" asChild className="w-full px-[18px]">
-          <Link href={cta.href}>{cta.label}</Link>
-        </Button>
-      )}
+      {cta &&
+        ("href" in cta ? (
+          <Button variant="primary" size="lg" asChild className="w-full px-[18px]">
+            <Link href={cta.href}>{cta.label}</Link>
+          </Button>
+        ) : (
+          <Button variant="primary" size="lg" className="w-full px-[18px]" onClick={cta.onPress}>
+            {cta.label}
+          </Button>
+        ))}
     </Card>
   )
 }

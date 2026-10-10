@@ -42,7 +42,7 @@ type BubbleProps = {
   avatar?: AvatarSpec;
   /** Default: member 72 · go 76 · me 78. */
   maxWidth?: BubbleMaxWidth;
-  /** Me only: QuoteBlock above the text. */
+  /** QuoteBlock above the text: the message this one replies to, or asks Go about. */
   quote?: { author: string; text: string };
   /** Me only: MentionChip "Go" before the text. */
   mention?: boolean;
@@ -125,7 +125,7 @@ export function Bubble({
           {label}
         </span>
       )}
-      {isMe && quote && <QuoteBlock author={quote.author} text={quote.text} />}
+      {quote && <QuoteBlock author={quote.author} text={quote.text} />}
       <div className={cn("text-16 leading-[1.4] tracking-body text-pretty whitespace-pre-line", bodyClassName)}>
         {isMe && mention ? (
           <div className="flex flex-wrap gap-1.5">

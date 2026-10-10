@@ -3,9 +3,10 @@ import { Button } from "@/components/ui/button";
 type SuggestionStripProps = {
   emoji: string;
   text: string;
-  cta: string;
+  /** With no button label (or no handler) the strip is a line to read. */
+  cta?: string;
   /** Opens the `cab` sheet. */
-  onAction: () => void;
+  onAction?: () => void;
 };
 
 /** Grey strip under the who-lands rows: 🚕 "You and Arjun land together. Share a cab?" + tint "Book". */
@@ -16,9 +17,11 @@ export function SuggestionStrip({ emoji, text, cta, onAction }: SuggestionStripP
         {emoji}
       </span>
       <span className="flex-1">{text}</span>
-      <Button type="button" variant="tint" size="2xs" className="px-[14px] tracking-sm" onClick={onAction}>
-        {cta}
-      </Button>
+      {cta && onAction && (
+        <Button type="button" variant="tint" size="2xs" className="px-[14px] tracking-sm" onClick={onAction}>
+          {cta}
+        </Button>
+      )}
     </div>
   );
 }
