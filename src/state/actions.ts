@@ -69,6 +69,7 @@ export function forgetCaches() {
   resourceSeq.clear();
   blobs.clear();
   uploadIds.clear();
+  voteLanes.clear();
 }
 
 // ---------------------------------------------------------------------------
@@ -611,10 +612,14 @@ export async function shareCallRecording(tripId: Id, cardId: Id) {
 // Votes, mandate (§4.8)
 // ---------------------------------------------------------------------------
 
-function applyDecision(tripId: Id, decision: Decision) {
+/**
+ * `takeMine`: let the decision's `my_vote` replace the pick on screen. Off while a burst of taps is still being sent, so
+ * an older answer never moves my pick back from what I tapped last.
+ */
+function applyDecision(tripId: Id, decision: Decision, takeMine = !voteLanes.has(`${tripId}|${decision.decision_id}`)) {
   set((s) => {
     const t = tripDraft(s, tripId);
-    if ("my_vote" in decision) t.myVotes[decision.decision_id] = decision.my_vote ?? null;
+    if (takeMine && "my_vote" in decision) t.myVotes[decision.decision_id] = decision.my_vote ?? null;
     if (!t.view) return;
     const at = t.view.decisions.findIndex((d) => d.decision_id === decision.decision_id);
     if (at >= 0) t.view.decisions[at] = decision;
@@ -630,29 +635,56 @@ export const loadDecision = (tripId: Id, decisionId: Id) =>
     return decision;
   });
 
-/** Cast or move my vote. My pick shows at once and is put back if the Server refuses. */
-export async function castVote(tripId: Id, decisionId: Id, vote: { option_index: number } | { flexible: true }) {
-  const before = get().trips[tripId]?.myVotes[decisionId];
-  set((s) => void (tripDraft(s, tripId).myVotes[decisionId] = vote));
-  try {
-    applyDecision(tripId, await api.vote(tripId, decisionId, vote));
-  } catch (err) {
-    restoreVote(tripId, decisionId, before);
-    throw err;
-  }
+/**
+ * One vote request at a time per decision, in the order of the taps. A burst of taps (A, B, C) used to be three
+ * requests in flight: their answers could land out of order and put the pick back on A, and the Server could end on a
+ * vote that was not the last tap. Now only the latest tap is sent once the one before it is done.
+ */
+interface VoteLane {
+  /** The last tap's number. */
+  ticket: number;
+  /** The requests so far, so the next one starts after them. */
+  tail: Promise<void>;
+  /** My vote as the Server last said it (what a refusal goes back to). */
+  confirmed: MyVote | undefined;
+}
+const voteLanes = new Map<string, VoteLane>();
+
+function sendVote(tripId: Id, decisionId: Id, next: MyVote, send: () => Promise<Decision>): Promise<void> {
+  const key = `${tripId}|${decisionId}`;
+  const lane: VoteLane = voteLanes.get(key) ?? { ticket: 0, tail: Promise.resolve(), confirmed: get().trips[tripId]?.myVotes[decisionId] };
+  voteLanes.set(key, lane);
+  const mine = ++lane.ticket;
+  set((s) => void (tripDraft(s, tripId).myVotes[decisionId] = next));
+
+  const run = lane.tail.then(async () => {
+    // A later tap already replaced this one before it was sent: that tap carries the answer.
+    if (lane.ticket !== mine) return;
+    try {
+      const decision = await send();
+      lane.confirmed = "my_vote" in decision ? (decision.my_vote ?? null) : next;
+      applyDecision(tripId, decision, lane.ticket === mine);
+    } catch (err) {
+      // A tap made meanwhile is sent next and decides; only the last one puts the pick back.
+      if (lane.ticket !== mine) return;
+      restoreVote(tripId, decisionId, lane.confirmed);
+      throw err;
+    }
+  });
+  lane.tail = run.catch(() => {});
+  void lane.tail.then(() => {
+    if (lane.ticket === mine && voteLanes.get(key) === lane) voteLanes.delete(key);
+  });
+  return run;
 }
 
+/** Cast or move my vote. My pick shows at once and is put back if the Server refuses. */
+export const castVote = (tripId: Id, decisionId: Id, vote: { option_index: number } | { flexible: true }) =>
+  sendVote(tripId, decisionId, vote, () => api.vote(tripId, decisionId, vote));
+
 /** Needs `features.vote_retract`. */
-export async function retractVote(tripId: Id, decisionId: Id) {
-  const before = get().trips[tripId]?.myVotes[decisionId];
-  set((s) => void (tripDraft(s, tripId).myVotes[decisionId] = null));
-  try {
-    applyDecision(tripId, await api.retractVote(tripId, decisionId));
-  } catch (err) {
-    restoreVote(tripId, decisionId, before);
-    throw err;
-  }
-}
+export const retractVote = (tripId: Id, decisionId: Id) =>
+  sendVote(tripId, decisionId, null, () => api.retractVote(tripId, decisionId));
 
 function restoreVote(tripId: Id, decisionId: Id, before: MyVote | undefined) {
   set((s) => {
