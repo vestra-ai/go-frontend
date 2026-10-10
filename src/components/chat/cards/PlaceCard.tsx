@@ -43,9 +43,9 @@ export function PlaceCard({ place, voters, mine, onDetails, onVote, voteLabel, v
         </Badge>
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3 pt-2.5 pb-3">
-        <span className="text-16 leading-[1.3] font-semibold tracking-body">{place.name}</span>
-        <span className="text-13 tracking-caption text-muted">{place.meta}</span>
-        <span className="text-13 font-semibold text-success-ink">{place.why}</span>
+        <span className="text-16 leading-[1.3] font-semibold tracking-body wrap-anywhere">{place.name}</span>
+        <span className="text-13 tracking-caption text-muted wrap-anywhere">{place.meta}</span>
+        <span className="text-13 font-semibold text-success-ink wrap-anywhere">{place.why}</span>
         <div className="flex items-center gap-1.5 text-13 font-semibold text-ink">
           {voters.length > 0 && (
             <AvatarStack avatars={voters.map((id) => stackAvatar(userOf(id)))} size={20} overlap={6} ring="white" max={3} />

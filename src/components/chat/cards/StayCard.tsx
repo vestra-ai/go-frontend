@@ -53,8 +53,8 @@ export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, vot
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3 pt-2.5 pb-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-16 leading-[1.3] font-semibold tracking-body">{stay.name}</span>
-          <span className="text-13 tracking-caption text-muted">{stay.reviews}</span>
+          <span className="min-w-0 text-16 leading-[1.3] font-semibold tracking-body wrap-anywhere">{stay.name}</span>
+          <span className="shrink-0 text-13 tracking-caption text-muted">{stay.reviews}</span>
         </div>
         <span className="flex items-center gap-1 text-13 text-muted">
           <MapPin className="size-[13px] shrink-0" />

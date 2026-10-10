@@ -52,7 +52,7 @@ export function DatesPollCard({
   return (
     <InChatCard className="flex flex-col gap-1 pt-3.5 pb-3">
       <div className="flex items-start justify-between gap-2 px-4 pb-1">
-        <span className="text-18 leading-[1.3] font-semibold tracking-h4">{title}</span>
+        <span className="min-w-0 text-18 leading-[1.3] font-semibold tracking-h4 wrap-anywhere">{title}</span>
         {countdown && <CountdownMeta text={countdown} />}
       </div>
       <RadioGroup

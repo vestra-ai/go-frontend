@@ -52,20 +52,21 @@ export function PollOptionRow({ option, voters, mine, first, won, lost, id, clas
       {option.month && option.range && <CalendarTile month={option.month} range={option.range} />}
       <span className="flex min-w-0 flex-1 flex-col gap-px">
         <span className="flex items-center justify-between gap-2">
-          <span className="text-15 leading-[1.3] font-semibold">{option.name}</span>
+          {/* wrap-anywhere: a long word wraps inside the row, where it would otherwise push the check and the tally off the card. */}
+          <span className="min-w-0 text-15 leading-[1.3] font-semibold wrap-anywhere">{option.name}</span>
           <RadioGroupItem
             id={itemId}
             value={option.id}
             variant="check"
-            className={cn(lost && "data-[state=checked]:border-faint data-[state=checked]:bg-faint")}
+            className={cn("shrink-0", lost && "data-[state=checked]:border-faint data-[state=checked]:bg-faint")}
             {...props}
           />
         </span>
-        <span className="text-13 font-medium text-muted">{option.meta}</span>
+        <span className="text-13 font-medium text-muted wrap-anywhere">{option.meta}</span>
         {/* min-h-5 = the 20px avatar, so the first vote doesn't grow the row. */}
         <span className="flex min-h-5 items-center justify-between gap-2 text-13 leading-[1.35]">
-          <span className={cn("font-semibold", fitToneClass[option.fitTone])}>{option.fit}</span>
-          <span className="flex items-center gap-1.5">
+          <span className={cn("min-w-0 font-semibold wrap-anywhere", fitToneClass[option.fitTone])}>{option.fit}</span>
+          <span className="flex shrink-0 items-center gap-1.5">
             {voters.length > 0 && (
               <AvatarStack aria-hidden avatars={voters.map((id) => stackAvatar(userOf(id)))} size={20} overlap={6} ring="white" max={3} />
             )}
