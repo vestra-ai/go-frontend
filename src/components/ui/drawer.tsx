@@ -81,8 +81,13 @@ function DrawerContent({
       <DrawerOverlay className={overlayClassName} />
       <DrawerPrimitive.Content
         data-slot="drawer-content"
+        // The `after:` block is the tail vaul draws under a sheet, which it drops for a custom container. It does two
+        // jobs: it fills the gap when the sheet is pulled up past its rest position, and its overflow is what stops
+        // vaul's "may I drag?" walk at the sheet. Without it the walk reaches <html>, and a page that is scrolled
+        // (the chat always is) reads as "the content is scrolled, don't drag": no sheet could be swiped down.
         className={cn(
           "absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-8xl bg-canvas text-ink shadow-sheet outline-none",
+          "after:absolute after:inset-x-0 after:top-full after:h-[200%] after:bg-inherit",
           className
         )}
         {...props}

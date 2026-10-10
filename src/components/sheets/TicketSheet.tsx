@@ -15,8 +15,8 @@ type TicketSheetProps = {
 /** The e-ticket PDF viewer as a tall sheet over the chat: the chat stays mounted and visible behind it. */
 export function TicketSheet({ tripId, open, onOpenChange, ticket }: TicketSheetProps) {
   return (
-    // Not draggable: no grab bar over the toolbar, and a drag never fights the PDF scroll.
-    <BottomSheet open={open} onOpenChange={onOpenChange} top={96} draggable={false} aria-label={ticket?.title}>
+    // No grab bar over the toolbar. A swipe down dismisses from the toolbar, or from the pages once they are back at the top.
+    <BottomSheet open={open} onOpenChange={onOpenChange} top={96} grabber={false} aria-label={ticket?.title}>
       {ticket && <PdfViewer tripId={tripId} ticket={ticket} onClose={() => onOpenChange(false)} />}
     </BottomSheet>
   );

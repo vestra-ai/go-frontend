@@ -38,6 +38,8 @@ type BottomSheetProps = {
   dismissible?: boolean;
   /** false: no grab bar and no drag at all (the close button, scrim tap, Escape and Back still dismiss). */
   draggable?: boolean;
+  /** false: no grab bar; the sheet still drags down to dismiss (viewers, whose toolbar sits at the very top). */
+  grabber?: boolean;
   /**
    * Stacks above another open sheet (time sheet over route sheet, share sheet). Opens one frame after `open`,
    * so it stays on top even when the parent opens in the same commit.
@@ -59,6 +61,7 @@ export function BottomSheet({
   minTop = MIN_TOP,
   dismissible = true,
   draggable = true,
+  grabber = true,
   nested = false,
   "aria-label": ariaLabel,
   className,
@@ -92,7 +95,7 @@ export function BottomSheet({
     >
       <DrawerContent
         aria-label={ariaLabel}
-        handle={draggable}
+        handle={draggable && grabber}
         overlayClassName={nested ? "z-40" : undefined}
         className={cn(top === undefined && inset === undefined && "max-h-[calc(100%-96px)]", nested && "z-40", className)}
         style={style}

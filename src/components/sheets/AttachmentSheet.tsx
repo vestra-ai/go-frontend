@@ -60,8 +60,8 @@ export function AttachmentSheet({ open, onOpenChange, attachment }: AttachmentSh
   }
 
   return (
-    // Not draggable: a drag never fights the document, and there is no grab bar over the toolbar.
-    <BottomSheet open={open} onOpenChange={onOpenChange} inset={0} draggable={false} aria-label={info?.title}>
+    // No grab bar over the toolbar. A swipe down dismisses from the toolbar, the Save bar or the photo; a PDF keeps its own touches.
+    <BottomSheet open={open} onOpenChange={onOpenChange} inset={0} grabber={false} aria-label={info?.title}>
       {attachment && info && (
         <div className="flex min-h-0 flex-1 flex-col bg-viewer">
           <div className="flex shrink-0 items-center gap-2 bg-white px-3 pt-safe-hero pb-2.5 shadow-[0_1px_0_rgb(11_27_63/0.06)]">
