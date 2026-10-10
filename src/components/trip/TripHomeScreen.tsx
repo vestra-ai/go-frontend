@@ -109,7 +109,7 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
     if (!row.expand) return;
     const ask = asks[row.key];
     const what = ask?.draft.trim() || (ask?.chip ? ask.chip.replace(LEADING_NON_LETTERS, "") : "");
-    sendMessage(tripId, { text: CALL_COPY.options.message(row.expand.who, what), mentionsGo: true });
+    sendMessage(tripId, { text: CALL_COPY.options.message(row.expand.who, what) });
     setAsk(row.key, { chip: null, draft: "" });
     toastGo(copy.asked(row.expand.who));
   };

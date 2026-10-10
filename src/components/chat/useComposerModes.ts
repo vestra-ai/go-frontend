@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { live } from "@/api/live";
 import { chat as chatCopy } from "@/data/seed/copy";
 import type { AttachItem, ComposerMode, TripId } from "@/data/types";
+import { mentionedIds, type MentionHandle } from "@/lib/mentions";
 import { toastGo } from "@/lib/toast";
 import { sendMessage } from "@/state";
 import type { RoomMessage } from "@/state/roomView";
@@ -24,9 +25,6 @@ const PADDING = { none: 96, longpress: 96, reply: 150, askGo: 190 } as const;
 const MAX_FILE_MB = 25;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/heic"]);
 const AUDIO_TYPES = new Set(["audio/mp4", "audio/mpeg", "audio/webm", "audio/ogg"]);
-
-/** The Server sets `mentions_go` itself; this only draws the "Go" chip on the bubble while it is sending. */
-const namesGo = (text: string) => /(^|\s)@go\b/i.test(text) || /^(hey\s+)?go[,:]/i.test(text.trim());
 
 /** A photo's pixel size, when the browser can decode it (HEIC often cannot: the upload takes null). */
 async function photoSize(file: Blob): Promise<{ width: number; height: number } | null> {
@@ -67,7 +65,8 @@ export interface ComposerModes {
 /** Member messages only: a person other than me, not deleted. */
 const isMemberMessage = (m: RoomMessage) => m.author.kind === "person" && !m.mine && !m.deleted && !m.sending;
 
-export function useComposerModes(tripId: TripId, messages: RoomMessage[]): ComposerModes {
+/** `people`: everyone in the trip with their "@" handle, so a send can list who its text names (`mentions`, §4.6). */
+export function useComposerModes(tripId: TripId, messages: RoomMessage[], people: MentionHandle[]): ComposerModes {
   const params = useSearchParams();
 
   const rawMode = params.get("mode");
@@ -116,7 +115,7 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[]): Compo
   }
 
   function sendDraft(text: string) {
-    sendMessage(tripId, { text, mentionsGo: namesGo(text) });
+    sendMessage(tripId, { text, mentions: mentionedIds(text, people) });
     setDraftValue("");
     live.typing(tripId, false);
   }
@@ -200,8 +199,9 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[]): Compo
     if (!target || (mode !== "reply" && mode !== "askGo")) return;
     if (!text) return; // a message needs words (or a file)
     // Reply: `reply_to`. Ask Go about this: `about_message_id`, which makes it a message to Go even without naming it.
-    if (mode === "reply") sendMessage(tripId, { text, replyTo: target.id });
-    else sendMessage(tripId, { text, aboutMessageId: target.id, mentionsGo: true });
+    const mentions = mentionedIds(text, people);
+    if (mode === "reply") sendMessage(tripId, { text, replyTo: target.id, mentions });
+    else sendMessage(tripId, { text, aboutMessageId: target.id, mentions });
     setMode(null);
   }
 

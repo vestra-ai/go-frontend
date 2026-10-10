@@ -19,8 +19,6 @@ export interface RoomMessage {
   /** A shared place (1.1): drawn as a line with a map link. */
   location?: { label: string; href: string };
   quote?: { author: string; text: string };
-  /** My message spoke to Go: the "Go" chip before the text. */
-  mention: boolean;
   /** One chip under the bubble: my reaction when I have one, else the most used. */
   reaction?: { emoji: string; count: number };
   myReaction?: string;
@@ -87,7 +85,6 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
       deleted: m.deleted,
       ...(m.deleted ? { attachments: [] } : toAttachments(m.attachments)),
       ...(quoted ? { quote: { author: authorName(quoted, users, meId), text: previewOf(quoted) } } : {}),
-      mention: mine && m.mentions_go,
       ...reactionOf(m, meId),
       ...(m.card && !m.deleted ? { card: m.card } : {}),
       quickReplies: m.deleted ? [] : (m.quick_replies ?? []),
@@ -116,7 +113,6 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
           ]
         : [],
       ...(quoted ? { quote: { author: authorName(quoted, users, meId), text: previewOf(quoted) } } : {}),
-      mention: Boolean(out.mentionsGo),
       quickReplies: [],
       sending: { status: out.status, error: out.error },
     });

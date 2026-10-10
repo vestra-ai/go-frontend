@@ -172,6 +172,8 @@ export const chat = {
   /** The header's second line: the dates once set, else who is in. */
   subtitle: { people: (n: number) => (n === 1 ? "Just you so far" : `${n} in the trip`) },
   earlier: "Earlier messages",
+  goThinking: "Go is thinking",
+  mention: { label: "Mention someone" },
   composer: {
     srLabel: "Message",
     placeholder: "Message, or @Go",

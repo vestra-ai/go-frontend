@@ -457,9 +457,8 @@ export interface SendInput {
   file?: { blob: Blob; attachment: OutgoingAttachment };
   replyTo?: Id;
   aboutMessageId?: Id;
+  /** The people the text names; the Server decides `mentions_go` itself (§4.6). */
   mentions?: Id[];
-  /** Draws the "Go" chip on the sending bubble; the Server decides `mentions_go` itself. */
-  mentionsGo?: boolean;
 }
 
 /** Shows my message at once as "sending", then replaces it with the stored `Message` (§3.2). */
@@ -473,17 +472,17 @@ export function sendMessage(tripId: Id, input: SendInput): string {
     attachment: input.file?.attachment,
     replyTo: input.replyTo,
     aboutMessageId: input.aboutMessageId,
-    mentionsGo: input.mentionsGo,
+    mentions: input.mentions?.length ? input.mentions : undefined,
     status: "sending",
     createdAt: Date.now(),
   };
   if (input.file) blobs.set(clientId, input.file.blob);
   set((s) => void tripDraft(s, tripId).outbox.push(outgoing));
-  void deliver(tripId, clientId, input.mentions);
+  void deliver(tripId, clientId);
   return clientId;
 }
 
-async function deliver(tripId: Id, clientId: string, mentions?: Id[]) {
+async function deliver(tripId: Id, clientId: string) {
   const out = get().trips[tripId]?.outbox.find((o) => o.clientId === clientId);
   if (!out) return;
   try {
@@ -508,7 +507,7 @@ async function deliver(tripId: Id, clientId: string, mentions?: Id[]) {
     if (uploadId) body.attachments = [{ upload_id: uploadId }];
     if (out.replyTo) body.reply_to = out.replyTo;
     if (out.aboutMessageId) body.about_message_id = out.aboutMessageId;
-    if (mentions && mentions.length > 0) body.mentions = mentions;
+    if (out.mentions) body.mentions = out.mentions;
     const message = await api.postMessage(tripId, body);
     set((s) => {
       const d = tripDraft(s, tripId);

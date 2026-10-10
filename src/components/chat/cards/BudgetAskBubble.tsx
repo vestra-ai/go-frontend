@@ -1,7 +1,7 @@
 import { GoBubble } from "@/components/chat/GoBubble";
 
 type BudgetAskBubbleProps = {
-  /** "\n" = line break (blank line before "@Aarav please set this"); the @mention is not highlighted. */
+  /** "\n" = line break (blank line before "@Aarav please set this"); the @mention is highlighted like any other. */
   text: string;
   /** 'Add my budget' */
   cta: string;

@@ -23,7 +23,7 @@ type MessageListProps = {
   children: ReactNode;
 };
 
-/** The chat thread, in the document flow (the body scrolls). No date separators, timestamps, receipts or typing rows (as designed). */
+/** The chat thread, in the document flow (the body scrolls). No date separators, timestamps or receipts (as designed); the only typing row is Go's (`GoThinking`). */
 export function MessageList({ bottomPadding, anchorRef, children }: MessageListProps) {
   return (
     <div

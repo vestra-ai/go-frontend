@@ -1,12 +1,13 @@
 import type { ReactNode, Ref } from "react";
-import { MentionChip } from "@/components/common/MentionChip";
 import { ReactionChip } from "@/components/common/ReactionChip";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { chat as copy } from "@/data/seed/copy";
 import type { AvatarSpec, BubbleMaxWidth } from "@/data/types";
 import { assets } from "@/lib/assets";
+import { splitMentions } from "@/lib/mentions";
 import { cn } from "@/lib/utils";
 import { QuoteBlock } from "./QuoteBlock";
+import { useMentionHandles } from "./RoomContext";
 import type { LongPressHandlers } from "./useLongPress";
 
 type Author = "go" | "member" | "me";
@@ -44,8 +45,6 @@ type BubbleProps = {
   maxWidth?: BubbleMaxWidth;
   /** QuoteBlock above the text: the message this one replies to, or asks Go about. */
   quote?: { author: string; text: string };
-  /** Me only: MentionChip "Go" before the text. */
-  mention?: boolean;
   reaction?: { emoji: string; count: number };
   /** Extra rows after the body (GoBubble CTA / caption). */
   footer?: ReactNode;
@@ -60,15 +59,24 @@ type BubbleProps = {
   className?: string;
   /** Overrides on the text body. */
   bodyClassName?: string;
-  /** Text: "\n" breaks, "**x**" bold. Non-string children render as-is. */
+  /** Text: "\n" breaks, "**x**" bold, "@Go" / "@Priya" highlighted. Non-string children render as-is. */
   children: ReactNode;
 };
 
+/** "@Go" and the "@Name" of anyone in the trip, in the Go accent; the rest as it is. */
+function withMentions(text: string, handles: string[]): ReactNode {
+  const parts = splitMentions(text, handles);
+  if (parts.length === 1 && typeof parts[0] === "string") return text;
+  return parts.map((part, i) => (typeof part === "string" ? part : <span key={i} className="font-semibold text-go">{part.mention}</span>));
+}
+
 /** Seed text format (E-deciding.md §1.2): `\n` is a line break (whitespace-pre-line), `**x**` is bold. */
-function richText(text: string): ReactNode {
+function richText(text: string, handles: string[]): ReactNode {
   const parts = text.split(/\*\*(.+?)\*\*/g);
-  if (parts.length === 1) return text;
-  return parts.map((part, i) => (i % 2 === 1 ? <strong key={i} className="font-bold">{part}</strong> : part));
+  if (parts.length === 1) return withMentions(text, handles);
+  return parts.map((part, i) =>
+    i % 2 === 1 ? <strong key={i} className="font-bold">{withMentions(part, handles)}</strong> : <span key={i}>{withMentions(part, handles)}</span>,
+  );
 }
 
 function bubbleAvatar(spec: AvatarSpec): ReactNode {
@@ -87,7 +95,6 @@ export function Bubble({
   avatar,
   maxWidth,
   quote,
-  mention = false,
   reaction,
   footer,
   enter = false,
@@ -99,7 +106,8 @@ export function Bubble({
   children,
 }: BubbleProps) {
   const isMe = author === "me";
-  const content = typeof children === "string" ? richText(children) : children;
+  const handles = useMentionHandles();
+  const content = typeof children === "string" ? richText(children, handles) : children;
   const label = author === "go" ? copy.goName : author === "member" ? name : undefined;
   const avatarSpec: AvatarSpec | undefined = isMe ? undefined : (avatar ?? (author === "go" ? { kind: "go" } : undefined));
   const pressable = author === "member" && pressHandlers;
@@ -128,14 +136,7 @@ export function Bubble({
       )}
       {quote && <QuoteBlock author={quote.author} text={quote.text} />}
       <div className={cn("text-16 leading-[1.4] tracking-body text-pretty whitespace-pre-line", bodyClassName)}>
-        {isMe && mention ? (
-          <div className="flex flex-wrap gap-1.5">
-            <MentionChip name={copy.goName} />
-            <span>{content}</span>
-          </div>
-        ) : (
-          content
-        )}
+        {content}
       </div>
       {footer}
     </div>

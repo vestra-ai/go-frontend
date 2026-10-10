@@ -82,7 +82,6 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
         author={author}
         {...who}
         quote={i === 0 ? m.quote : undefined}
-        mention={!b.attachment && m.mention}
         reaction={last ? m.reaction : undefined}
         enter={enter}
         pressHandlers={press}

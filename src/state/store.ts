@@ -49,7 +49,8 @@ export interface OutgoingMessage {
   attachment?: OutgoingAttachment;
   replyTo?: Id;
   aboutMessageId?: Id;
-  mentionsGo?: boolean;
+  /** The people the text names, for `mentions`: kept so a retried send still carries them. */
+  mentions?: Id[];
   status: "sending" | "failed";
   error?: string;
   createdAt: number;

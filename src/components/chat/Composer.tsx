@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useId, useRef } from "react";
 import { Plus } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { StickyDock } from "@/components/shell/StickyDock";
@@ -8,9 +8,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { chat as copy } from "@/data/seed/copy";
 import type { AttachItem } from "@/data/types";
+import type { MentionItem } from "@/lib/mentions";
 import { AttachMenu } from "./AttachMenu";
+import { MentionSuggestions } from "./MentionSuggestions";
 import { MicSendButton } from "./MicSendButton";
 import { RecordingBar } from "./RecordingBar";
+import { useMentionSuggest } from "./useMentionSuggest";
 
 type ComposerProps = {
   value: string;
@@ -27,6 +30,8 @@ type ComposerProps = {
   onCancelRecording(): void;
   /** A photo or PDF chosen in the picker the + menu opened. */
   onAttachFile(item: AttachItem, file: File): void;
+  /** Go and the people in the trip: what typing "@" lists. */
+  mentionItems?: MentionItem[];
 };
 
 // File picker per menu row; the menu closes first, then the native picker opens.
@@ -44,8 +49,12 @@ export function Composer({
   attachOpen,
   onAttachOpenChange,
   onAttachFile,
+  mentionItems,
 }: ComposerProps) {
   const draft = value.trim();
+  const listId = useId();
+  const msgInput = useRef<HTMLInputElement>(null);
+  const mentions = useMentionSuggest({ value, onChange, inputRef: msgInput, items: mentionItems });
   const photoInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
   const inputs: Record<AttachItem, React.RefObject<HTMLInputElement | null>> = { photo: photoInput, pdf: pdfInput };
@@ -73,6 +82,10 @@ export function Composer({
             <RecordingBar seconds={recordingSeconds} onCancel={onCancelRecording} onSend={onMic} />
           ) : (
             <>
+              {/* 8px above the input: the row starts 24px above it. */}
+              {mentions.open && (
+                <MentionSuggestions id={listId} items={mentions.matches} active={mentions.active} onPick={mentions.pick} className="inset-x-4 bottom-[calc(100%-16px)]" />
+              )}
               <AttachMenu open={attachOpen} onOpenChange={onAttachOpenChange} onPick={pick}>
                 <Button type="button" variant="white" size="icon-lg" aria-label={copy.composer.add} aria-expanded={attachOpen}>
                   <Plus className="size-5" />
@@ -81,15 +94,22 @@ export function Composer({
               <label htmlFor="msg" className="min-w-0 flex-1">
                 <span className="sr-only">{copy.composer.srLabel}</span>
                 <Input
+                  ref={msgInput}
                   id="msg"
                   type="text"
                   shape="pill"
                   autoComplete="off"
                   enterKeyHint="send"
                   placeholder={copy.composer.placeholder}
+                  role="combobox"
+                  aria-autocomplete="list"
+                  aria-expanded={mentions.open}
+                  aria-controls={mentions.open ? listId : undefined}
+                  aria-activedescendant={mentions.open ? `${listId}-${mentions.active}` : undefined}
                   value={value}
-                  onChange={(e) => onChange(e.target.value)}
+                  {...mentions.inputProps}
                   onKeyDown={(e) => {
+                    if (mentions.onKeyDown(e)) return;
                     if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
                     e.preventDefault();
                     if (draft) onSend(draft);

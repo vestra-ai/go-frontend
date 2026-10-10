@@ -9,7 +9,10 @@ import { Chip } from "@/components/ui/chip";
 import { Input } from "@/components/ui/input";
 import { chat as copy } from "@/data/seed/copy";
 import { assets } from "@/lib/assets";
+import type { MentionItem } from "@/lib/mentions";
 import { cn } from "@/lib/utils";
+import { MentionSuggestions } from "./MentionSuggestions";
+import { useMentionSuggest } from "./useMentionSuggest";
 
 type ComposerTrayProps = {
   mode: "reply" | "askGo";
@@ -23,12 +26,16 @@ type ComposerTrayProps = {
   /** Trimmed; the caller decides what '' means (reply: nothing, ask Go: advance). */
   onSend(text: string): void;
   onCancel(): void;
+  /** Go and the people in the trip: what typing "@" lists. */
+  mentionItems?: MentionItem[];
 };
 
 /** White reply / ask-Go tray that replaces the composer (D2/D3). No + and no mic. */
-export function ComposerTray({ mode, banner, suggestions, value, onChange, placeholder, onSend, onCancel }: ComposerTrayProps) {
+export function ComposerTray({ mode, banner, suggestions, value, onChange, placeholder, onSend, onCancel, mentionItems }: ComposerTrayProps) {
   const inputId = useId();
+  const listId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const mentions = useMentionSuggest({ value, onChange, inputRef, items: mentionItems });
 
   // Focus the input when the tray opens (or switches mode), caret after any prefilled draft.
   useEffect(() => {
@@ -43,6 +50,9 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
   return (
     <StickyDock>
       <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 rounded-t-6xl bg-white px-4 pt-2.5 pb-safe shadow-tray">
+        {mentions.open && (
+          <MentionSuggestions id={listId} items={mentions.matches} active={mentions.active} onPick={mentions.pick} className="inset-x-4 bottom-full mb-2" />
+        )}
         <div
           className={cn(
             "flex items-center gap-2.5 rounded-2xl border-l-[3px] bg-surface-2 py-2 pr-2 pl-3",
@@ -88,9 +98,15 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
               autoComplete="off"
               enterKeyHint="send"
               placeholder={placeholder}
+              role="combobox"
+              aria-autocomplete="list"
+              aria-expanded={mentions.open}
+              aria-controls={mentions.open ? listId : undefined}
+              aria-activedescendant={mentions.open ? `${listId}-${mentions.active}` : undefined}
               value={value}
-              onChange={(e) => onChange(e.target.value)}
+              {...mentions.inputProps}
               onKeyDown={(e) => {
+                if (mentions.onKeyDown(e)) return;
                 if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
                 e.preventDefault();
                 send();

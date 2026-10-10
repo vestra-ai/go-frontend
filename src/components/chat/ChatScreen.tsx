@@ -8,6 +8,7 @@ import { ChatHeader } from "@/components/chat/ChatHeader";
 import { Composer } from "@/components/chat/Composer";
 import { ComposerTray } from "@/components/chat/ComposerTray";
 import { FactChipRow, type FactChipData } from "@/components/chat/FactChipRow";
+import { GoThinking } from "@/components/chat/GoThinking";
 import { LongPressOverlay } from "@/components/chat/LongPressOverlay";
 import { MessageList } from "@/components/chat/MessageList";
 import { RoomUsersProvider } from "@/components/chat/RoomContext";
@@ -37,6 +38,7 @@ import { CIT } from "@/data/seed/cities";
 import { board as boardCopy, cards as cardCopy, chat as chatCopy, fromSheet, polls, staySheet } from "@/data/seed/copy";
 import { ROUTE_COPY } from "@/data/seed/routes";
 import type { Attachment, ChipKey, CityRef, FrameRect, TripId, TripType, Vibe } from "@/data/types";
+import { GO_MENTION, mentionHandles, type MentionItem } from "@/lib/mentions";
 import { dropQueryParams } from "@/lib/query";
 import { scrollBehavior } from "@/lib/motion";
 import { toastGo } from "@/lib/toast";
@@ -135,7 +137,13 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
   const autoQuickStart = !dismissed && !from && !vibe && view.stage !== "planned";
 
   const sheets = useChatSheets(autoQuickStart);
-  const modes = useComposerModes(tripId, rows);
+  // "@" in the composer: Go first, then everyone else in the trip (not me).
+  const mentionPeople = mentionHandles(Object.values(users));
+  const mentionItems: MentionItem[] = [
+    GO_MENTION,
+    ...mentionPeople.filter((p) => p.user.id !== me.id).map((p) => ({ id: p.user.id, name: p.user.name, handle: p.handle, user: p.user })),
+  ];
+  const modes = useComposerModes(tripId, rows, mentionPeople);
   const sheet = sheets.sheet;
   const budget = useGroupBudget(tripId);
 
@@ -198,7 +206,9 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
   // -- Scrolling --------------------------------------------------------------------------------------------------
   // The 3A contract: useLongPress cancels on any scroll, so auto-scroll holds while a press is armed and catches up
   // on release. The key follows the newest row, so reading back older pages never yanks the thread to its end.
-  const liveScrollKey = lastId;
+  // Go's `typing` frame (§3.1) adds a row under the newest one; the store drops it when Go speaks or it runs out.
+  const goThinking = data.typing.some((e) => e.who.kind === "go");
+  const liveScrollKey = goThinking ? `${lastId}+go` : lastId;
   const [heldScrollKey, setHeldScrollKey] = useState<string | null>(null);
   useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey, modes.bottomPadding]);
 
@@ -455,6 +465,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
               actions={actions}
             />
           ))}
+          {goThinking && <GoThinking />}
         </MessageList>
 
         {trayMode && target && targetUser ? (
@@ -470,6 +481,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
             placeholder={trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetUser.firstName) : chatCopy.tray.askGoPlaceholder}
             onSend={modes.sendTray}
             onCancel={() => modes.setMode(null)}
+            mentionItems={mentionItems}
           />
         ) : (
           <Composer
@@ -483,6 +495,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
             attachOpen={modes.attachOpen}
             onAttachOpenChange={modes.onAttachOpenChange}
             onAttachFile={modes.attachFile}
+            mentionItems={mentionItems}
           />
         )}
 
