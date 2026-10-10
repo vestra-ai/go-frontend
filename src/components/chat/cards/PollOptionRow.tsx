@@ -49,7 +49,8 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
           <RadioGroupItem id={itemId} value={option.id} variant="check" {...props} />
         </span>
         <span className="text-13 font-medium text-muted">{option.meta}</span>
-        <span className="flex justify-between gap-2 text-13 leading-[1.35]">
+        {/* min-h-5 = the 20px avatar, so the first vote doesn't grow the row. */}
+        <span className="flex min-h-5 items-center justify-between gap-2 text-13 leading-[1.35]">
           <span className={cn("font-semibold", fitToneClass[option.fitTone])}>{option.fit}</span>
           <span className="flex items-center gap-1.5">
             {voters.length > 0 && (
