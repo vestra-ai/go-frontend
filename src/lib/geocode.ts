@@ -16,15 +16,6 @@ type GeoResult = {
 
 type Ranked = { city: CityRef; population: number };
 
-// The API has no "top cities" endpoint, so the biggest Indian metros are resolved by name through the same search and
-// ranked by the population the API returns.
-const TOP_CITY_NAMES = [
-  "Mumbai", "Delhi", "Bengaluru", "Hyderabad", "Ahmedabad", "Chennai",
-  "Kolkata", "Surat", "Pune", "Jaipur", "Lucknow", "Kanpur",
-] as const;
-const TOP_LIMIT = 10;
-const TOP_STORAGE_KEY = "go.topCities.v1";
-const TOP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const SEARCH_LIMIT = 8;
 /** The API fuzzy-matches only from 3 characters; 2 return exact name matches only (so "mu" finds nothing), 1 nothing. */
 export const MIN_SEARCH_CHARS = 3;
@@ -70,51 +61,4 @@ export async function searchCitiesOnline(query: string, signal?: AbortSignal): P
   const cities = ranked.sort(byPopulation).slice(0, SEARCH_LIMIT).map((x) => x.city);
   searchCache.set(q, cities);
   return cities;
-}
-
-function readStoredTop(): CityRef[] | null {
-  try {
-    const raw = window.localStorage.getItem(TOP_STORAGE_KEY);
-    if (!raw) return null;
-    const { at, cities } = JSON.parse(raw) as { at: number; cities: CityRef[] };
-    return Date.now() - at < TOP_TTL_MS && cities.length > 0 ? cities : null;
-  } catch {
-    return null;
-  }
-}
-
-function storeTop(cities: CityRef[]) {
-  try {
-    window.localStorage.setItem(TOP_STORAGE_KEY, JSON.stringify({ at: Date.now(), cities }));
-  } catch {
-    // Storage can be blocked or full; the in-memory copy still serves this session.
-  }
-}
-
-let topPromise: Promise<CityRef[]> | null = null;
-
-/** Top Indian cities by population, fetched once per session and kept for a week. */
-export function fetchTopCities(): Promise<CityRef[]> {
-  topPromise ??= (async () => {
-    const stored = readStoredTop();
-    if (stored) return stored;
-
-    const settled = await Promise.allSettled(TOP_CITY_NAMES.map((name) => request(name, 10)));
-    const ranked: Ranked[] = [];
-    for (const [i, outcome] of settled.entries()) {
-      if (outcome.status !== "fulfilled") continue;
-      const best = outcome.value
-        .filter((r) => isPlace(r) && r.name.toLowerCase() === TOP_CITY_NAMES[i].toLowerCase())
-        .sort((a, b) => (b.population ?? 0) - (a.population ?? 0))[0];
-      if (best) ranked.push({ city: toRef(best), population: best.population ?? 0 });
-    }
-    if (ranked.length === 0) throw new Error("No top cities available");
-    const cities = ranked.sort(byPopulation).slice(0, TOP_LIMIT).map((x) => x.city);
-    storeTop(cities);
-    return cities;
-  })().catch((err) => {
-    topPromise = null; // let the next open try again
-    throw err;
-  });
-  return topPromise;
 }

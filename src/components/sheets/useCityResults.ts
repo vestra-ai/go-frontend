@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { searchCities as searchSavedCities } from "@/data/seed/cities";
+import { TOP_CITIES, searchCities as searchSavedCities } from "@/data/seed/cities";
 import type { CityRef } from "@/data/types";
-import { MIN_SEARCH_CHARS, fetchTopCities, searchCitiesOnline } from "@/lib/geocode";
+import { MIN_SEARCH_CHARS, searchCitiesOnline } from "@/lib/geocode";
 
 /** Quiet time after the last keystroke before a search request goes out. */
 const DEBOUNCE_MS = 400;
@@ -31,8 +31,8 @@ export type CityResults = {
 const includes = (c: CityRef, q: string) => c.name.toLowerCase().includes(q);
 
 /**
- * City results for the dropdown: top Indian cities while the query is empty, a filter of those below
- * MIN_SEARCH_CHARS, a live search from there. A search goes out only after the user has stopped typing for DEBOUNCE_MS, and typing again
+ * City results for the dropdown: the hardcoded top Indian cities while the query is empty, a filter of those below
+ * MIN_SEARCH_CHARS (both instant, no request), a live search from there. A search goes out only after the user has stopped typing for DEBOUNCE_MS, and typing again
  * cancels the request that is still in flight (aborting its fetch) before the next one is scheduled. An unreachable
  * API (offline PWA, blocked network) falls back to the bundled list instead of showing nothing.
  */
@@ -40,10 +40,12 @@ export function useCityResults(query: string, active: boolean): CityResults {
   const q = query.trim().toLowerCase();
   const [state, setState] = useState<State>({ byQuery: {}, fallback: null, last: null });
 
+  const short = q.length < MIN_SEARCH_CHARS;
+
   const known = state.byQuery[q] ?? (state.fallback?.query === q ? state.fallback : null);
 
   useEffect(() => {
-    if (!active || state.byQuery[q]) return;
+    if (!active || short || state.byQuery[q]) return;
     const controller = new AbortController();
     const settle = (outcome: Outcome) => {
       if (controller.signal.aborted) return;
@@ -56,20 +58,14 @@ export function useCityResults(query: string, active: boolean): CityResults {
 
     const run = async () => {
       try {
-        if (q.length < MIN_SEARCH_CHARS) {
-          const top = await fetchTopCities();
-          settle({ query: q, cities: q ? top.filter((c) => includes(c, q)) : top, offline: false });
-        } else {
-          settle({ query: q, cities: await searchCitiesOnline(q, controller.signal), offline: false });
-        }
+        settle({ query: q, cities: await searchCitiesOnline(q, controller.signal), offline: false });
       } catch {
         // An aborted request is a superseded one, not a failure.
         settle({ query: q, cities: searchSavedCities(q), offline: true });
       }
     };
 
-    // Short queries come from the cached top list: no need to wait for typing to settle.
-    const timer = window.setTimeout(run, q.length < MIN_SEARCH_CHARS ? 0 : DEBOUNCE_MS);
+    const timer = window.setTimeout(run, DEBOUNCE_MS);
     return () => {
       window.clearTimeout(timer);
       controller.abort();
@@ -78,6 +74,7 @@ export function useCityResults(query: string, active: boolean): CityResults {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q, active]);
 
+  if (short) return { cities: q ? TOP_CITIES.filter((c) => includes(c, q)) : TOP_CITIES, loading: false, stale: false, offline: false };
   if (known) return { cities: known.cities, loading: false, stale: false, offline: known.offline };
   // While typing, the previous query's rows stay (dimmed). With nothing relevant to keep, show the loading state.
   const keep = q && state.last?.query ? state.last : null;

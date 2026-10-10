@@ -26,7 +26,7 @@ type CityPickerProps = {
   onChange: (city: CityRef | null) => void;
   /** Quick start true, From sheet false. */
   allowDeselect: boolean;
-  /** Search state is lifted so `?q=` can open the sheet mid-search. */
+  /** Search state is lifted so the owning sheet can reset it on every open. */
   searchOpen: boolean;
   onSearchOpenChange: (open: boolean) => void;
   query: string;
@@ -52,7 +52,7 @@ export function CityPicker({
   const stripRef = useRef<HTMLDivElement>(null);
   const revealFrame = useRef(0);
   const valueIsOther = value !== null && !CIT.some((c) => c.id === value.id);
-  // Live results (top Indian cities for an empty query). The query is cleared on open rather than on close, so the
+  // Results (the hardcoded top Indian cities for an empty query, live search from MIN_SEARCH_CHARS). The query is cleared on open rather than on close, so the
   // list keeps its rows while the popover fades out.
   const { cities: results, loading, stale, offline } = useCityResults(query, searchOpen);
 
@@ -248,9 +248,7 @@ export function CityPicker({
                 </span>
               )}
               {loading
-                ? query.trim()
-                  ? copy.searching
-                  : copy.loadingTop
+                ? copy.searching
                 : query.trim().length < MIN_SEARCH_CHARS
                   ? copy.keepTyping
                   : copy.empty}
