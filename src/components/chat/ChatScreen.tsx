@@ -13,7 +13,7 @@ import { LongPressOverlay } from "@/components/chat/LongPressOverlay";
 import { MessageList } from "@/components/chat/MessageList";
 import { RoomUsersProvider } from "@/components/chat/RoomContext";
 import { useLongPress } from "@/components/chat/useLongPress";
-import { useScrollToEnd } from "@/components/chat/useScrollToEnd";
+import { useScrollToEnd, useStayAtEnd } from "@/components/chat/useScrollToEnd";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { AttachmentSheet } from "@/components/sheets/AttachmentSheet";
@@ -136,7 +136,6 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
   const [dismissed, setDismissed] = useState(() => wasDismissed(tripId));
   const autoQuickStart = !dismissed && !from && !vibe && view.stage !== "planned";
 
-  const sheets = useChatSheets(autoQuickStart);
   // "@" in the composer: Go first, then everyone else in the trip (not me).
   const mentionPeople = mentionHandles(Object.values(users));
   const mentionItems: MentionItem[] = [
@@ -144,6 +143,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
     ...mentionPeople.filter((p) => p.user.id !== me.id).map((p) => ({ id: p.user.id, name: p.user.name, handle: p.handle, user: p.user })),
   ];
   const modes = useComposerModes(tripId, rows, mentionPeople);
+  const sheets = useChatSheets(autoQuickStart, () => modes.setMode(null));
   const sheet = sheets.sheet;
   const budget = useGroupBudget(tripId);
 
@@ -210,7 +210,10 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
   const goThinking = data.typing.some((e) => e.who.kind === "go");
   const liveScrollKey = goThinking ? `${lastId}+go` : lastId;
   const [heldScrollKey, setHeldScrollKey] = useState<string | null>(null);
-  useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey, modes.bottomPadding]);
+  useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey]);
+  // Opening or closing the reply / ask-Go tray moves the bottom edge only: the thread follows it when it was already at
+  // the end, and stays where it is when reading further up (the message being replied to is usually there).
+  useStayAtEnd(anchorRef, modes.bottomPadding);
 
   // "Earlier messages" adds a page above: keep what was on screen where it was.
   const firstId = rows[0]?.id ?? "";
@@ -240,7 +243,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
     return () => window.clearTimeout(timer);
   }, [focus]);
 
-  // -- Long-press (one gesture for every member bubble; the bubble's `[data-msg-id]` row names the message) -----------
+  // -- Long-press (one gesture for every member and own bubble; the bubble's `[data-msg-id]` row names the message) --
   const [anchor, setAnchor] = useState<{ id: string; rect: FrameRect } | null>(null);
   const pressHandlers = useLongPress((target) => {
     const row = target.closest<HTMLElement>("[data-msg-id]");
@@ -251,17 +254,7 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
     modes.setMode("longpress", id);
   });
 
-  // `?mode=longpress&msg=…` on load: measure the row once it has been laid out and scrolled.
   const overlayTarget = modes.mode === "longpress" ? modes.target : null;
-  const measureId = overlayTarget && anchor?.id !== overlayTarget.id ? overlayTarget.id : null;
-  useEffect(() => {
-    if (!measureId) return;
-    const raf = requestAnimationFrame(() => {
-      const row = document.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(measureId)}"]`);
-      if (row) setAnchor({ id: measureId, rect: frameRect(row) });
-    });
-    return () => cancelAnimationFrame(raf);
-  }, [measureId]);
 
   // -- Fact chips: derived from the trip itself, never from a message ---------------------------------------------------
   const stayBooking = view.bookings.find((b) => b.kind === "stay" && b.status === "confirmed");
@@ -429,7 +422,8 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
 
   // Composer / tray / overlay.
   const target = modes.target;
-  const targetUser = target?.author.kind === "person" ? users[target.author.id] : null;
+  const targetUser = target?.mine ? me : target?.author.kind === "person" ? users[target.author.id] : null;
+  const targetMine = Boolean(target?.mine);
   const trayMode = modes.mode === "reply" || modes.mode === "askGo" ? modes.mode : null;
   const subtitle = view.dates ? toTripDates(view.dates).short : chatCopy.subtitle.people(view.people.length);
 
@@ -472,13 +466,18 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
           <ComposerTray
             mode={trayMode}
             banner={{
-              title: trayMode === "reply" ? chatCopy.tray.replyingTo(targetUser.firstName) : chatCopy.tray.askGoAbout(targetUser.firstName),
+              title:
+                trayMode === "reply"
+                  ? chatCopy.tray.replyingTo(targetMine ? chatCopy.tray.yourself : targetUser.firstName)
+                  : targetMine
+                    ? chatCopy.tray.askGoAboutMine
+                    : chatCopy.tray.askGoAbout(targetUser.firstName),
               snippet: target.text,
               accent: trayMode === "reply" ? "go" : "ink",
             }}
             value={modes.trayDraft}
             onChange={modes.setTrayDraft}
-            placeholder={trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetUser.firstName) : chatCopy.tray.askGoPlaceholder}
+            placeholder={trayMode === "reply" ? chatCopy.tray.replyPlaceholder(targetMine ? chatCopy.tray.yourself : targetUser.firstName) : chatCopy.tray.askGoPlaceholder}
             onSend={modes.sendTray}
             onCancel={() => modes.setMode(null)}
             mentionItems={mentionItems}
@@ -501,7 +500,11 @@ function Room({ tripId, data }: { tripId: TripId; data: TripData }) {
 
         {overlayTarget && targetUser && anchor?.id === overlayTarget.id && (
           <LongPressOverlay
-            message={{ id: overlayTarget.id, name: targetUser.firstName, text: overlayTarget.text, avatar: userAvatar(targetUser) }}
+            message={
+              targetMine
+                ? { id: overlayTarget.id, text: overlayTarget.text, mine: true }
+                : { id: overlayTarget.id, name: targetUser.firstName, text: overlayTarget.text, avatar: userAvatar(targetUser) }
+            }
             anchorRect={anchor.rect}
             onReact={(emoji) => {
               // One reaction per person per message: the same emoji again takes it back.

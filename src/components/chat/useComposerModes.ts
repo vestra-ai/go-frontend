@@ -1,6 +1,5 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { live } from "@/api/live";
 import { chat as chatCopy } from "@/data/seed/copy";
@@ -9,14 +8,11 @@ import { mentionedIds, type MentionHandle } from "@/lib/mentions";
 import { toastGo } from "@/lib/toast";
 import { sendMessage } from "@/state";
 import type { RoomMessage } from "@/state/roomView";
-import { writeChatQuery } from "./useChatSheets";
 import { useVoiceRecorder } from "./useVoiceRecorder";
 
 // Composer state machine: default composer (draft, voice note, attach menu), the long-press overlay, and the reply /
-// ask-Go trays. `?mode=longpress|reply|askGo&msg=<id>` mirrors the mode via replaceState. Sending is
+// ask-Go trays. The mode and its message are component state (never in the URL). Sending is
 // `POST …/messages` (CONTRACT-APP §4.6); files go to storage first (§4.5).
-
-const MODES: readonly Exclude<ComposerMode, null>[] = ["longpress", "reply", "askGo"];
 
 // Message list bottom padding per mode.
 const PADDING = { none: 96, longpress: 96, reply: 150, askGo: 190 } as const;
@@ -40,7 +36,7 @@ async function photoSize(file: Blob): Promise<{ width: number; height: number } 
 
 export interface ComposerModes {
   mode: ComposerMode;
-  /** The member message the overlay / tray is about (null when `mode` is null). */
+  /** The message (a member's or mine) the overlay / tray is about (null when `mode` is null). */
   target: RoomMessage | null;
   bottomPadding: 96 | 150 | 190;
   draft: string;
@@ -62,28 +58,16 @@ export interface ComposerModes {
   sendTray(text: string): void;
 }
 
-/** Member messages only: a person other than me, not deleted. */
-const isMemberMessage = (m: RoomMessage) => m.author.kind === "person" && !m.mine && !m.deleted && !m.sending;
+/** What the long-press actions apply to: a person's stored message (mine included), not deleted. */
+const isActionable = (m: RoomMessage) => m.author.kind === "person" && !m.deleted && !m.sending;
 
 /** `people`: everyone in the trip with their "@" handle, so a send can list who its text names (`mentions`, §4.6). */
 export function useComposerModes(tripId: TripId, messages: RoomMessage[], people: MentionHandle[]): ComposerModes {
-  const params = useSearchParams();
+  const [active, setActive] = useState<{ mode: Exclude<ComposerMode, null>; id: string } | null>(null);
 
-  const rawMode = params.get("mode");
-  const msgId = params.get("msg");
-  const candidate = MODES.find((m) => m === rawMode) ?? null;
-  const target = candidate ? (messages.find((m) => m.id === msgId && isMemberMessage(m)) ?? null) : null;
-  const mode: ComposerMode = target ? candidate : null;
-
-  // An unknown mode or a target that isn't a member message in the room is dropped from the URL.
-  const invalid = rawMode !== null && mode === null && messages.length > 0;
-  useEffect(() => {
-    if (!invalid) return;
-    writeChatQuery((p) => {
-      p.delete("mode");
-      p.delete("msg");
-    });
-  }, [invalid]);
+  // A target that is no longer an actionable message in the room (deleted, say) ends the mode.
+  const target = active ? (messages.find((m) => m.id === active.id && isActionable(m)) ?? null) : null;
+  const mode: ComposerMode = target && active ? active.mode : null;
 
   const [draft, setDraftValue] = useState("");
   const [attachOpen, setAttachOpen] = useState(false);
@@ -103,15 +87,7 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[], people
   }
 
   function setMode(next: ComposerMode, id?: string) {
-    writeChatQuery((p) => {
-      if (next && id) {
-        p.set("mode", next);
-        p.set("msg", id);
-      } else {
-        p.delete("mode");
-        p.delete("msg");
-      }
-    });
+    setActive(next && id ? { mode: next, id } : null);
   }
 
   function sendDraft(text: string) {

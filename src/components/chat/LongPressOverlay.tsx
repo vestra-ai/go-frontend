@@ -9,10 +9,12 @@ import { chat as copy } from "@/data/seed/copy";
 import type { AvatarSpec, BubbleMaxWidth, FrameRect } from "@/data/types";
 import { assets } from "@/lib/assets";
 import { toastGo } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import { Bubble } from "./Bubble";
 
 type LongPressOverlayProps = {
-  message: { id: string; name: string; text: string; avatar: AvatarSpec; maxWidth?: BubbleMaxWidth };
+  /** `mine`: my own message, drawn on the right with no avatar or name. */
+  message: { id: string; name?: string; text: string; avatar?: AvatarSpec; maxWidth?: BubbleMaxWidth; mine?: boolean };
   /** Rect of the pressed bubble row, relative to #app-frame's top-left (page coordinates). */
   anchorRect: FrameRect;
   onReact(emoji: string): void;
@@ -25,6 +27,9 @@ type LongPressOverlayProps = {
   /** Backdrop tap or Escape. */
   onClose(): void;
 };
+
+/** The browser's own menu (right-click / touch-hold) never shows over the message actions. */
+const suppressContextMenu = (e: React.MouseEvent) => e.preventDefault();
 
 const EDGE = 16; // the column stays at least this far inside the frame
 const BAR_OFFSET = 60; // reaction bar 50 + gap 10, so the lifted bubble lands on the real one
@@ -49,6 +54,7 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
   }, [top]);
 
   useEffect(() => {
+    window.getSelection()?.removeAllRanges(); // the press itself may have selected a word before the overlay opened
     firstReactionRef.current?.focus();
   }, []);
 
@@ -75,15 +81,26 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
         aria-label={copy.longPress.close}
         className="absolute inset-0 z-40 cursor-default bg-scrim-strong backdrop-blur-[6px]"
         onClick={onClose}
+        onContextMenu={suppressContextMenu}
       />
       <div
         ref={columnRef}
         role="dialog"
         aria-label={copy.longPress.dialogLabel}
-        className="absolute inset-x-4 z-[41] flex flex-col gap-2.5"
+        // The column spans the frame, so its empty sides and gaps must not eat taps meant for the backdrop: only the
+        // reaction bar and the menu take pointer events; a tap anywhere else (the lifted copy included) closes.
+        // Unselectable: the overlay opens under the still-held finger, which would otherwise select the word there.
+        className="pointer-events-none absolute inset-x-4 z-[41] flex flex-col gap-2.5 select-none [-webkit-touch-callout:none]"
         style={{ top: Math.max(EDGE, top) }}
+        // The press that opened the overlay is still down under it: its context-menu event now lands here, not on the bubble.
+        onContextMenu={suppressContextMenu}
       >
-        <div className="ml-[30px] flex gap-0.5 self-start rounded-full bg-white px-1.5 py-1 shadow-menu">
+        <div
+          className={cn(
+            "pointer-events-auto flex gap-0.5 rounded-full bg-white px-1.5 py-1 shadow-menu",
+            message.mine ? "self-end" : "ml-[30px] self-start",
+          )}
+        >
           {copy.longPress.reactions.map((emoji, i) => (
             <Button
               key={emoji}
@@ -103,11 +120,11 @@ export function LongPressOverlay({ message, anchorRect, onReact, onMore, onReply
           </Button>
         </div>
 
-        <Bubble author="member" name={message.name} avatar={message.avatar} maxWidth={message.maxWidth} lifted>
+        <Bubble author={message.mine ? "me" : "member"} name={message.name} avatar={message.avatar} maxWidth={message.maxWidth} lifted>
           {message.text}
         </Bubble>
 
-        <div className="ml-[38px] w-[230px] overflow-hidden rounded-4xl bg-white shadow-menu">
+        <div className={cn("pointer-events-auto w-[230px] overflow-hidden rounded-4xl bg-white shadow-menu", message.mine ? "self-end" : "ml-[38px]")}>
           <MenuItem variant="wide" label={copy.longPress.reply} icon={<Reply className="size-[18px]" />} onClick={onReply} />
           <MenuItem
             variant="wide"

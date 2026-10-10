@@ -225,6 +225,9 @@ export const chat = {
     replyingTo: (name: string) => `Replying to ${name}`,
     replyPlaceholder: (name: string) => `Reply to ${name}`,
     askGoAbout: (name: string) => `Ask Go about ${name}’s message`,
+    /** The same two for my own message, and the name the reply line uses for me. */
+    askGoAboutMine: "Ask Go about your message",
+    yourself: "yourself",
     askGoPlaceholder: "Ask Go anything about this",
     cancel: "Cancel",
   },

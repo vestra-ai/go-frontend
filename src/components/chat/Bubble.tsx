@@ -50,10 +50,10 @@ type BubbleProps = {
   footer?: ReactNode;
   /** Mount animation; true only for messages appended after first render. */
   enter?: boolean;
-  /** LongPressOverlay copy: scale 1.03 from the left. */
+  /** LongPressOverlay copy: scale 1.03 from the side the bubble sits on. */
   lifted?: boolean;
   bubbleRef?: Ref<HTMLDivElement>;
-  /** Member only: `useLongPress` handlers; makes the bubble a focusable button that opens the actions dialog. */
+  /** Member or mine: `useLongPress` handlers; makes the bubble a focusable button that opens the actions dialog. */
   pressHandlers?: LongPressHandlers;
   /** Overrides on the bubble element (GoBubble's CTA padding). */
   className?: string;
@@ -110,7 +110,7 @@ export function Bubble({
   const content = typeof children === "string" ? richText(children, handles) : children;
   const label = author === "go" ? copy.goName : author === "member" ? name : undefined;
   const avatarSpec: AvatarSpec | undefined = isMe ? undefined : (avatar ?? (author === "go" ? { kind: "go" } : undefined));
-  const pressable = author === "member" && pressHandlers;
+  const pressable = (author === "member" || author === "me") && pressHandlers;
 
   const bubble = (
     <div
@@ -162,7 +162,7 @@ export function Bubble({
         "flex",
         isMe ? "justify-end" : "items-end gap-2",
         enter && enterClass,
-        lifted && "origin-left scale-[1.03]",
+        lifted && (isMe ? "origin-right" : "origin-left") + " scale-[1.03]",
       )}
     >
       {avatarSpec && bubbleAvatar(avatarSpec)}
