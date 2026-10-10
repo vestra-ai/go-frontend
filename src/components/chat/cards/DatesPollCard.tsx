@@ -24,6 +24,8 @@ type DatesPollCardProps = {
   flexibleLabels?: { off: string; on: string };
   /** The vote is closed or called off: nothing can be picked. */
   closed?: boolean;
+  /** The option that won, once the vote is closed with a result. */
+  winner?: DateOption["id"] | null;
   /** voteDate */
   onVote: (id: DateOption["id"] | null) => void;
   /** setFlexible */
@@ -42,6 +44,7 @@ export function DatesPollCard({
   voted,
   flexibleLabels,
   closed = false,
+  winner = null,
   onVote,
   onFlexible,
 }: DatesPollCardProps) {
@@ -68,6 +71,8 @@ export function DatesPollCard({
               voters={mine ? [...option.voters, me.id] : option.voters}
               mine={mine}
               first={i === 0}
+              won={winner === option.id}
+              lost={mine && winner !== null && winner !== option.id}
               // Radix never deselects, so the checked radio un-votes on its own click.
               onClick={mine && !closed ? () => onVote(null) : undefined}
             />

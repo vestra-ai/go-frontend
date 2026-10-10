@@ -309,6 +309,8 @@ export const polls = {
   left: (text: string) => `${text} left`,
   closesIn: (text: string) => `Voting closes in ${text}`,
   won: (label: string) => `${label} won`,
+  /** Next to the winning option's tally: "3 votes · won". */
+  wonTag: "won",
   closed: "Vote closed",
   cancelled: "Vote called off",
   failed: "Couldn’t save your vote. Try again.",

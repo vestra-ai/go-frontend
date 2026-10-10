@@ -137,7 +137,7 @@ function VoteCard({ decision, room, actions }: { decision: Decision; room: RoomM
     return (
       <DatesPollCard
         title={decision.question}
-        countdown={open ? (left ? polls.left(left) : undefined) : ended}
+        countdown={open && left ? polls.left(left) : undefined}
         options={decision.options.map((o, i) => toDateOption(o, String(i), votersOf(i)))}
         vote={myIndex}
         flexible={flexible}
@@ -146,6 +146,7 @@ function VoteCard({ decision, room, actions }: { decision: Decision; room: RoomM
         voted={decision.voted}
         flexibleLabels={features?.vote_flexible && decision.kind === "choice" ? polls.flexible : undefined}
         closed={!open}
+        winner={!open && decision.result_index != null ? String(decision.result_index) : null}
         onVote={onVote}
         onFlexible={() => actions.flexible(decision.decision_id)}
       />

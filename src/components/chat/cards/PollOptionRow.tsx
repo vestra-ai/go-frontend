@@ -17,6 +17,10 @@ type PollOptionRowProps = Omit<ComponentProps<typeof RadioGroupItem>, "value" | 
   mine: boolean;
   /** The first row has no top hairline. */
   first: boolean;
+  /** The vote's result: green row and "· won" after the tally. */
+  won: boolean;
+  /** Mine, but another option won: the row and its check go grey. */
+  lost: boolean;
 };
 
 const fitToneClass: Record<DateOption["fitTone"], string> = {
@@ -29,7 +33,7 @@ const fitToneClass: Record<DateOption["fitTone"], string> = {
  * One full-width dates-poll option: calendar tile, name + check radio, meta, fit + tally.
  * Must be rendered inside <RadioGroup>; extra props (e.g. `onClick` for re-tap to un-vote) go to the radio.
  */
-export function PollOptionRow({ option, voters, mine, first, id, className, ...props }: PollOptionRowProps) {
+export function PollOptionRow({ option, voters, mine, first, won, lost, id, className, ...props }: PollOptionRowProps) {
   const autoId = useId();
   const userOf = useRoomUsers();
   const itemId = id ?? autoId;
@@ -40,7 +44,8 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
       className={cn(
         "flex w-full cursor-pointer items-center gap-3.5 px-4 py-2 text-left transition-colors duration-160",
         !first && "border-t border-line",
-        mine && "bg-success-tint",
+        (won || (mine && !lost)) && "bg-success-tint",
+        lost && "bg-surface-2",
         className,
       )}
     >
@@ -48,7 +53,13 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
       <span className="flex min-w-0 flex-1 flex-col gap-px">
         <span className="flex items-center justify-between gap-2">
           <span className="text-15 leading-[1.3] font-semibold">{option.name}</span>
-          <RadioGroupItem id={itemId} value={option.id} variant="check" {...props} />
+          <RadioGroupItem
+            id={itemId}
+            value={option.id}
+            variant="check"
+            className={cn(lost && "data-[state=checked]:border-faint data-[state=checked]:bg-faint")}
+            {...props}
+          />
         </span>
         <span className="text-13 font-medium text-muted">{option.meta}</span>
         {/* min-h-5 = the 20px avatar, so the first vote doesn't grow the row. */}
@@ -58,7 +69,15 @@ export function PollOptionRow({ option, voters, mine, first, id, className, ...p
             {voters.length > 0 && (
               <AvatarStack aria-hidden avatars={voters.map((id) => stackAvatar(userOf(id)))} size={20} overlap={6} ring="white" max={3} />
             )}
-            <span className="font-semibold whitespace-nowrap">{copy.dateVotes(voters.length)}</span>
+            <span className="font-semibold whitespace-nowrap">
+              {copy.dateVotes(voters.length)}
+              {won && (
+                <>
+                  {" · "}
+                  <span className="text-success-ink">{copy.wonTag}</span>
+                </>
+              )}
+            </span>
           </span>
         </span>
       </span>
