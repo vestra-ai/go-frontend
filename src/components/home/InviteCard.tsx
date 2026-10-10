@@ -27,16 +27,16 @@ export function InviteCard({ title, sub, members, membersLine, thumb, acceptHref
           <img src={thumb.src} alt="" className="size-11" />
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-16 leading-[1.3] font-semibold tracking-body">{title}</span>
-          <span className="text-13 tracking-caption text-muted">{sub}</span>
-          <span className="flex items-center gap-1.5 text-13 tracking-caption text-muted">
+          <span className="text-16 leading-[1.3] font-semibold tracking-body wrap-anywhere">{title}</span>
+          <span className="text-13 tracking-caption text-muted wrap-anywhere">{sub}</span>
+          <span className="flex min-w-0 items-center gap-1.5 text-13 tracking-caption text-muted">
             <AvatarStack
               size={20}
               overlap={6}
               ring="white"
               avatars={members.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
             />
-            {membersLine}
+            <span className="min-w-0 wrap-anywhere">{membersLine}</span>
           </span>
         </div>
       </div>

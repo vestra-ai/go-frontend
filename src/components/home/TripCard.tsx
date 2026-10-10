@@ -38,32 +38,35 @@ export function TripCard({ href, name, cover, coverTitle, coverSub, members, sta
             </>
           )}
           <span className="absolute inset-0 bg-linear-to-b from-ink/0 from-30% to-ink/60" />
-          <span className="absolute bottom-3 left-3.5 flex flex-col text-white">
-            <span className="text-24 font-bold tracking-h2">
-              {match ? (
-                <>
-                  <span aria-hidden>{match[1]}</span> {match[2]}
-                </>
-              ) : (
-                coverTitle
-              )}
+          {/* The title block takes what the crew's avatars leave, and wraps (a long place or date line) rather than running under them. */}
+          <span className="absolute right-3 bottom-3 left-3.5 flex items-end gap-2 text-white">
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="line-clamp-2 text-24 font-bold tracking-h2 wrap-anywhere">
+                {match ? (
+                  <>
+                    <span aria-hidden>{match[1]}</span> {match[2]}
+                  </>
+                ) : (
+                  coverTitle
+                )}
+              </span>
+              <span className="line-clamp-2 text-14 font-medium wrap-anywhere">{coverSub}</span>
             </span>
-            <span className="text-14 font-medium">{coverSub}</span>
+            <AvatarStack
+              className="shrink-0"
+              size={26}
+              overlap={8}
+              ring="white"
+              max={4}
+              avatars={members.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
+            />
           </span>
-          <AvatarStack
-            className="absolute right-3 bottom-3"
-            size={26}
-            overlap={8}
-            ring="white"
-            max={4}
-            avatars={members.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
-          />
         </span>
         <span className="flex items-center gap-2.5 px-3.5 py-3">
-          <span className="flex flex-1 flex-col gap-px">
-            <span className="text-16 leading-[1.3] font-semibold tracking-body">{name}</span>
+          <span className="flex min-w-0 flex-1 flex-col gap-px">
+            <span className="line-clamp-2 text-16 leading-[1.3] font-semibold tracking-body wrap-anywhere">{name}</span>
             {status && (
-              <span className={cn("text-13", statusTone === "go" ? "font-semibold text-go" : "tracking-caption text-muted")}>
+              <span className={cn("text-13 wrap-anywhere", statusTone === "go" ? "font-semibold text-go" : "tracking-caption text-muted")}>
                 {status}
               </span>
             )}

@@ -70,8 +70,8 @@ function ListRow({
     <>
       {leading}
       <span className="flex min-w-0 flex-1 flex-col gap-px">
-        <span className={cn(titleSizeClass[titleSize], "font-semibold", muted && "text-muted")}>{title}</span>
-        {sub && <span className="text-13 tracking-caption text-muted">{sub}</span>}
+        <span className={cn(titleSizeClass[titleSize], "font-semibold wrap-anywhere", muted && "text-muted")}>{title}</span>
+        {sub && <span className="text-13 tracking-caption text-muted wrap-anywhere">{sub}</span>}
       </span>
       {trailing}
       {chevron && <ChevronRight className="size-4 shrink-0 text-faint" strokeWidth={2.4} />}
