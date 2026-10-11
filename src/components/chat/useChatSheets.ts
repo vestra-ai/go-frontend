@@ -19,7 +19,9 @@ export type ChatSheet =
   | "share"
   | "attachment"
   | "record"
-  | "recording";
+  | "recording"
+  | "live"
+  | "page";
 
 export interface ChatSheets {
   /** The open content sheet; QuickStart shows on its own while `autoQuickStart` holds and nothing else is open. */

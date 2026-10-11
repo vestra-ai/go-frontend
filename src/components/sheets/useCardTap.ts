@@ -8,8 +8,20 @@ import { openIn, parseGoRoute, preopenTab, type GoRoute } from "@/lib/links";
 import { toastGo } from "@/lib/toast";
 import { tapCard } from "@/state";
 
-/** Actions whose answer is a page to open (the vault, Go's live view): the tab is opened inside the tap. */
-const OPENS_A_PAGE = new Set(["approve", "watch", "listen"]);
+/**
+ * The two answers that must open in the browser itself, never framed (CONTRACT-APP §4.7): the vault (`approve`) and the
+ * listen-in page (`listen`). Their tab is opened inside the tap. Every other page Go answers with opens inside the app.
+ */
+const OPENS_IN_BROWSER = new Set(["approve", "listen"]);
+
+/** A page Go answered a tap with (its "Log in to ixigo" view, a page to watch): framed in a sheet, never a new tab. */
+export interface GoPage {
+  /** The card and the button that opened it: the page is done with once Go takes that button off the card. */
+  cardId: string;
+  actionId: string;
+  /** Handed to the frame exactly as it came: a link like this carries its access in the `#fragment`. */
+  url: string;
+}
 
 /** Where a `go://` link leads when it is one of the app's own screens on another route. */
 function pathFor(route: GoRoute): string | null {
@@ -28,9 +40,14 @@ export interface CardTap {
 
 /**
  * One press of a Go card button: sends it, then does what Go answered. `done` / `refused` show the toast; `open` opens
- * an `https://` page at once, or one of the app's own screens for a `go://` link. Never retried on its own.
+ * one of the app's own screens for a `go://` link, or an `https://` page at once: framed in a sheet (`onPage`), except
+ * the vault and the listen-in page, which open in the browser. Never retried on its own.
  */
-export function useCardTap(tripId: string, onSheet: (route: Extract<GoRoute, { kind: "sheet" | "booking" }>) => void): CardTap {
+export function useCardTap(
+  tripId: string,
+  onSheet: (route: Extract<GoRoute, { kind: "sheet" | "booking" }>) => void,
+  onPage: (page: GoPage) => void,
+): CardTap {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
 
@@ -48,7 +65,8 @@ export function useCardTap(tripId: string, onSheet: (route: Extract<GoRoute, { k
 
   async function tap(cardId: string, actionId: string, opts: { optionId?: string; payload?: { trip: "oneway" | "round" } } = {}) {
     if (pending) return null;
-    const tab = OPENS_A_PAGE.has(actionId) ? preopenTab() : null;
+    const browser = OPENS_IN_BROWSER.has(actionId);
+    const tab = browser ? preopenTab() : null;
     setPending(cardId);
     try {
       const result = await tapCard(tripId, cardId, actionId, opts);
@@ -56,7 +74,8 @@ export function useCardTap(tripId: string, onSheet: (route: Extract<GoRoute, { k
         if (result.url.startsWith("go://")) {
           tab?.close();
           follow(result.url);
-        } else openIn(tab, result.url);
+        } else if (browser) openIn(tab, result.url);
+        else if (/^https:\/\//i.test(result.url)) onPage({ cardId, actionId, url: result.url });
       } else {
         tab?.close();
         if (result.toast) toastGo(result.toast);

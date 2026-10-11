@@ -563,7 +563,16 @@ export interface WorkingCard extends CardBase {
   title: string;
   state: "running" | "needs_you" | "done" | "failed";
   steps: Array<{ text: string; state: "todo" | "doing" | "done" | "failed" }>;
+  /** The latest picture of the page Go is on; at `done` the final one. */
   screenshot_url?: string | null;
+  /** 1.3: the address of that page. */
+  page_url?: string | null;
+  /**
+   * 1.3: a live, view-only stream of Go's screen, to frame while the card is `running` or `needs_you`. Its access token
+   * is in the `#fragment`: pass the link on exactly as it came. Go puts a fresh one on the card before the old one runs
+   * out (15 minutes at most) and sends `null` once the task is `done` or `failed`.
+   */
+  live_url?: string | null;
   updated_at: Iso;
   actions?: CardAction[] | null;
 }

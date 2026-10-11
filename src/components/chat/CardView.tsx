@@ -37,6 +37,7 @@ import { toSettlement } from "@/state/moneyView";
 import { optionAction, toDateOption, toPlaceOption, toStay, voteShape } from "@/state/optionView";
 import type { TripData } from "@/state/store";
 import { fromMinor, illustrationFor, placePhoto, toTripDates, userOf } from "@/state/view";
+import { toWorking } from "@/state/workingView";
 import { Bubble } from "./Bubble";
 import { InChatCard } from "./InChatCard";
 import { NextStepPill } from "./NextStepPill";
@@ -91,6 +92,8 @@ export interface RoomActions {
   openCab(card: OptionsCard): void;
   openRecord(transfer: Transfer): void;
   openRecording(card: CallCard): void;
+  /** Go's screen, full height: the live stream while it works, else the latest picture (contract 1.3). */
+  openLive(card: WorkingCard): void;
 }
 
 const money = (minor: number) => inr(fromMinor(minor));
@@ -393,22 +396,25 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
 }
 
 function WorkingView({ card, room, actions }: { card: WorkingCard; room: RoomModel; actions: RoomActions }) {
-  const total = card.steps.length;
-  const filled = card.steps.filter((s) => s.state === "done").length;
-  const at = card.steps.findIndex((s) => s.state === "doing");
-  const current = at >= 0 ? at : Math.min(filled, Math.max(total - 1, 0));
-  const tone = card.state === "done" ? "success" : card.state === "failed" ? "danger" : "muted";
-  const status = { running: copy.working.running, needs_you: copy.working.needsYou, done: copy.working.done, failed: copy.working.failed }[card.state] ?? card.state;
+  const work = toWorking(card);
+  const mine = visible(card.actions, room.me.id);
+  const openLive = () => actions.openLive(card);
+  // With a stream on the card, watching happens here in the app: Go's own `watch` button opens it too, and the card
+  // offers one when Go sent none.
+  const buttons = mine.map((a) => ({ label: a.label, onPress: work.liveUrl && a.action_id === "watch" ? openLive : () => actions.tap(card.card_id, a.action_id) }));
+  if (work.liveUrl && !mine.some((a) => a.action_id === "watch")) buttons.unshift({ label: copy.working.watch, onPress: openLive });
   return (
     <BookingProgressCard
       title={card.title}
-      actions={visible(card.actions, room.me.id).map((a) => ({ label: a.label, onPress: () => actions.tap(card.card_id, a.action_id) }))}
-      screenshot={httpUrl(card.screenshot_url)}
-      line={card.steps[current]?.text ?? card.title}
-      lineSub={total > 0 ? copy.working.step(Math.min(current + 1, total), total) : ""}
-      steps={{ filled, total }}
-      status={{ text: status, tone }}
+      actions={buttons}
+      url={work.address}
+      screenshot={work.screenshot}
+      line={work.line}
+      lineSub={work.lineSub}
+      steps={{ filled: work.filled, total: work.total }}
+      status={work.status}
       live={card.state === "running"}
+      open={work.liveUrl || work.screenshot ? { label: copy.working.open(card.title), onPress: openLive } : undefined}
     />
   );
 }

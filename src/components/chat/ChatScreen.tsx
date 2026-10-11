@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { isKnownCard, type CallCard, type OptionsCard, type Transfer } from "@/api/contract";
+import { isKnownCard, type CallCard, type GoCard, type OptionsCard, type Transfer, type WorkingCard } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatSkeleton } from "@/components/chat/ChatSkeleton";
@@ -24,6 +24,8 @@ import { BoardSheet } from "@/components/sheets/BoardSheet";
 import { BudgetSheet } from "@/components/sheets/BudgetSheet";
 import { CabSheet } from "@/components/sheets/CabSheet";
 import { FromCitySheet } from "@/components/sheets/FromCitySheet";
+import { GoPageSheet } from "@/components/sheets/GoPageSheet";
+import { LiveViewSheet } from "@/components/sheets/LiveViewSheet";
 import { PlaceDetailsSheet } from "@/components/sheets/PlaceDetailsSheet";
 import { PrivateSheet } from "@/components/sheets/PrivateSheet";
 import { QuickStartSheet } from "@/components/sheets/QuickStartSheet";
@@ -31,7 +33,7 @@ import { RecordPaymentSheet, type RecordTarget } from "@/components/sheets/Recor
 import { RouteSheet } from "@/components/sheets/RouteSheet";
 import { StayDetailsSheet } from "@/components/sheets/StayDetailsSheet";
 import { TicketSheet } from "@/components/sheets/TicketSheet";
-import { useCardTap } from "@/components/sheets/useCardTap";
+import { useCardTap, type GoPage } from "@/components/sheets/useCardTap";
 import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor } from "@/components/sheets/useRecordTarget";
 import { RecordingSheet } from "@/components/trip/RecordingSheet";
@@ -67,6 +69,7 @@ import { toCall, type CallModel } from "@/state/homeView";
 import { toCabCard, toPlaceOption, toRouteCard, toStay, voteShape } from "@/state/optionView";
 import { buildRoom } from "@/state/roomView";
 import { fromMinor, toTripDates, toUser, tripFromView, usersById } from "@/state/view";
+import { toWorking } from "@/state/workingView";
 import { kFormat } from "@/lib/format";
 import type { OptionRef, RoomModel } from "./CardView";
 import { MessageRenderer, userAvatar, type MessageActions } from "./MessageRenderer";
@@ -162,6 +165,18 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   const [attachment, setAttachment] = useState<Extract<Attachment, { kind: "image" | "file" }> | null>(null);
   const [recordTarget, setRecordTarget] = useState<RecordTarget | null>(null);
   const [recording, setRecording] = useState<CallModel | null>(null);
+  // Go's screen follows its card: Go replaces the card in place (a new step, a fresh stream link, the end of the task).
+  const cardById = (cardId: string | null) => (cardId ? data.order.map((id) => data.messages[id].card).find((card) => card?.card_id === cardId) : undefined);
+  const [liveCardId, setLiveCardId] = useState<string | null>(null);
+  const liveCard = cardById(liveCardId);
+  const working = liveCard?.kind === "working" ? toWorking(liveCard as WorkingCard) : null;
+  // A page Go answered a tap with (its "Log in to ixigo" view), framed in a sheet. It is done with when the page says
+  // so itself, or when Go takes the button that opened it off the card (the card now reads "Logged in").
+  const [page, setPage] = useState<GoPage | null>(null);
+  const pageCard = cardById(page?.cardId ?? null) as GoCard | undefined;
+  const pageAction = (pageCard?.actions ?? []).find((a) => a.action_id === page?.actionId && (!a.only_for_person_ids || a.only_for_person_ids.includes(me.id)));
+  const pageDone = Boolean(pageCard && !pageAction);
+  const pageTitle = (pageCard && "title" in pageCard ? pageCard.title : undefined) ?? pageAction?.label ?? pageCard?.fallback_text ?? "";
 
   /** The latest card of a kind in the room: what a `go://…/sheet/route` link, or the Board's travel row, opens. */
   const latestOptions = (kinds: string[]): OptionsCard | null => {
@@ -194,11 +209,21 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     sheets.open("private");
   };
 
+  // Let go of the sheet once its page is done with, so it cannot come back by itself if Go offers the button again.
+  const closeSheet = sheets.close;
+  const pageOver = sheet === "page" && pageDone;
+  useEffect(() => {
+    if (pageOver) closeSheet();
+  }, [pageOver, closeSheet]);
+
   const cardTap = useCardTap(tripId, (route) => {
     if (route.kind === "booking") openPrivate(route.bookingId);
     else if (route.sheet === "budget") openBudget();
     else if (route.sheet === "route") openRoute(latestOptions(["flight", "train", "bus"]));
     else openCab(latestOptions(["cab"]));
+  }, (opened) => {
+    setPage(opened);
+    sheets.open("page");
   });
 
   // -- Reading: mark the room read while it is on screen ------------------------------------------------------------
@@ -364,6 +389,10 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     openRecording: (card: CallCard) => {
       setRecording(toCall(card));
       sheets.open("recording");
+    },
+    openLive: (card) => {
+      setLiveCardId(card.card_id);
+      sheets.open("live");
     },
     openAttachment: (a) => {
       if (a.kind === "voice") return;
@@ -608,6 +637,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
       <BoardSheet board={board} open={sheet === "board"} onOpenChange={closeOnFalse} onAction={boardAction} />
       <RecordPaymentSheet open={sheet === "record"} onOpenChange={closeOnFalse} target={recordTarget} />
       <RecordingSheet tripId={tripId} call={recording} open={sheet === "recording"} onOpenChange={closeOnFalse} />
+      <LiveViewSheet open={sheet === "live" && working !== null} onOpenChange={closeOnFalse} work={working} />
+      <GoPageSheet open={sheet === "page" && !pageDone} onOpenChange={closeOnFalse} url={page?.url ?? null} title={pageTitle} />
       <ShareInviteSheet trip={trip} open={sheet === "share"} onOpenChange={closeOnFalse} />
     </RoomUsersProvider>
   );
