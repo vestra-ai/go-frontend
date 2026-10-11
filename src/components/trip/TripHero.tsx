@@ -130,12 +130,12 @@ export function TripHero({ hero, title, titleEmoji, meta, members, onShare }: Tr
             {meta.slice(-1).map((line) => (
               <MetaLine key={line.text} line={line} />
             ))}
-            {/* At most six faces, then "+N": the line beside them says how many joined. */}
+            {/* At most four faces, then "+N", as on the home page's trip cards (the Server sends those four). */}
             <AvatarStack
               className="ml-auto shrink-0 pl-2 text-12"
               size={28}
               overlap={10}
-              max={6}
+              max={4}
               ring="white"
               avatars={members.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
             />

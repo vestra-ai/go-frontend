@@ -99,7 +99,8 @@ export function AppHomeView({ home }: { home: Home }) {
               cover={trip.cover ? { kind: "photo", ...trip.cover } : { kind: "gradient" }}
               coverTitle={trip.homeCard.coverTitle}
               coverSub={trip.homeCard.coverSub}
-              members={summary.people_preview.slice(0, 4).map((p) => toUser(p))}
+              members={summary.people_preview.map((p) => toUser(p))}
+              memberCount={summary.people_count}
               status={status.text}
               statusTone={status.tone}
             />

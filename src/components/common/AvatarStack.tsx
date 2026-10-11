@@ -26,6 +26,8 @@ type AvatarStackProps = Omit<React.ComponentProps<"div">, "children"> & {
   overlap?: keyof typeof overlapMap
   /** Show at most this many avatars, then a "+N" count. */
   max?: number
+  /** How many people there are when `avatars` is only the first few of them (a preview): "+N" then counts the rest. */
+  count?: number
   ring?: "none" | "white" | "white-thin" | "black"
   /** Earlier avatars sit on top of later ones. */
   reverse?: boolean
@@ -36,13 +38,14 @@ function AvatarStack({
   size = 28,
   overlap = 8,
   max,
+  count,
   ring = "white",
   reverse = false,
   className,
   ...props
 }: AvatarStackProps) {
   const shown = max === undefined ? avatars : avatars.slice(0, max)
-  const extra = avatars.length - shown.length
+  const extra = Math.max(count ?? 0, avatars.length) - shown.length
   const total = shown.length + (extra > 0 ? 1 : 0)
   const layer = (i: number) => (reverse ? total - i : i)
 

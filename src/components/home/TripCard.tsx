@@ -14,7 +14,10 @@ type TripCardProps = {
   /** "📍 Goa": a leading emoji is split off and hidden from assistive tech. */
   coverTitle: string;
   coverSub: string;
+  /** The crew's first faces: the Server sends a few of them (`people_preview`), not everyone. */
   members: User[];
+  /** Everyone in the trip (`people_count`): the faces not shown are counted as "+N". */
+  memberCount: number;
   /** Omitted → no status line. */
   status?: string;
   statusTone?: "go" | "muted";
@@ -23,7 +26,7 @@ type TripCardProps = {
 const LEADING_EMOJI = /^(\p{Extended_Pictographic}️?)\s+(.*)$/u;
 
 /** Active trip on App home: cover (photo or gradient) with title and crew, status footer. */
-export function TripCard({ href, name, cover, coverTitle, coverSub, members, status, statusTone }: TripCardProps) {
+export function TripCard({ href, name, cover, coverTitle, coverSub, members, memberCount, status, statusTone }: TripCardProps) {
   const match = LEADING_EMOJI.exec(coverTitle);
   return (
     <Card asChild variant="shadow" radius="3xl" className={cn("flex flex-col overflow-hidden", rowPress)}>
@@ -53,11 +56,12 @@ export function TripCard({ href, name, cover, coverTitle, coverSub, members, sta
               <span className="line-clamp-2 text-14 font-medium wrap-anywhere">{coverSub}</span>
             </span>
             <AvatarStack
-              className="shrink-0"
+              className="shrink-0 text-12"
               size={26}
               overlap={8}
               ring="white"
               max={4}
+              count={memberCount}
               avatars={members.map((u) => ({ name: u.name, src: u.avatar, tone: u.tone }))}
             />
           </span>
