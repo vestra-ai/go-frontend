@@ -323,6 +323,7 @@ export const polls = {
   left: (text: string) => `${text} left`,
   closesIn: (text: string) => `Voting closes in ${text}`,
   won: (label: string) => `${label} won`,
+  chosen: (label: string) => `${label} chosen`,
   /** Next to the winning option's tally: "3 votes · won". */
   wonTag: "won",
   closed: "Vote closed",
@@ -336,7 +337,7 @@ export const polls = {
 // (titles, bodies, button labels) is always the card's own.
 export const cards = {
   checked: (ago: string) => `checked ${ago}`,
-  options: { count: (n: number) => `${n} ${n === 1 ? "option" : "options"}`, see: "See options", pending: "Sending…" },
+  options: { count: (n: number) => `${n} ${n === 1 ? "option" : "options"}`, see: "See options", pending: "Sending…", choose: "Choose" },
   /** A button that is no longer on the card (a pay card already paid, expired or declined): the tap never reached Go. */
   changed: "This has changed",
   mandate: {
