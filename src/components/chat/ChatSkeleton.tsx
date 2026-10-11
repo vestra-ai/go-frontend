@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
+import { usePageInResume } from "@/components/shell/PageTransition";
 import { Screen } from "@/components/shell/Screen";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
@@ -91,10 +92,11 @@ function OutgoingSkeleton({ text }: { text: string }) {
 
 /** The composer's dock: the + button, the message pill and the mic, at their real sizes. */
 function ComposerSkeleton() {
+  const resume = usePageInResume();
   return (
     <StickyDock>
       <FadeDock variant="gradient" aria-hidden>
-        <div className="relative flex items-center gap-2.5 px-4 pt-6">
+        <div ref={resume} className="relative flex items-center gap-2.5 px-4 pt-6 [[data-own]_&]:animate-page-in">
           <span className="size-12 shrink-0 rounded-full bg-white shadow-btn" />
           <span className="h-12 min-w-0 flex-1 rounded-full bg-white" />
           <span className="size-12 shrink-0 rounded-full bg-line-2" />
@@ -109,8 +111,10 @@ function ComposerSkeleton() {
  * an empty canvas): the pinned header, a thread of placeholder bubbles resting on the composer (the room opens at its
  * newest messages), and the composer's dock. It is exactly one viewport tall and clipped, so a short phone never
  * scrolls a skeleton. Same containers and text styles as the real thread, so the room lands where this one stands.
+ * Like the room, the thread and the composer slide up with the page while the header holds still.
  */
 export function ChatSkeleton({ tripId }: { tripId: TripId }) {
+  const resume = usePageInResume();
   return (
     <Screen>
       <div className="flex h-dvh flex-col overflow-hidden">
@@ -118,7 +122,11 @@ export function ChatSkeleton({ tripId }: { tripId: TripId }) {
           {copy.loading}
         </span>
         <HeaderSkeleton tripId={tripId} />
-        <div aria-hidden className="flex flex-1 flex-col justify-end gap-2.5 overflow-hidden px-4 pt-4 pb-24">
+        <div
+          ref={resume}
+          aria-hidden
+          className="flex flex-1 flex-col justify-end gap-2.5 overflow-hidden px-4 pt-4 pb-24 [[data-own]_&]:animate-page-in"
+        >
           <IncomingSkeleton name="Priya" text="Anyone up for a long weekend somewhere warm?" />
           <OutgoingSkeleton text="I am in, checking dates now" />
           <IncomingSkeleton name="Go" text="Found a few stays that fit everyone’s budget and the dates" />

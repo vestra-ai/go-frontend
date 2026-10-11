@@ -3,6 +3,7 @@
 import { useId, useRef } from "react";
 import { Plus } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
+import { usePageInResume } from "@/components/shell/PageTransition";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ export function Composer({
 }: ComposerProps) {
   const draft = value.trim();
   const listId = useId();
+  const resume = usePageInResume();
   const msgInput = useRef<HTMLInputElement>(null);
   const mentions = useMentionSuggest({ value, onChange, inputRef: msgInput, items: mentionItems });
   const photoInput = useRef<HTMLInputElement>(null);
@@ -81,7 +83,7 @@ export function Composer({
   return (
     <StickyDock>
       <FadeDock variant="gradient">
-        <div className={cn("relative flex items-center gap-2.5 px-4 pt-6", slideIn && "[[data-own]_&]:animate-page-in")}>
+        <div ref={resume} className={cn("relative flex items-center gap-2.5 px-4 pt-6", slideIn && "[[data-own]_&]:animate-page-in")}>
           {recording ? (
             <RecordingBar seconds={recordingSeconds} onCancel={onCancelRecording} onSend={onMic} />
           ) : (

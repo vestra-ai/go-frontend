@@ -1,4 +1,5 @@
 import type { ReactNode, RefObject } from "react";
+import { usePageInResume } from "@/components/shell/PageTransition";
 import { cn } from "@/lib/utils";
 
 // Bottom padding matches the composer in front of the list: default 96, reply tray 150, ask-Go tray 190.
@@ -27,8 +28,10 @@ type MessageListProps = {
 
 /** The chat thread, in the document flow (the body scrolls). No date separators, timestamps or receipts (as designed); the only typing row is Go's (`GoThinking`). */
 export function MessageList({ bottomPadding, anchorRef, slideIn = true, children }: MessageListProps) {
+  const resume = usePageInResume();
   return (
     <div
+      ref={resume}
       className={cn(
         "flex flex-1 flex-col gap-2.5 px-4 pt-4",
         slideIn && "[[data-own]_&]:animate-page-in", // the page slide-up, minus the pinned header
