@@ -24,7 +24,7 @@ export function NewMessagesPill({ label, bottomPadding, onPress }: NewMessagesPi
       <div
         className="pointer-events-none absolute inset-x-0 flex justify-center"
         // 12px of the composer's gradient pad sits under the pill; a tall bottom inset lifts it with the composer.
-        style={{ bottom: `calc(${bottomPadding - 12}px + max(0px, env(safe-area-inset-bottom) - 24px))` }}
+        style={{ bottom: `calc(${bottomPadding - 12}px + var(--dock-rise))` }}
       >
         <Button type="button" variant="navy" size="xs" weight="semibold" className={pillClass} onClick={onPress}>
           {label}

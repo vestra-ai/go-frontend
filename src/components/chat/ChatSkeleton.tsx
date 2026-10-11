@@ -125,7 +125,7 @@ export function ChatSkeleton({ tripId }: { tripId: TripId }) {
         <div
           ref={resume}
           aria-hidden
-          className="flex flex-1 flex-col justify-end gap-2.5 overflow-hidden px-4 pt-4 pb-24 [[data-own]_&]:animate-page-in"
+          className="flex flex-1 flex-col justify-end gap-2.5 overflow-hidden px-4 pt-4 pb-[calc(96px+var(--dock-rise))] [[data-own]_&]:animate-page-in"
         >
           <IncomingSkeleton name="Priya" text="Anyone up for a long weekend somewhere warm?" />
           <OutgoingSkeleton text="I am in, checking dates now" />

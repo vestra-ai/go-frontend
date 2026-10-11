@@ -85,7 +85,7 @@
   --color-cover-1: #F4C9A8; --color-cover-2: #D98A68; --color-cover-3: #8E4A3A;  /* warm cover gradient 160deg 0/45/100% */
   --color-map-sea: #D6EAE6; --color-map-land: #F1EFE8; --color-map-road: #E4E1D6; --color-map-label: #8FB3AD;
   --color-viewer: #E4E7EC;         /* PDF viewer canvas */
-  --color-skeleton: #E6E9EE;       /* PDF skeleton bars */
+  --color-skeleton: #E6E9EE;       /* PDF skeleton bars, a stay photo that has not loaded yet */
   --color-track-empty: #E3E5E8;    /* booking progress empty segment */
   --color-frame-bg: #E9EDF2;       /* desktop background outside the phone frame */
 
@@ -216,6 +216,9 @@ html[data-navigating] main { animation: navDim 200ms ease-out 100ms forwards; }
 /* scroll + safe-area utilities (global-level only) */
 @utility scrollbar-none { scrollbar-width: none; &::-webkit-scrollbar { display: none; } }
 @utility pb-safe { padding-bottom: max(24px, env(safe-area-inset-bottom)); }
+/* What a bottom inset taller than those 24px adds to a `pb-safe` dock. The page under the dock (the chat thread's
+   bottom padding, the "new messages" button) adds the same, so the dock never covers its end. */
+:root { --dock-rise: max(0px, env(safe-area-inset-bottom) - 24px); }
 /* Top inset = the device's real safe area (notch / status bar in standalone PWAs, 0 in a browser tab) plus a small
    natural gap. The design artboards' faux 46–56px status bar is not reproduced. */
 @utility pt-safe { padding-top: calc(env(safe-area-inset-top, 0px) + 16px); }        /* page headers */

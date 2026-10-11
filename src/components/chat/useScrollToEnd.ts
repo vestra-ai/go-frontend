@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { LONG_PRESS_MS, SCROLL_DELAY_MS } from "@/data/timing";
 import { scrollBehavior } from "@/lib/motion";
 
@@ -8,18 +8,191 @@ const FOLLOW_PX = 150;
 const REACHED_PX = 48;
 /** No scroll event for this long: the scroll has stopped. */
 const SETTLE_MS = 140;
+/** A scroll we asked for has this long to send its first scroll event. */
+const START_MS = 300;
+/** Scrolls made for one move of the end: an animated one, then instant ones. After those the page is as far down as the browser takes it. */
+const MAX_TRIES = 3;
+/** For this long after it opens the room gets to its end without animation: the page is still settling under it. */
+const OPENING_MS = 1000;
+/** A viewport that gets shorter this soon after the reader scrolled up is their doing (the browser's bars sliding back in). */
+const BARS_MS = 500;
 
-// The page's laid-out height, not `scrollHeight`: the page slide-up is a transform, and the room it adds below the
-// page while it runs is not the thread's end.
-const distanceToEnd = () => document.documentElement.offsetHeight - window.scrollY - window.innerHeight;
+interface Place {
+  /** The page's laid-out height, not `scrollHeight`: the page slide-up is a transform, and the room it adds below the page while it runs is not the thread's end. */
+  height: number;
+  /** The viewport's height. An iOS browser's bars sliding in and out change it. */
+  view: number;
+  y: number;
+}
 
-function scrollToEnd(anchor: HTMLElement | null) {
+const place = (): Place => ({ height: document.documentElement.offsetHeight, view: window.innerHeight, y: window.scrollY });
+const toEnd = (p: Place) => p.height - p.y - p.view;
+const distanceToEnd = () => toEnd(place());
+
+function scrollToEnd(anchor: HTMLElement | null, animated: boolean) {
   try {
     // A page in the background runs no animation: a smooth scroll started there never moves.
-    anchor?.scrollIntoView({ behavior: document.visibilityState === "visible" ? scrollBehavior() : "auto", block: "end" });
+    anchor?.scrollIntoView({ behavior: animated && document.visibilityState === "visible" ? scrollBehavior() : "auto", block: "end" });
   } catch {
     // Older engines reject the options object; staying put is fine.
   }
+}
+
+interface FollowEvents {
+  /** The reader went up the thread (`true`), or was brought back to its end by a send or the button. */
+  left(left: boolean): void;
+  /** The reader is at the end: they have seen the newest message. */
+  reached(): void;
+}
+
+/**
+ * The scrolling itself, outside React. Every scroll, resize and change of the page's height is compared with the
+ * `Place` seen before it, which says who moved: the reader (the scroll position went up) or the end (it is further
+ * away and the reader did not go up). The order the browser reports them in does not matter, and it is not the same
+ * on iOS, where a scroll event can arrive after the page has already grown.
+ */
+function createFollow(anchorRef: React.RefObject<HTMLElement | null>, on: FollowEvents) {
+  // True while the reader is at the end or within `FOLLOW_PX` of it. Only a scroll up takes them off it.
+  let following = true;
+  // The end is not where a reader who is following has it yet. The room opens owing its end.
+  let owed = true;
+  let tries = 0;
+  let last = place();
+  let lastUpAt = -Infinity;
+  const openedAt = performance.now();
+  let pinTimer: number | null = null;
+  let holdTimer: number | null = null;
+  let settleTimer: number | undefined;
+
+  // Nothing is owed any more: the reader is at the end, went up the thread, or the browser takes the page no further.
+  const clear = () => {
+    owed = false;
+    tries = 0;
+  };
+
+  const pin = () => {
+    pinTimer = null;
+    if (!following || !owed || holdTimer !== null) return;
+    if (distanceToEnd() <= 1 || tries >= MAX_TRIES) return clear();
+    tries += 1;
+    scrollToEnd(anchorRef.current, tries === 1 && performance.now() - openedAt > OPENING_MS);
+    // A scroll that never starts sends no event to wait on.
+    settleSoon(START_MS);
+  };
+  const pinSoon = () => {
+    pinTimer ??= window.setTimeout(pin, SCROLL_DELAY_MS);
+  };
+  /** The end moved away from a reader who is following: take them there. */
+  const owe = () => {
+    owed = true;
+    tries = 0;
+    pinSoon();
+  };
+
+  // A smooth scroll aims at where the end was when it started, a touch stops it, and one that iOS drops never moves:
+  // finish what is left.
+  const settle = () => {
+    if (owed) pinSoon();
+  };
+  function settleSoon(ms = SETTLE_MS) {
+    window.clearTimeout(settleTimer);
+    settleTimer = window.setTimeout(settle, ms);
+  }
+
+  const sync = () => {
+    const was = last;
+    const now = (last = place());
+    const distance = toEnd(now);
+    const up = now.y < was.y - 0.5;
+    if (up) lastUpAt = performance.now();
+
+    if (distance <= FOLLOW_PX) following = true;
+    else if (up) {
+      following = false;
+      clear();
+      on.left(true);
+    }
+
+    if (distance <= 1) clear();
+    else if (following && distance > toEnd(was) + 0.5 && !up) {
+      // The end is further away and the reader did not go up: the page grew (a row, Go's typing row, a card that grew
+      // in place, the tray), or the viewport got shorter (the browser's bars coming back after a page change, a
+      // rotated phone). Bars that come back because the reader is scrolling up are left alone.
+      const bars = now.view < was.view && now.height === was.height && performance.now() - lastUpAt < BARS_MS;
+      if (!bars) owe();
+    }
+    if (distance <= REACHED_PX) on.reached();
+  };
+
+  const onScroll = () => {
+    sync();
+    settleSoon();
+  };
+  // Back from the background, where a smooth scroll that was under way stopped.
+  const onVisible = () => {
+    if (document.visibilityState === "visible" && owed) pinSoon();
+  };
+
+  // Next scrolls a new page to its top after the layout effect that opened the room at its end.
+  scrollToEnd(anchorRef.current, false);
+  last = place();
+  pinSoon();
+
+  window.addEventListener("scroll", onScroll, { passive: true });
+  window.addEventListener("resize", sync, { passive: true });
+  // iOS reports its bars here first, and not always as a window resize.
+  window.visualViewport?.addEventListener("resize", sync, { passive: true });
+  document.addEventListener("visibilitychange", onVisible);
+  // The body is as tall as the page: every row, and the bottom padding the composer's tray resizes.
+  const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(sync) : null;
+  observer?.observe(document.body);
+
+  const release = () => {
+    if (holdTimer === null) return;
+    window.clearTimeout(holdTimer);
+    holdTimer = null;
+    if (owed) pinSoon();
+  };
+
+  return {
+    /** The newest row changed. `sent`: it is a send of mine, which always brings me to the end. */
+    rows(sent: boolean) {
+      if (sent) {
+        following = true;
+        on.left(false);
+      }
+      if (!following) return;
+      // A new message takes a reader who is following to the end, wherever in the follow range they had stopped.
+      owe();
+      // A room shorter than the screen never scrolls, so no scroll event would say its newest message was seen.
+      if (distanceToEnd() <= REACHED_PX) on.reached();
+    },
+    hold() {
+      if (holdTimer !== null) window.clearTimeout(holdTimer);
+      // The press has fired or ended by then. A release that never comes (the pointer went up somewhere else, the row
+      // lost its handlers) must not hold the thread for good.
+      holdTimer = window.setTimeout(release, LONG_PRESS_MS + 100);
+    },
+    release,
+    jumpToEnd() {
+      following = true;
+      owed = true;
+      tries = 1;
+      on.left(false);
+      scrollToEnd(anchorRef.current, true);
+      settleSoon(START_MS);
+    },
+    stop() {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", sync);
+      window.visualViewport?.removeEventListener("resize", sync);
+      document.removeEventListener("visibilitychange", onVisible);
+      observer?.disconnect();
+      window.clearTimeout(settleTimer);
+      if (pinTimer !== null) window.clearTimeout(pinTimer);
+      if (holdTimer !== null) window.clearTimeout(holdTimer);
+    },
+  };
 }
 
 interface ThreadRow {
@@ -39,25 +212,18 @@ function newestStoredKey(rows: readonly ThreadRow[]): string | undefined {
  * Keeps the reader of the thread with its latest messages (C-chat-kickoff.md §1.2). The room opens at its end, with no
  * animation. From then on a reader at the end (or sending a message of their own) is taken to the new end, after
  * `SCROLL_DELAY_MS`, whenever it moves away from them: a new row, Go's typing row, a card that grew in place, a photo
- * that loaded, the reply tray opening. A reader further up is left where they are, and the messages they have not seen
- * are counted for a "N new messages" button. The count goes when they reach the end again, by hand or through `jumpToEnd`.
+ * that loaded, the reply tray opening, the browser's bars taking room back from the viewport. A reader further up is
+ * left where they are, and the messages they have not seen are counted for a "N new messages" button. The count goes
+ * when they reach the end again, by hand or through `jumpToEnd`.
  *
- * It watches the page's height, not only the newest row: a scroll aimed at where the end was when a message arrived
- * stops short of an end that moved afterwards.
+ * A scroll that stops short of the end (the end moved on, a touch stopped it, iOS dropped it) is made again once the
+ * page is still, without animation.
  *
  * `hold` / `release` are for the long-press (the 3A contract: `useLongPress` cancels on any scroll): nothing scrolls
  * while a press is armed, and the thread catches up when it ends.
  */
 export function useThreadFollow(anchorRef: React.RefObject<HTMLElement | null>, rows: readonly ThreadRow[]) {
-  // True while the reader is at the end or on their way there. Our own scrolls only go down, and the page growing sends
-  // no scroll event: only a move up takes the reader off the end.
-  const following = useRef(true);
-  // How far from the end the reader last stopped. Further than this, and the end has moved away from them.
-  const rest = useRef(0);
-  // The end moved away from a reader who is following, and they are not there yet.
-  const owed = useRef(false);
-  const pinTimer = useRef<number | null>(null);
-  const holdTimer = useRef<number | null>(null);
+  const follow = useRef<ReturnType<typeof createFollow> | null>(null);
 
   // The reader went up the thread and has not been back to its end.
   const [left, setLeft] = useState(false);
@@ -66,131 +232,38 @@ export function useThreadFollow(anchorRef: React.RefObject<HTMLElement | null>, 
   const [seen, setSeen] = useState(newestStored);
   const newestRef = useRef(newestStored);
 
-  const reached = useCallback(() => {
-    setSeen(newestRef.current);
-    setLeft(false);
-  }, []);
-
-  const pin = useCallback(() => {
-    pinTimer.current = null;
-    if (!following.current || !owed.current || holdTimer.current !== null) return;
-    if (distanceToEnd() <= 1) owed.current = false;
-    else scrollToEnd(anchorRef.current);
-  }, [anchorRef]);
-  const schedulePin = useCallback(() => {
-    pinTimer.current ??= window.setTimeout(pin, SCROLL_DELAY_MS);
-  }, [pin]);
-
-  /** The page's height changed: a reader who is following goes with an end that moved away from them. */
-  const endMoved = useCallback(() => {
-    const distance = distanceToEnd();
-    if (distance < rest.current) rest.current = distance;
-    else if (following.current && distance > rest.current + 1) {
-      owed.current = true;
-      schedulePin();
-    }
-  }, [schedulePin]);
+  // Before the first paint, so a room that replaces its skeleton in place is never seen from its top.
+  useLayoutEffect(() => scrollToEnd(anchorRef.current, false), [anchorRef]);
 
   useEffect(() => {
-    const anchor = anchorRef.current;
-    anchor?.scrollIntoView({ block: "end" });
-
-    let lastY = window.scrollY;
-    let settleTimer: number | undefined;
-    // A smooth scroll aims at where the end was when it started, and a touch stops it: finish what is left.
-    const onSettle = () => {
-      if (!owed.current) return;
-      if (distanceToEnd() <= 1) owed.current = false;
-      else schedulePin();
-    };
-    const onScroll = () => {
-      const y = window.scrollY;
-      const distance = distanceToEnd();
-      const up = y < lastY;
-      lastY = y;
-      if (distance <= FOLLOW_PX) following.current = true;
-      else if (up) {
-        following.current = false;
-        setLeft(true);
-      }
-      if (up || distance <= 1) owed.current = false;
-      if (!owed.current) rest.current = distance;
-      if (distance <= REACHED_PX) reached();
-      window.clearTimeout(settleTimer);
-      settleTimer = window.setTimeout(onSettle, SETTLE_MS);
-    };
-    // A taller viewport (the browser's bar sliding away) brings the end closer with no scroll.
-    const onResize = () => {
-      rest.current = Math.min(rest.current, distanceToEnd());
-    };
-    // Back from the background, where a smooth scroll that was under way stopped.
-    const onVisible = () => {
-      if (document.visibilityState === "visible" && owed.current) schedulePin();
-    };
-    window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onResize, { passive: true });
-    document.addEventListener("visibilitychange", onVisible);
-
-    // The body is as tall as the page: every row, and the bottom padding the composer's tray resizes.
-    const observer = typeof ResizeObserver !== "undefined" ? new ResizeObserver(endMoved) : null;
-    observer?.observe(document.body);
-
+    const started = createFollow(anchorRef, {
+      left: setLeft,
+      reached: () => {
+        setSeen(newestRef.current);
+        setLeft(false);
+      },
+    });
+    follow.current = started;
     return () => {
-      window.removeEventListener("scroll", onScroll);
-      window.removeEventListener("resize", onResize);
-      document.removeEventListener("visibilitychange", onVisible);
-      observer?.disconnect();
-      window.clearTimeout(settleTimer);
-      if (pinTimer.current !== null) window.clearTimeout(pinTimer.current);
-      if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
-      pinTimer.current = null;
-      holdTimer.current = null;
+      started.stop();
+      follow.current = null;
     };
-  }, [anchorRef, endMoved, reached, schedulePin]);
+  }, [anchorRef]);
 
   const newest = rows[rows.length - 1];
   const newestKey = newest?.key;
   const newestMine = newest?.mine ?? false;
   const lastNewestKey = useRef(newestKey);
-  const first = useRef(true);
   useEffect(() => {
     newestRef.current = newestStored;
     const sent = newestMine && lastNewestKey.current !== newestKey;
     lastNewestKey.current = newestKey;
-    if (sent) {
-      // A send of mine always brings me to the end.
-      following.current = true;
-      setLeft(false);
-    }
-    // A new message takes a reader who is following to the end, wherever in the follow range they had stopped.
-    if (following.current && !first.current) {
-      owed.current = true;
-      schedulePin();
-    }
-    first.current = false;
-    // A room shorter than the screen never scrolls, so no scroll event would say its newest message was seen.
-    if (following.current && distanceToEnd() <= REACHED_PX) reached();
-  }, [newestKey, newestMine, newestStored, reached, schedulePin]);
+    follow.current?.rows(sent);
+  }, [newestKey, newestMine, newestStored]);
 
-  const release = useCallback(() => {
-    if (holdTimer.current === null) return;
-    window.clearTimeout(holdTimer.current);
-    holdTimer.current = null;
-    if (owed.current) schedulePin();
-  }, [schedulePin]);
-  const hold = useCallback(() => {
-    if (holdTimer.current !== null) window.clearTimeout(holdTimer.current);
-    // The press has fired or ended by then. A release that never comes (the pointer went up somewhere else, the row
-    // lost its handlers) must not hold the thread for good.
-    holdTimer.current = window.setTimeout(release, LONG_PRESS_MS + 100);
-  }, [release]);
-
-  const jumpToEnd = useCallback(() => {
-    following.current = true;
-    owed.current = true;
-    setLeft(false);
-    scrollToEnd(anchorRef.current);
-  }, [anchorRef]);
+  const hold = useCallback(() => follow.current?.hold(), []);
+  const release = useCallback(() => follow.current?.release(), []);
+  const jumpToEnd = useCallback(() => follow.current?.jumpToEnd(), []);
 
   // Counted from the stored message they last saw: a send of mine still on its way sits under the ones that came in.
   const from = seen === undefined ? -1 : rows.findIndex((r) => r.key === seen);
