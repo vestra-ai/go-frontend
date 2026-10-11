@@ -7,6 +7,7 @@ const overlapMap = {
   7: "-ml-[7px]",
   8: "-ml-2",
   12: "-ml-3",
+  14: "-ml-3.5",
 } as const
 
 type StackAvatar = {
