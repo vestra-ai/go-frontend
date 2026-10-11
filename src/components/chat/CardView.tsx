@@ -420,7 +420,9 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
     hideVotes: !vote,
     voteLabel: decisionId ? undefined : pick?.label,
     disabled: decisionId ? !vote?.open : !pick || busy,
-    noVote: Boolean(vote && !vote.open),
+    // A closed vote shows its result with no button; a card that is no vote and has no per-option action has nothing to
+    // press, so it draws no button either (it used to draw a greyed-out "Vote").
+    noVote: Boolean(vote && !vote.open) || (!decisionId && !pick),
     onVote: onPick,
   };
   const votes = (id: string) => (vote ? { voters: vote.votersOf(id), tally: vote.tallyOf(id) } : { voters: [], tally: undefined });
