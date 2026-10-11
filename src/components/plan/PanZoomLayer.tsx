@@ -274,6 +274,8 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
       // keeps vertical swipes (native scroll and momentum, no fight with the map); pinch and horizontal moves still
       // reach the map. The value is read when a touch starts, so it takes effect from the next gesture.
       style={{ touchAction: zoomed ? "none" : restTouchAction }}
+      // Inside a sheet, a drag on a zoomed layer is a pan and must not also drag the sheet shut (vaul reads this).
+      data-vaul-no-drag={zoomed ? "" : undefined}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={(e) => endPointer(e, false)}

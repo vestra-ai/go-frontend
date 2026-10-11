@@ -29,11 +29,12 @@ type PhotoViewerProps = {
 /**
  * The carousel's photos full screen, over the sheet that opened it. Photos change as in the carousel (a swipe, the
  * previous / next buttons or the arrow keys); each one zooms up to 3× by pinch, double tap, Ctrl/⌘ + wheel or the +/−
- * buttons, and pans by drag while zoomed. No swipe-down to close: a drag on a zoomed photo is a pan.
+ * buttons, and pans by drag while zoomed. A drag down closes it like any sheet, from the bars or from a photo at its
+ * resting zoom; on a zoomed photo a drag is a pan (the layer tells the sheet to keep out of it).
  */
 export function PhotoViewer({ open, onOpenChange, ...viewer }: PhotoViewerProps) {
   return (
-    <BottomSheet open={open} onOpenChange={onOpenChange} nested inset={0} grabber={false} draggable={false} aria-label={copy.photos.label(viewer.name)} className="bg-black text-white">
+    <BottomSheet open={open} onOpenChange={onOpenChange} nested inset={0} grabber={false} aria-label={copy.photos.label(viewer.name)} className="bg-black text-white">
       <Viewer {...viewer} onClose={() => onOpenChange(false)} />
     </BottomSheet>
   );
@@ -58,8 +59,9 @@ function Viewer({ photos, name, start, onAt, onClose }: Omit<PhotoViewerProps, "
 
   const label = photos[at]?.label;
   return (
-    // `touch-none`: no pinch or double tap anywhere in the viewer zooms the page itself. The row of photos still pans
-    // sideways: a scroller's own swipes are decided from the touched element up to that scroller, no further.
+    // `touch-none`: no pinch or double tap anywhere in the viewer zooms the page itself, and a drag down reaches the
+    // sheet (which closes on it) instead of the browser. The row of photos still pans sideways: a scroller's own swipes
+    // are decided from the touched element up to that scroller, no further.
     <div className="flex min-h-0 flex-1 touch-none flex-col">
       <div className="grid shrink-0 grid-cols-[40px_1fr_40px] items-center gap-2 px-3 pt-safe-hero pb-2.5">
         <Button type="button" variant="glass" size="icon-sm" aria-label={copy.photos.close} className="bg-white/15" onClick={onClose}>

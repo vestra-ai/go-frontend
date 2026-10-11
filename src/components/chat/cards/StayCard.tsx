@@ -27,14 +27,16 @@ type StayCardProps = {
   noVote?: boolean;
 };
 
-/** 236px stay poll card in the E8 rail: photo with a price pill and a rating pill, area, tags, voters, Details / Vote. */
+/** 236px stay poll card in the E8 rail: photo with a price pill and a rating pill, area, tags, voters, Details / Vote. A tap anywhere else on it opens Details too. */
 export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false, noVote = false }: StayCardProps) {
   const userOf = useRoomUsers();
   // Seed tags lead with an emoji ("🏊 Private pool · 3 rooms"); it stays text, hidden from screen readers.
   const tag = splitEmoji(stay.tags);
 
   return (
-    <Card variant="float" radius="xl" className="flex w-[236px] shrink-0 snap-start flex-col overflow-hidden">
+    // The whole card opens Details, as its Details button does. The button stays the keyboard and screen-reader way in,
+    // so the card itself is not a second control.
+    <Card variant="float" radius="xl" className="flex w-[236px] shrink-0 cursor-pointer snap-start flex-col overflow-hidden" onClick={onDetails}>
       {/* The grey shows until the photo has loaded (and its alt text stays out of it). */}
       <div className="relative h-[132px] bg-skeleton">
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
@@ -78,7 +80,8 @@ export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, vot
           )}
           {!hideVotes && copy.votes(Math.max(stay.votes ?? 0, voters.length))}
         </div>
-        <div className="mt-auto flex gap-1.5 pt-1.5">
+        {/* A press on a button is that button's alone. On the row, so one on a disabled Vote (which lets presses through) stops here too. */}
+        <div className="mt-auto flex gap-1.5 pt-1.5" onClick={(e) => e.stopPropagation()}>
           <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onDetails}>
             {copy.details}
           </Button>
