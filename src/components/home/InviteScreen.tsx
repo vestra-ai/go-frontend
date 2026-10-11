@@ -1,7 +1,7 @@
 "use client";
 
 import { notFound, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { InvitePreview } from "@/api/contract";
 import { api } from "@/api/endpoints";
 import { errorMessage, isApiError } from "@/api/http";
@@ -41,9 +41,40 @@ function previewTrip(preview: InvitePreview): Trip {
   };
 }
 
+// Set when a signed-out visitor taps "Accept & join" and leaves for Google, so the page they come back to knows that tap
+// already happened. A visitor who was signed in all along has no mark and taps Accept themselves.
+const SIGN_IN_MARK = "go:invite-sign-in";
+
+function markSignIn(code: string) {
+  try {
+    sessionStorage.setItem(SIGN_IN_MARK, code);
+  } catch {
+    // Storage blocked: they come back to the sheet and tap Accept again.
+  }
+}
+
+function clearSignInMark() {
+  try {
+    sessionStorage.removeItem(SIGN_IN_MARK);
+  } catch {
+    // Nothing to clear.
+  }
+}
+
+/** True once for the invite the visitor tapped "Accept & join" on before signing in. */
+function takeSignInMark(code: string): boolean {
+  try {
+    const marked = sessionStorage.getItem(SIGN_IN_MARK) === code;
+    if (marked) sessionStorage.removeItem(SIGN_IN_MARK);
+    return marked;
+  } catch {
+    return false;
+  }
+}
+
 /**
- * A friend taps an invite link (CONTRACT-APP §4.3). The link joins directly: a signed-in visitor is accepted at once;
- * a signed-out one sees the public preview, signs in from "Accept & join", and is accepted on the way back.
+ * A friend taps an invite link (CONTRACT-APP §4.3). Everyone sees the public preview and taps "Accept & join" themselves.
+ * A signed-in visitor is accepted by that tap; a signed-out one signs in from it and is accepted on the way back.
  */
 export function InviteScreen({ code }: { code: string }) {
   const router = useRouter();
@@ -54,6 +85,21 @@ export function InviteScreen({ code }: { code: string }) {
   const accepting = useRef(false);
   // Where sign-in comes back to: the invite itself, so the visitor is accepted on return.
   const path = `/invite/${encodeURIComponent(code)}`;
+
+  const accept = useCallback(() => {
+    if (accepting.current) return;
+    accepting.current = true;
+    setPending(true);
+    acceptInvite(code)
+      .then((res) => router.replace(res.landing === "chat" ? `/trips/${res.trip_id}/chat` : `/trips/${res.trip_id}`))
+      .catch((err) => {
+        // 409: the link was rotated or the trip is over. Anything else: let them tap again.
+        accepting.current = false;
+        setPending(false);
+        toastGo(errorMessage(err, copy.failed));
+        if (isApiError(err) && err.status === 409) router.replace("/home");
+      });
+  }, [code, router]);
 
   // The preview is public; a signed-in read personalises `state`, so read it again once the session is known.
   useEffect(() => {
@@ -85,23 +131,14 @@ export function InviteScreen({ code }: { code: string }) {
       return;
     }
     if (session !== "signedIn" || accepting.current) return;
+    const cameFromSignIn = takeSignInMark(code);
     if (state === "already_member") {
       router.replace(`/trips/${tripId}`);
       return;
     }
-    accepting.current = true;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- shows the waiting button while the accept is on its way
-    setPending(true);
-    acceptInvite(code)
-      .then((res) => router.replace(res.landing === "chat" ? `/trips/${res.trip_id}/chat` : `/trips/${res.trip_id}`))
-      .catch((err) => {
-        // 409: the link was rotated or the trip is over. Anything else: let them tap again.
-        accepting.current = false;
-        setPending(false);
-        toastGo(errorMessage(err, copy.failed));
-        if (isApiError(err) && err.status === 409) router.replace("/home");
-      });
-  }, [state, tripId, session, code, router]);
+    // Back from the sign-in that "Accept & join" started: finish the join. Otherwise the visitor taps Accept themselves.
+    if (cameFromSignIn) accept();
+  }, [state, tripId, session, code, router, accept]);
 
   if (missing) notFound();
   if (!preview) return <Screen>{null}</Screen>;
@@ -143,10 +180,13 @@ export function InviteScreen({ code }: { code: string }) {
         pending={pending || session === "loading"}
         notNow={false}
         onAccept={() => {
-          // Signed in: the effect above is already accepting. Signed out: sign in, then come back here to be accepted.
+          // Signed in: this tap is the accept. Signed out: sign in, then come back here to be accepted.
+          if (session === "signedIn") return accept();
           if (session !== "signedOut") return;
           setPending(true);
+          markSignIn(code);
           signInWithGoogle(path).catch(() => {
+            clearSignInMark();
             setPending(false);
             toastGo(copy.failed);
           });
