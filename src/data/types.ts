@@ -335,7 +335,7 @@ export interface Booking {
   title: string;
   sub: string;
   memberIds: UserId[];
-  media: { kind: "logo" | "photo" | "emoji"; src?: string; alt?: string; emoji?: string; bg: "indigo" | "stay-tint" | "none" };
+  media: { kind: "logo" | "photo" | "emoji"; src?: string; alt?: string; emoji?: string; bg: "indigo" | "stay-tint" | "success-tint" | "none" };
   accent: "info" | "success";
   stub: { kind: "count"; n: number } | { kind: "booked" };
   href: string;

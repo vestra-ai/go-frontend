@@ -3,7 +3,10 @@ import { cn } from "@/lib/utils";
 
 const MEDIA_BG = {
   indigo: "bg-indigo",
+  /** Blue, despite the name (the money screen's "Stay" colour): a journey's tint. */
   "stay-tint": "bg-stay-soft",
+  /** Green: a stay's tint, the colour of its rule. */
+  "success-tint": "bg-success-soft",
   none: "",
 } as const;
 

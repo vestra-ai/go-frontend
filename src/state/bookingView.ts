@@ -88,7 +88,10 @@ export function bookingDetails(b: ApiBooking, users: Record<Id, User>, meId: Id)
 
 export const ticketHref = (tripId: Id, bookingId: Id) => `/trips/${tripId}/bookings/${encodeURIComponent(bookingId)}/ticket`;
 
-/** What a booking's ticket shows at its left end: its photo, else the carrier's wordmark, else the kind's emoji on a tint. */
+/**
+ * What a booking's ticket shows at its left end: its photo, else the carrier's wordmark, else the kind's emoji on a
+ * tint of the colour of its rule (green for a stay, blue for everything else).
+ */
 export function bookingMedia(b: ApiBooking): Booking["media"] {
   const photo = httpUrl(b.image_url) ?? httpUrl(placePhoto(b.place));
   const logo = httpUrl(b.journey?.logo_url);
@@ -96,7 +99,7 @@ export function bookingMedia(b: ApiBooking): Booking["media"] {
     ? { kind: "photo", src: photo, bg: "none" }
     : logo
       ? { kind: "logo", src: logo, alt: b.journey?.carrier_name ?? b.vendor, bg: "none" }
-      : { kind: "emoji", emoji: bookingEmoji(b.kind), bg: "stay-tint" };
+      : { kind: "emoji", emoji: bookingEmoji(b.kind), bg: b.kind === "stay" ? "success-tint" : "stay-tint" };
 }
 
 /** The rule beside a ticket's graphic: green for a stay, blue for everything else. */
