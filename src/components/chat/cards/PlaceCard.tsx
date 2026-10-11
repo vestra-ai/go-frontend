@@ -26,16 +26,19 @@ type PlaceCardProps = {
   noVote?: boolean;
 };
 
-/** 236px place card in the E1 rail: illustration on a tint, price pill, why line, tally, Details / Vote (E-deciding.md §1.3). */
+/** 236px place card in the E1 rail: illustration on a tint, price pill, why line, tally, Details / Vote (E-deciding.md §1.3). A tap anywhere else on it opens Details too. */
 export function PlaceCard({ place, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false, noVote = false }: PlaceCardProps) {
   const userOf = useRoomUsers();
   return (
+    // The whole card opens Details, as its Details button does. The button stays the keyboard and screen-reader way in,
+    // so the card itself is not a second control.
     <Card
       variant="float"
       radius="xl"
       role="group"
       aria-label={place.name}
-      className="flex w-[236px] shrink-0 snap-start flex-col overflow-hidden"
+      className="flex w-[236px] shrink-0 cursor-pointer snap-start flex-col overflow-hidden"
+      onClick={onDetails}
     >
       <div className={cn("relative flex h-[132px] items-center justify-center", place.tint)}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -54,7 +57,8 @@ export function PlaceCard({ place, voters, mine, onDetails, onVote, voteLabel, v
           )}
           {!hideVotes && copy.votes(Math.max(place.votes ?? 0, voters.length))}
         </div>
-        <div className="mt-auto flex gap-1.5 pt-1.5">
+        {/* A press on a button is that button's alone. On the row, so one on a disabled Vote (which lets presses through) stops here too. */}
+        <div className="mt-auto flex gap-1.5 pt-1.5" onClick={(e) => e.stopPropagation()}>
           <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onDetails}>
             {copy.details}
           </Button>
