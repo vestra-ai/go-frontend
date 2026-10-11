@@ -8,6 +8,7 @@ import { errorMessage, isApiError } from "@/api/http";
 import { TripHomeSkeleton } from "@/components/home/TripHomeSkeleton";
 import { InviteSheet } from "@/components/sheets/InviteSheet";
 import { Screen } from "@/components/shell/Screen";
+import { TripSkeleton } from "@/components/trip/TripSkeleton";
 import { invite as copy } from "@/data/seed/copy";
 import type { Invite, Trip } from "@/data/types";
 import { signInWithGoogle } from "@/lib/auth";
@@ -141,7 +142,10 @@ export function InviteScreen({ code }: { code: string }) {
   }, [state, tripId, session, code, router, accept]);
 
   if (missing) notFound();
-  if (!preview) return <Screen>{null}</Screen>;
+  // Nothing to accept: the effect above is taking the visitor away, so the sheet is not drawn for the moment that takes.
+  // Someone already in the trip (their own link included) sees the skeleton of the trip page they are going to.
+  if (preview && state === "already_member" && session === "signedIn") return <TripSkeleton tripId={preview.trip.trip_id} active="home" />;
+  if (!preview || state === "expired" || state === "revoked") return <Screen>{null}</Screen>;
 
   const trip = previewTrip(preview);
   const inviter = toUser(preview.inviter);
