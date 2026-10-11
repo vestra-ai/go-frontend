@@ -127,7 +127,12 @@ export function PendingSheet({ tripId, view, data, features, item, open, onOpenC
       <BottomSheet open={open} onOpenChange={onOpenChange} aria-label={item?.title}>
         <SheetBody className="gap-3 pb-[104px]">
           <SheetHeader title={item?.title ?? ""} subtitle={item?.subtitle ?? undefined} />
-          {card && <CardView card={card} room={room} actions={actions} />}
+          {/* Chat cards sit 38px in, on the bubble column beside Go's avatar. There is no avatar here, so take it back. */}
+          {card && (
+            <div className="-ml-[38px]">
+              <CardView card={card} room={room} actions={actions} />
+            </div>
+          )}
           {line && (
             <Card variant="outline" radius="2xl" className="flex flex-col gap-2 px-4 py-3.5">
               <Eyebrow>{copy.line.eyebrow}</Eyebrow>
