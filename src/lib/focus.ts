@@ -12,8 +12,8 @@ function isIOS(): boolean {
 }
 
 /** Focuses a text box with the caret after its text; a text longer than the box shows its end. */
-export function focusAtEnd(input: HTMLInputElement) {
-  input.focus();
+export function focusAtEnd(input: HTMLInputElement, options?: FocusOptions) {
+  input.focus(options);
   const end = input.value.length;
   input.setSelectionRange(end, end);
   input.scrollLeft = input.scrollWidth;
@@ -62,4 +62,80 @@ export function focusAtEndAfterSheets(input: HTMLInputElement): () => void {
     cancelAnimationFrame(frame);
     if (held) input.removeAttribute("inputmode");
   };
+}
+
+/** After the focus, the keyboard has this long to come up and be answered. */
+const KEYBOARD_MS = 2000;
+
+/**
+ * `focusAtEnd` for a box in a dock at the bottom of the screen, when the app makes the focus itself inside a touch that
+ * was not on the box (a swipe on a message that opens the reply tray). Returns the cancel.
+ *
+ * iOS brings the keyboard up for such a focus, but what it scrolls into view is the place the finger was, not the box:
+ * the dock stays under the keyboard. There the focus is made without the browser's own scroll, and once the keyboard is
+ * up the page is moved by what it covers of `dock`. The keyboard shortens the visual viewport only, so that move slides
+ * the view down inside the layout viewport, to the dock at its bottom. A tap on the box itself is the browser's to
+ * reveal, as before. Everywhere else this is `focusAtEnd`.
+ */
+export function focusAtEndAboveKeyboard(input: HTMLInputElement, dock: HTMLElement): () => void {
+  const view = window.visualViewport;
+  if (!view || !isIOS()) {
+    focusAtEnd(input);
+    return () => {};
+  }
+  focusAtEnd(input, { preventScroll: true });
+
+  // What the keyboard covered before the last move. A move that uncovered nothing took the dock along with the page:
+  // more of them would only walk the thread away.
+  let covered: number | null = null;
+  const reveal = () => {
+    if (document.activeElement !== input) return;
+    const hidden = dock.getBoundingClientRect().bottom - (view.offsetTop + view.height);
+    if (hidden <= 1) return;
+    if (covered !== null && hidden > covered - 1) return stop();
+    covered = hidden;
+    window.scrollBy(0, hidden);
+  };
+  const stop = () => {
+    view.removeEventListener("resize", reveal);
+    window.clearTimeout(timer);
+    cancelAnimationFrame(frame);
+  };
+  view.addEventListener("resize", reveal);
+  const timer = window.setTimeout(stop, KEYBOARD_MS);
+  // The keyboard may be up already (the composer had the focus): nothing will resize.
+  const frame = requestAnimationFrame(reveal);
+  return stop;
+}
+
+/** A held keyboard nobody took over goes after this long. */
+const HOLD_MS = 1500;
+
+/**
+ * Brings the keyboard up now, inside a tap, for a box that will only be on the page a moment later (the reply tray,
+ * which opens once the message menu has faded out). Call it inside the tap; the box then takes the focus as usual.
+ *
+ * iOS opens the keyboard only for a focus made inside a tap, and keeps it up when the focus moves on. So there an
+ * unseen box takes the focus at once and stands in until the real one does; it removes itself when it loses the focus,
+ * or after `HOLD_MS` when nothing took it. Everywhere else a later focus brings the keyboard by itself: nothing is done.
+ */
+export function holdKeyboard(): void {
+  if (!isIOS()) return;
+  const stand = document.createElement("input");
+  stand.type = "text";
+  stand.tabIndex = -1;
+  stand.autocomplete = "off";
+  stand.enterKeyHint = "send";
+  stand.setAttribute("aria-hidden", "true");
+  // At the top of the screen, so nothing has to scroll to show it; 16px, so iOS does not zoom in on it.
+  stand.style.cssText = "position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;pointer-events:none";
+  document.body.appendChild(stand);
+  stand.focus({ preventScroll: true });
+  const drop = () => {
+    window.clearTimeout(timer);
+    stand.removeEventListener("blur", drop);
+    stand.remove();
+  };
+  stand.addEventListener("blur", drop);
+  const timer = window.setTimeout(drop, HOLD_MS);
 }

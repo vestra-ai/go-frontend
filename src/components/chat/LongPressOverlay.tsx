@@ -9,6 +9,7 @@ import { chat as copy } from "@/data/seed/copy";
 import type { Attachment, AvatarSpec, BubbleMaxWidth, FrameRect } from "@/data/types";
 import { MENU_EXIT_MS } from "@/data/timing";
 import { assets } from "@/lib/assets";
+import { holdKeyboard } from "@/lib/focus";
 import { toastGo } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 import { AttachmentContent, photoBubbleClass } from "./AttachmentContent";
@@ -72,6 +73,13 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
     setLeaving(true);
     exitTimer.current = window.setTimeout(then, MENU_EXIT_MS);
   }, []);
+
+  // Reply / Ask Go open a tray whose box takes the focus once the menu has faded out. That is after the tap, where iOS
+  // opens no keyboard, so the keyboard is asked for here, inside it: a swipe to reply and this menu end the same way.
+  const openTray = (then: () => void) => {
+    holdKeyboard();
+    leave(then);
+  };
 
   // Clamp against the bottom once the column's height is known (the top clamp is applied at render).
   useLayoutEffect(() => {
@@ -180,12 +188,12 @@ export function LongPressOverlay({ message, anchorRect, myReaction, onReact, onR
         )}
 
         <div className={cn("pointer-events-auto w-[230px] overflow-hidden rounded-4xl bg-white shadow-menu", mine ? "self-end" : "ml-[38px]")}>
-          <MenuItem variant="wide" label={copy.longPress.reply} icon={<Reply className="size-[18px]" />} onClick={() => leave(onReply)} />
+          <MenuItem variant="wide" label={copy.longPress.reply} icon={<Reply className="size-[18px]" />} onClick={() => openTray(onReply)} />
           <MenuItem
             variant="wide"
             label={copy.longPress.askGo}
             icon={<Avatar kind="go" size={22} src={assets.goAvatar.src} />}
-            onClick={() => leave(onAskGo)}
+            onClick={() => openTray(onAskGo)}
           />
           {hasText && <MenuItem variant="wide" label={copy.longPress.copy} icon={<Copy className="size-[18px]" />} onClick={copyText} />}
         </div>

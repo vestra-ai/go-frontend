@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { chat as copy } from "@/data/seed/copy";
 import { assets } from "@/lib/assets";
-import { focusAtEnd } from "@/lib/focus";
+import { focusAtEndAboveKeyboard } from "@/lib/focus";
 import type { MentionItem } from "@/lib/mentions";
 import { cn } from "@/lib/utils";
 import { MentionInput } from "./MentionInput";
@@ -39,10 +39,11 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
   const mentions = useMentionSuggest({ value, onChange, inputRef, items: mentionItems });
 
   // Focus the input when the tray opens (or switches mode) and when a suggestion chip writes the draft, caret after the
-  // words.
+  // words. A swipe on a message opens the tray with the finger elsewhere: the tray is then kept above the keyboard.
+  const trayRef = useRef<HTMLDivElement>(null);
   const [suggested, setSuggested] = useState(0);
   useEffect(() => {
-    if (inputRef.current) focusAtEnd(inputRef.current);
+    if (inputRef.current && trayRef.current) return focusAtEndAboveKeyboard(inputRef.current, trayRef.current);
   }, [mode, suggested]);
 
   const send = () => onSend(value.trim());
@@ -53,7 +54,7 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
 
   return (
     <StickyDock>
-      <div className="absolute inset-x-0 bottom-0 flex flex-col gap-2 rounded-t-6xl bg-white px-4 pt-2.5 pb-safe shadow-tray">
+      <div ref={trayRef} className="absolute inset-x-0 bottom-0 flex flex-col gap-2 rounded-t-6xl bg-white px-4 pt-2.5 pb-safe shadow-tray">
         {mentions.open && (
           <MentionSuggestions id={listId} items={mentions.matches} active={mentions.active} onPick={mentions.pick} className="inset-x-4 bottom-full mb-2" />
         )}
