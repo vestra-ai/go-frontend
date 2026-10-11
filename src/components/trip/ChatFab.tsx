@@ -50,7 +50,7 @@ export function ChatFab({ tripId, avatars, preview, unread }: ChatFabProps) {
             {unread}
           </Badge>
         ) : (
-          <ChevronRight aria-hidden className="size-5 shrink-0 text-white/70" strokeWidth={2.4} />
+          <ChevronRight aria-hidden className="size-5 shrink-0 text-white" strokeWidth={2.4} />
         )}
       </Link>
     </Button>
