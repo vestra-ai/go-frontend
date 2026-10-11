@@ -17,6 +17,8 @@ const figtree = Figtree({
 });
 
 export const metadata: Metadata = {
+  // og:image must be an absolute URL, so Next needs the address the app is served from. Set NEXT_PUBLIC_APP_URL when it moves.
+  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || "https://go-frontend-three.vercel.app"),
   title: "Go — Group Trip Agent",
   applicationName: "Go",
   manifest: "/manifest.webmanifest",

@@ -146,6 +146,9 @@ export const invite = {
 export const share = {
   dialogLabel: "Share trip invite",
   title: (crewName: string) => `Join ${crewName} on Go`,
+  /** The message that goes out with the invite link (WhatsApp, Messages, …): the link sits on its own line under it. */
+  message: (link: string) =>
+    `I created our trip group on Go. Join here and let’s plan it there, Go can help us with the boring work 👇👇👇\n${link}`,
   copy: "Copy",
   recentSub: "WhatsApp group · recent",
   targets: [

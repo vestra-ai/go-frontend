@@ -17,14 +17,23 @@ export function inviteLink(trip: Trip): string {
   return trip.inviteHref ?? "https://" + trip.inviteUrl;
 }
 
-/** What goes out: the file when there is one, else the trip invite. */
-function payload(trip: Trip, file?: ShareFile): { title: string; url: string } {
-  return file ? { title: file.title, url: file.url } : { title: shareCopy.title(trip.name), url: inviteLink(trip) };
+/** The link that goes out: the file's when there is one, else the trip invite. */
+function linkOf(trip: Trip, file?: ShareFile): string {
+  return file ? file.url : inviteLink(trip);
+}
+
+/**
+ * What goes out: the file when there is one, else the trip invite. The invite is one `text` with the link already in it and no
+ * separate `url`, because apps differ in how they join the two (some keep only the url) and this way the message arrives as written.
+ */
+function payload(trip: Trip, file?: ShareFile): { title: string; text: string; url?: string } {
+  if (file) return { title: file.title, text: file.title, url: file.url };
+  return { title: shareCopy.title(trip.name), text: shareCopy.message(inviteLink(trip)) };
 }
 
 export async function copyInviteLink(trip: Trip, file?: ShareFile): Promise<void> {
   try {
-    await navigator.clipboard?.writeText(payload(trip, file).url);
+    await navigator.clipboard?.writeText(linkOf(trip, file));
   } catch {
     // Clipboard can be blocked (permissions, insecure context); the toast still confirms the tap.
   }
@@ -34,9 +43,8 @@ export async function copyInviteLink(trip: Trip, file?: ShareFile): Promise<void
 /** Returns true when the OS share sheet handled it (including a user cancel). */
 async function nativeShare(trip: Trip, file?: ShareFile): Promise<boolean> {
   if (typeof navigator === "undefined" || typeof navigator.share !== "function") return false;
-  const { title, url } = payload(trip, file);
   try {
-    await navigator.share({ title, text: title, url });
+    await navigator.share(payload(trip, file));
     return true;
   } catch (err) {
     return err instanceof DOMException && err.name === "AbortError";
@@ -46,13 +54,13 @@ async function nativeShare(trip: Trip, file?: ShareFile): Promise<boolean> {
 // navigator.share needs user activation: call these synchronously from the tap handler.
 export async function inviteViaWhatsApp(trip: Trip, file?: ShareFile): Promise<void> {
   if (await nativeShare(trip, file)) return;
-  const { title, url } = payload(trip, file);
-  const text = title + " " + url;
-  window.open("https://wa.me/?text=" + encodeURIComponent(text), "_blank", "noopener,noreferrer");
+  const { text, url } = payload(trip, file);
+  const message = url ? text + " " + url : text;
+  window.open("https://wa.me/?text=" + encodeURIComponent(message), "_blank", "noopener,noreferrer");
 }
 
 export async function inviteNative(trip: Trip, channel: NativeChannel, file?: ShareFile): Promise<void> {
   if (await nativeShare(trip, file)) return;
-  await navigator.clipboard?.writeText(payload(trip, file).url).catch(() => {});
+  await navigator.clipboard?.writeText(linkOf(trip, file)).catch(() => {});
   toastGo(shareCopy.toasts[channel]);
 }
