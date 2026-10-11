@@ -29,6 +29,8 @@ type GoPageSheetProps = {
    * is done. Called with the status, after which the caller closes the sheet.
    */
   onVault?: (status: VaultStatus) => void;
+  /** The page posted `vestra:ended` (the login was detected), as opposed to the person closing the sheet. It closes after. */
+  onEnded?: () => void;
 };
 
 function hostOf(url: string): string {
@@ -44,8 +46,12 @@ function hostOf(url: string): string {
  * (contract 1.3). It is never opened in a new tab. The sheet closes when the page posts `{ type: "vestra:ended" }`;
  * the caller also closes it when Go replaces the card ("Logged in"). The same frame holds Go's vault (`onVault`).
  */
-export function GoPageSheet({ open, onOpenChange, url, title, onVault }: GoPageSheetProps) {
+export function GoPageSheet({ open, onOpenChange, url, title, onVault, onEnded }: GoPageSheetProps) {
   const host = url ? hostOf(url) : "";
+  const ended = () => {
+    onEnded?.();
+    onOpenChange(false);
+  };
   return (
     <BottomSheet open={open} onOpenChange={onOpenChange} inset={0} grabber={false} aria-label={title}>
       {url && (
@@ -67,7 +73,7 @@ export function GoPageSheet({ open, onOpenChange, url, title, onVault }: GoPageS
           <div className="relative min-h-0 flex-1">
             <p className="absolute inset-0 m-auto h-fit text-center text-15 text-muted">{copy.opening}</p>
             {/* Only mounted while the sheet is open, so closing it leaves the page at once. */}
-            {open && <PageFrame key={url} url={url} title={title} onEnded={() => onOpenChange(false)} onVault={onVault} />}
+            {open && <PageFrame key={url} url={url} title={title} onEnded={ended} onVault={onVault} />}
           </div>
         </div>
       )}

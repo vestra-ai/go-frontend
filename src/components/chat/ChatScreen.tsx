@@ -33,7 +33,7 @@ import { RecordPaymentSheet, type RecordTarget } from "@/components/sheets/Recor
 import { RouteSheet } from "@/components/sheets/RouteSheet";
 import { StayDetailsSheet } from "@/components/sheets/StayDetailsSheet";
 import { TicketSheet } from "@/components/sheets/TicketSheet";
-import { useCardTap, type GoPage } from "@/components/sheets/useCardTap";
+import { offers, useCardTap, type GoPage } from "@/components/sheets/useCardTap";
 import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor } from "@/components/sheets/useRecordTarget";
 import { RecordingSheet } from "@/components/trip/RecordingSheet";
@@ -238,7 +238,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   }, (opened) => {
     setPage(opened);
     sheets.open("page");
-  });
+  }, (opened) => offers(cardById(opened.cardId), opened.actionId, me.id));
 
   // -- Reading: mark the room read while it is on screen ------------------------------------------------------------
   const lastId = rows.length > 0 ? rows[rows.length - 1].id : "";
@@ -379,7 +379,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     },
     mandate: (decisionId, answer) => void answerMandate(tripId, decisionId, answer).catch(fail(cardCopy.mandate.failed)),
     tap: (cardId, actionId, opts) => void cardTap.tap(cardId, actionId, opts),
-    pending: cardTap.pending,
+    // After the login page closes itself, Go takes a few seconds to replace the card: its button waits meanwhile.
+    pending: cardTap.pending ?? cardTap.settling,
     openOption: (ref) => {
       setOption(ref);
       sheets.open(ref.shape);
@@ -660,7 +661,13 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
       <RecordPaymentSheet open={sheet === "record"} onOpenChange={closeOnFalse} target={recordTarget} />
       <RecordingSheet tripId={tripId} call={recording} open={sheet === "recording"} onOpenChange={closeOnFalse} />
       <LiveViewSheet open={sheet === "live" && working !== null} onOpenChange={closeOnFalse} work={working} />
-      <GoPageSheet open={sheet === "page" && !pageDone} onOpenChange={closeOnFalse} url={page?.url ?? null} title={pageTitle} />
+      <GoPageSheet
+        open={sheet === "page" && !pageDone}
+        onOpenChange={closeOnFalse}
+        url={page?.url ?? null}
+        title={pageTitle}
+        onEnded={() => page && cardTap.pageEnded(page)}
+      />
       <ShareInviteSheet trip={trip} open={sheet === "share"} onOpenChange={closeOnFalse} />
     </RoomUsersProvider>
   );

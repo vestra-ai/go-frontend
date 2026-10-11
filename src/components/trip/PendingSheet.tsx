@@ -10,7 +10,7 @@ import { AvatarStack } from "@/components/common/AvatarStack";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { Spinner } from "@/components/icons/custom/Spinner";
 import { GoPageSheet } from "@/components/sheets/GoPageSheet";
-import { useCardTap, type GoPage } from "@/components/sheets/useCardTap";
+import { offers, useCardTap, type GoPage } from "@/components/sheets/useCardTap";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -84,7 +84,7 @@ export function PendingSheet({ tripId, view, data, features, item, open, onOpenC
   const cardTap = useCardTap(tripId, toChat, (opened) => {
     setPage(opened);
     setPageOpen(true);
-  });
+  }, (opened) => offers(data.goCards[opened.cardId]?.card, opened.actionId, me.id));
 
   const fail = (fallback: string) => (err: unknown) => toastGo(errorMessage(err, fallback));
   const actions: RoomActions = {
@@ -97,7 +97,8 @@ export function PendingSheet({ tripId, view, data, features, item, open, onOpenC
     },
     mandate: (id, answer) => void answerMandate(tripId, id, answer).catch(fail(cardCopy.mandate.failed)),
     tap: (id, actionId, opts) => void cardTap.tap(id, actionId, opts),
-    pending: cardTap.pending,
+    // After the login page closes itself, Go takes a few seconds to replace the card: its button waits meanwhile.
+    pending: cardTap.pending ?? cardTap.settling,
     openOption: toChat,
     openRoute: toChat,
     openCab: toChat,
@@ -154,7 +155,7 @@ export function PendingSheet({ tripId, view, data, features, item, open, onOpenC
           </Button>
         </SheetFooter>
       </BottomSheet>
-      <GoPageSheet open={pageOpen} onOpenChange={setPageOpen} url={page?.url ?? null} title={item?.title ?? ""} />
+      <GoPageSheet open={pageOpen} onOpenChange={setPageOpen} url={page?.url ?? null} title={item?.title ?? ""} onEnded={() => page && cardTap.pageEnded(page)} />
     </RoomUsersProvider>
   );
 }

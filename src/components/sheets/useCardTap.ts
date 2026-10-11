@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import type { CardActionResult } from "@/api/contract";
+import { useEffect, useState } from "react";
+import type { Card, CardAction, CardActionResult } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { openIn, parseGoRoute, preopenTab, type GoRoute } from "@/lib/links";
 import { toastGo } from "@/lib/toast";
@@ -24,6 +24,18 @@ export interface GoPage {
   url: string;
 }
 
+/**
+ * How long a card waits for Go once its page has ended itself. Go replaces the card within a few seconds; if it never
+ * does, the button can be pressed again after this.
+ */
+const SETTLE_MS = 20_000;
+
+/** Whether the card still offers this person the button: Go takes it off once what it opened is done with. */
+export function offers(card: Card | null | undefined, actionId: string, meId: string): boolean {
+  const actions = (card as { actions?: CardAction[] | null } | null | undefined)?.actions ?? [];
+  return actions.some((a) => a.action_id === actionId && (!a.only_for_person_ids || a.only_for_person_ids.includes(meId)));
+}
+
 /** Where a `go://` link leads when it is one of the app's own screens on another route. */
 function pathFor(route: GoRoute): string | null {
   if (route.kind === "tab") return `/trips/${route.tripId}/${route.tab}`;
@@ -34,6 +46,13 @@ function pathFor(route: GoRoute): string | null {
 export interface CardTap {
   /** The card whose tap is on its way: disable its buttons meanwhile (CONTRACT-APP §4.7). */
   pending: string | null;
+  /**
+   * The card whose page ended itself (the login was detected) and that Go has not replaced yet: it still shows the
+   * button, which waits as it does for a tap, and is not pressed again meanwhile.
+   */
+  settling: string | null;
+  /** The framed page said it is finished with: its card waits for Go from here. */
+  pageEnded(page: GoPage): void;
   tap(cardId: string, actionId: string, opts?: { optionId?: string; payload?: { trip: "oneway" | "round" } }): Promise<CardActionResult | null>;
   /** Follows a `go://` link (a card button, or a notice's link): a sheet of this room, or another screen. */
   follow(url: string): void;
@@ -43,14 +62,26 @@ export interface CardTap {
  * One press of a Go card button: sends it, then does what Go answered. `done` / `refused` show the toast; `open` opens
  * one of the app's own screens for a `go://` link, or an `https://` page at once: framed in a sheet (`onPage`), except
  * the vault and the listen-in page, which open in the browser. Never retried on its own.
+ *
+ * @param offered Whether the card still offers me the button that opened a page (see `offers`).
  */
 export function useCardTap(
   tripId: string,
   onSheet: (route: Extract<GoRoute, { kind: "sheet" | "booking" }>) => void,
   onPage: (page: GoPage) => void,
+  offered: (page: GoPage) => boolean,
 ): CardTap {
   const router = useRouter();
   const [pending, setPending] = useState<string | null>(null);
+  const [ended, setEnded] = useState<GoPage | null>(null);
+  const settling = ended && offered(ended) ? ended.cardId : null;
+  // Go took the button off: the wait is over for good, also if Go offers the same button again later (after a log out).
+  if (ended && !settling) setEnded(null);
+  useEffect(() => {
+    if (!settling) return;
+    const timer = window.setTimeout(() => setEnded(null), SETTLE_MS);
+    return () => window.clearTimeout(timer);
+  }, [settling]);
 
   function follow(url: string) {
     const route = parseGoRoute(url);
@@ -65,7 +96,7 @@ export function useCardTap(
   }
 
   async function tap(cardId: string, actionId: string, opts: { optionId?: string; payload?: { trip: "oneway" | "round" } } = {}) {
-    if (pending) return null;
+    if (pending || cardId === settling) return null;
     const browser = OPENS_IN_BROWSER.has(actionId);
     const tab = browser ? preopenTab() : null;
     setPending(cardId);
@@ -91,5 +122,5 @@ export function useCardTap(
     }
   }
 
-  return { pending, tap, follow };
+  return { pending, settling, pageEnded: setEnded, tap, follow };
 }
