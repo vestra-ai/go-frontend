@@ -19,7 +19,7 @@ const endMarginClass = {
 
 type MessageListProps = {
   bottomPadding: keyof typeof padClass;
-  /** End sentinel; pass the same ref to `useScrollToEnd`. */
+  /** End sentinel; pass the same ref to `useThreadFollow`. */
   anchorRef: RefObject<HTMLSpanElement | null>;
   /** Slide up with the page (default). Off when the thread replaces the skeleton in place. */
   slideIn?: boolean;

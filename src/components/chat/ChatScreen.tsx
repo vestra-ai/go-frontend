@@ -2,7 +2,7 @@
 
 import { useSearchParams } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { isKnownCard, type CallCard, type GoCard, type OptionsCard, type Transfer, type WorkingCard } from "@/api/contract";
+import { type CallCard, type GoCard, type OptionsCard, type Transfer, type WorkingCard } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatSkeleton } from "@/components/chat/ChatSkeleton";
@@ -16,7 +16,7 @@ import { MessageList } from "@/components/chat/MessageList";
 import { NewMessagesPill } from "@/components/chat/NewMessagesPill";
 import { RoomUsersProvider } from "@/components/chat/RoomContext";
 import { useLongPress } from "@/components/chat/useLongPress";
-import { useScrollToEnd, useStayAtEnd, useThreadFollow } from "@/components/chat/useScrollToEnd";
+import { useThreadFollow } from "@/components/chat/useScrollToEnd";
 import { Screen } from "@/components/shell/Screen";
 import { ShareInviteSheet } from "@/components/shell/ShareInviteSheet";
 import { AttachmentSheet } from "@/components/sheets/AttachmentSheet";
@@ -235,22 +235,12 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   }, [tripId, lastId]);
 
   // -- Scrolling --------------------------------------------------------------------------------------------------
-  // The 3A contract: useLongPress cancels on any scroll, so auto-scroll holds while a press is armed and catches up
-  // on release. The key follows the newest row, so reading back older pages never yanks the thread to its end.
   // Go's `typing` frame (§3.1) adds a row under the newest one; the store drops it when Go speaks or it runs out.
   const goThinking = data.typing.some((e) => e.who.kind === "go");
-  const liveScrollKey = goThinking ? `${lastId}+go` : lastId;
-  const [heldScrollKey, setHeldScrollKey] = useState<string | null>(null);
-  // A new message scrolls a reader who is at the end; one who has scrolled up stays where they are, with a button that counts what came in.
+  // A reader at the end goes with it whenever it moves: a new message, Go's typing row, a card that grew in place, the
+  // reply / ask-Go tray. One who has scrolled up stays where they are, with a button that counts what came in. Reading
+  // back older pages never yanks the thread to its end.
   const thread = useThreadFollow(anchorRef, rows);
-  useScrollToEnd(anchorRef, [heldScrollKey ?? liveScrollKey], thread.follow);
-  // Opening or closing the reply / ask-Go tray moves the bottom edge only: the thread follows it when it was already at
-  // the end, and stays where it is when reading further up (the message being replied to is usually there).
-  useStayAtEnd(anchorRef, modes.bottomPadding);
-  // A vote's card stands as a placeholder until its decision is read, and the poll is taller: if the thread was at its end,
-  // it follows the newest card to its new end.
-  const newest = rows[rows.length - 1]?.card;
-  useStayAtEnd(anchorRef, newest && isKnownCard(newest) && newest.kind === "vote" ? view.decisions.some((d) => d.decision_id === newest.decision_id) : true);
 
   // "Earlier messages" adds a page above: keep what was on screen where it was.
   const firstId = rows[0]?.id ?? "";
@@ -287,7 +277,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     const row = target.closest<HTMLElement>("[data-msg-id]");
     const id = row?.dataset.msgId;
     if (!row || !id) return;
-    setHeldScrollKey(null); // the overlay now covers the bubble, so its release never reaches the row
+    thread.release(); // the overlay now covers the bubble, so its release never reaches the row
     setAnchor({ id, rect: frameRect(row) });
     modes.setMode("longpress", id);
   });
@@ -497,8 +487,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
               room={room}
               enter={!historyIds.has(m.id)}
               pressHandlers={pressHandlers}
-              onPressStart={() => setHeldScrollKey(liveScrollKey)}
-              onPressEnd={() => setHeldScrollKey(null)}
+              onPressStart={thread.hold}
+              onPressEnd={thread.release}
               actions={actions}
             />
           ))}
