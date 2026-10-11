@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Spinner } from "@/components/icons/custom/Spinner";
 import { Plus } from "@/components/icons/generated";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -7,12 +7,14 @@ type HeroCardProps = {
   title: string;
   body: string;
   ctaLabel: string;
-  ctaHref: string;
+  onCta(): void;
+  /** The trip is being created: the CTA shows a spinner. */
+  ctaPending?: boolean;
   mascot: { src: string; alt: string };
 };
 
 /** First-run Home hero: Go mascot, headline and the Create-a-trip CTA. */
-export function HeroCard({ title, body, ctaLabel, ctaHref, mascot }: HeroCardProps) {
+export function HeroCard({ title, body, ctaLabel, onCta, ctaPending = false, mascot }: HeroCardProps) {
   return (
     <Card
       variant="shadow"
@@ -29,11 +31,9 @@ export function HeroCard({ title, body, ctaLabel, ctaHref, mascot }: HeroCardPro
       <h2 className="relative max-w-[230px] text-26 font-semibold tracking-[-0.022em] text-balance">{title}</h2>
       <p className="relative max-w-[240px] text-15 leading-[1.4] tracking-sub text-pretty text-muted">{body}</p>
       <div className="relative mt-1 flex flex-col gap-2">
-        <Button variant="primary" size="xl" asChild>
-          <Link href={ctaHref}>
-            <Plus className="size-5" />
-            {ctaLabel}
-          </Link>
+        <Button variant="primary" size="xl" aria-busy={ctaPending} onClick={onCta}>
+          {ctaPending ? <Spinner className="size-5 border-white/30 border-t-white border-r-white" /> : <Plus className="size-5" />}
+          {ctaLabel}
         </Button>
       </div>
     </Card>

@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { CrewCluster } from "@/components/home/CrewCluster";
 import { CrewList } from "@/components/home/CrewList";
+import { CrewSkeleton } from "@/components/home/CrewSkeleton";
 import { InviteLinkField } from "@/components/home/InviteLinkField";
 import { SuggestionsPlaceholder } from "@/components/home/SuggestionsPlaceholder";
 import { SectionHeader } from "@/components/common/SectionHeader";
@@ -19,67 +20,25 @@ import { crew as copy } from "@/data/seed/copy";
 import { timeAgo } from "@/lib/dates";
 import { formatWhosIn } from "@/lib/format";
 import { copyInviteLink } from "@/lib/share";
-import { toastGo } from "@/lib/toast";
-import { newKey } from "@/api/http";
-import { createTrip, loadMe, useGo, useOpenTrip, useRequireSession } from "@/state";
+import { useOpenTrip, useRequireSession } from "@/state";
 import { toUser, tripFromView } from "@/state/view";
 
-const CREATE_KEY = "go-new-trip-key";
-
 /**
- * `POST /trips` for a visit without `?trip=`. The Idempotency-Key is kept for the tab until the trip exists, so a
- * reload (or a second effect run) while the request is on its way replays the same answer instead of adding a trip.
+ * Who's coming (CONTRACT-APP §4.4): the new trip's people, live as friends tap the invite link. The trip is created on
+ * Home, on the tap (`useStartTrip`), and this page is always opened as `?trip=<id>`; without it there is nothing to
+ * show, so it goes back to Home.
  */
-let creating: Promise<string> | null = null;
-function createOnce(hint: string | null): Promise<string> {
-  creating ??= (async () => {
-    let key = window.sessionStorage.getItem(CREATE_KEY);
-    if (!key) {
-      key = newKey();
-      window.sessionStorage.setItem(CREATE_KEY, key);
-    }
-    // The body must be the same on a replay: read my profile first, then build it once.
-    const me = useGo.getState().me ?? (await loadMe());
-    const view = await createTrip(
-      { ...(hint ? { destination_hint: hint.slice(0, 80) } : {}), ...(me.from_city ? { from_city: me.from_city } : {}) },
-      key,
-    );
-    window.sessionStorage.removeItem(CREATE_KEY);
-    return view.trip_id;
-  })().finally(() => {
-    creating = null;
-  });
-  return creating;
-}
-
-/** Who's coming (CONTRACT-APP §4.4): the new trip's people, live as friends tap the invite link. */
 function WhosComing() {
   const router = useRouter();
-  const params = useSearchParams();
   const session = useRequireSession();
-  const tripId = params.get("trip");
-  const hint = params.get("hint");
+  const tripId = useSearchParams().get("trip");
   const [shareOpen, setShareOpen] = useState(false);
 
   useEffect(() => {
-    if (session !== "signedIn" || tripId) return;
-    let cancelled = false;
-    createOnce(hint)
-      .then((id) => {
-        if (!cancelled) router.replace(`/trips/new?trip=${encodeURIComponent(id)}`);
-      })
-      .catch(() => {
-        if (cancelled) return;
-        window.sessionStorage.removeItem(CREATE_KEY);
-        toastGo(copy.createFailed);
-        router.replace("/home");
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session, tripId, hint, router]);
+    if (session === "signedIn" && !tripId) router.replace("/home");
+  }, [session, tripId, router]);
 
-  if (session !== "signedIn" || !tripId) return <Screen>{null}</Screen>;
+  if (session !== "signedIn" || !tripId) return <CrewSkeleton />;
   return <Crew tripId={tripId} shareOpen={shareOpen} setShareOpen={setShareOpen} />;
 }
 
@@ -91,7 +50,7 @@ function Crew({ tripId, shareOpen, setShareOpen }: { tripId: string; shareOpen: 
     if (forbidden) router.replace("/home");
   }, [forbidden, router]);
 
-  if (!view) return <Screen>{null}</Screen>;
+  if (!view) return <CrewSkeleton />;
 
   const trip = tripFromView(view);
   const organizerPerson = view.people.find((p) => p.person_id === view.organizer_person_id) ?? view.me.person;
@@ -194,7 +153,7 @@ function Crew({ tripId, shareOpen, setShareOpen }: { tripId: string; shareOpen: 
 
 export default function NewTripPage() {
   return (
-    <Suspense fallback={<Screen>{null}</Screen>}>
+    <Suspense fallback={<CrewSkeleton />}>
       <WhosComing />
     </Suspense>
   );

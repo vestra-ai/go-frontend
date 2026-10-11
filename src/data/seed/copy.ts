@@ -119,6 +119,7 @@ export const crew = {
   organizer: "Organizer",
   joinLabel: (ago: string) => `Joined via link · ${ago}`,
   createFailed: "Couldn’t start the trip. Try again.",
+  loading: "Loading your trip",
   next: "Next",
   nextJoined: "Next · open trip chat",
   helper: "Go can share the link for you from the trip chat",

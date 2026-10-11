@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import type { Attention, Home, PastTripSummary } from "@/api/contract";
 import { ListCard } from "@/components/common/ListCard";
 import { ListRow } from "@/components/common/ListRow";
@@ -10,6 +9,8 @@ import { StickyDock } from "@/components/shell/StickyDock";
 import { homeBodyClass } from "@/components/home/HomeHeader";
 import { PastTripRow } from "@/components/home/PastTripRow";
 import { TripCard } from "@/components/home/TripCard";
+import { useStartTrip } from "@/components/home/useStartTrip";
+import { Spinner } from "@/components/icons/custom/Spinner";
 import { Plus } from "@/components/icons/generated";
 import { DashedNoteRow } from "@/components/trip/DashedNoteRow";
 import { Avatar } from "@/components/ui/avatar";
@@ -58,6 +59,7 @@ function pastTrip(trip: PastTripSummary, index: number): PastTrip {
 /** Returning Home body (what I owe, your trips, past trips) plus the New-trip FAB. */
 export function AppHomeView({ home }: { home: Home }) {
   const now = new Date();
+  const trip = useStartTrip();
 
   return (
     <>
@@ -116,11 +118,15 @@ export function AppHomeView({ home }: { home: Home }) {
       </div>
       <StickyDock>
         <FadeDock variant="fade" className="h-[120px] items-center justify-end">
-          <Button variant="primary" size="xl" asChild className="mb-1 px-6 text-17 font-semibold tracking-normal shadow-fab">
-            <Link href="/trips/new">
-              <Plus className="size-5" />
-              {copy.fab}
-            </Link>
+          <Button
+            variant="primary"
+            size="xl"
+            aria-busy={trip.pending !== null}
+            onClick={() => void trip.start("fab")}
+            className="mb-1 px-6 text-17 font-semibold tracking-normal shadow-fab"
+          >
+            {trip.pending ? <Spinner className="size-5 border-white/30 border-t-white border-r-white" /> : <Plus className="size-5" />}
+            {copy.fab}
           </Button>
         </FadeDock>
       </StickyDock>

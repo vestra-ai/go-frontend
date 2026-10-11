@@ -4,12 +4,19 @@ import type { Idea } from "@/data/types";
 const rowClass =
   "-mx-4 flex snap-x snap-mandatory scroll-px-4 gap-2.5 overflow-x-auto overscroll-x-contain px-4 pt-0.5 pb-2 scrollbar-none";
 
-/** Horizontal snap row of idea cards; each card links to its own `hrefFor(idea)`. */
-export function IdeasCarousel({ ideas, hrefFor }: { ideas: Idea[]; hrefFor: (idea: Idea) => string }) {
+type IdeasCarouselProps = {
+  ideas: Idea[];
+  onPick(idea: Idea): void;
+  /** The idea whose trip is being created: its card shows the spinner. */
+  pendingId?: string | null;
+};
+
+/** Horizontal snap row of idea cards; tapping one starts a trip with it (`onPick`). */
+export function IdeasCarousel({ ideas, onPick, pendingId }: IdeasCarouselProps) {
   return (
     <div className={rowClass}>
       {ideas.map((idea) => (
-        <IdeaCard key={idea.id} idea={idea} href={hrefFor(idea)} />
+        <IdeaCard key={idea.id} idea={idea} onPick={() => onPick(idea)} pending={idea.id === pendingId} />
       ))}
     </div>
   );
