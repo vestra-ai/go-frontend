@@ -488,7 +488,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
 
         <MessageList bottomPadding={modes.bottomPadding} anchorRef={anchorRef} slideIn={slideIn}>
           {data.hasMoreHistory && (
-            <EarlierMessagesRow label={chatCopy.earlier} loading={data.loadingHistory} onPress={loadEarlier} />
+            <EarlierMessagesRow label={chatCopy.earlier} loading={data.loadingHistory} onPress={loadEarlier} pageKey={firstId} />
           )}
           {rows.map((m) => (
             <MessageRenderer
