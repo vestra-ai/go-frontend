@@ -4,7 +4,7 @@ import { useParams, usePathname, useSearchParams } from "next/navigation";
 import { Suspense, type ReactNode } from "react";
 import { TripShell } from "@/components/trip/TripShell";
 import { TripSkeleton } from "@/components/trip/TripSkeleton";
-import type { TripTab } from "@/components/trip/TripTabs";
+import { tripTabOf } from "@/components/trip/TripTabs";
 import { useTripShellProps } from "@/components/trip/useTripShellProps";
 import type { TripId } from "@/data/types";
 import { useTripGate } from "@/state";
@@ -14,9 +14,7 @@ import { useTripGate } from "@/state";
 // swaps (and, while the next tab's payload is on its way, shows `loading.tsx`, which is empty). Until the session is
 // read and the trip answers (a refresh), `TripSkeleton` stands in for the whole shell. The chat, the ticket, the
 // check-in pass and the transactions history sit outside this group, with their own screens.
-const TAB_OF_PATH = /^\/trips\/[^/]+(?:\/(itinerary|bookings|expenses))?\/?$/;
-
-const tabOf = (pathname: string) => (TAB_OF_PATH.exec(pathname)?.[1] ?? "home") as TripTab;
+const tabOf = (pathname: string) => tripTabOf(pathname) ?? "home";
 
 function TripTabsFrame({ tripId, children }: { tripId: TripId; children: ReactNode }) {
   const pathname = usePathname();

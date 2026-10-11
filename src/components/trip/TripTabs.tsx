@@ -5,6 +5,14 @@ import { cn } from "@/lib/utils";
 
 export type TripTab = "home" | "itinerary" | "bookings" | "expenses";
 
+const TAB_OF_PATH = /^\/trips\/[^/]+(?:\/(itinerary|bookings|expenses))?\/?$/;
+
+/** The tab a pathname shows, or null when it is not one of the trip's four tabs (the chat, a ticket, …). */
+export const tripTabOf = (pathname: string): TripTab | null => {
+  const match = TAB_OF_PATH.exec(pathname);
+  return match ? ((match[1] ?? "home") as TripTab) : null;
+};
+
 const tabs: { id: TripTab; label: string; path: string }[] = [
   { id: "home", label: "Home", path: "" },
   { id: "itinerary", label: "Itinerary", path: "/itinerary" },
