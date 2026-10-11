@@ -1,13 +1,9 @@
 "use client";
 
-import { useParams, usePathname } from "next/navigation";
-import { ChatSkeleton } from "@/components/chat/ChatSkeleton";
+import { usePathname } from "next/navigation";
+import { routeSkeleton } from "@/components/shell/routeSkeleton";
 import { Screen } from "@/components/shell/Screen";
-import { TripSkeleton } from "@/components/trip/TripSkeleton";
-import { tripTabOf } from "@/components/trip/TripTabs";
-import type { TripId } from "@/data/types";
 
-const CHAT = /^\/trips\/[^/]+\/chat\/?$/;
 const TICKET = /^\/trips\/[^/]+\/bookings\/[^/]+\/ticket\/?$/;
 
 /**
@@ -16,10 +12,6 @@ const TICKET = /^\/trips\/[^/]+\/bookings\/[^/]+\/ticket\/?$/;
  * next (the trip tabs, the chat), not an empty canvas, which would be a blank flash with nothing left to animate.
  */
 export default function TripLoading() {
-  const { tripId } = useParams<{ tripId: TripId }>();
   const pathname = usePathname();
-  const tab = tripTabOf(pathname);
-  if (tab) return <TripSkeleton tripId={tripId} active={tab} />;
-  if (CHAT.test(pathname)) return <ChatSkeleton tripId={tripId} />;
-  return <Screen bg={TICKET.test(pathname) ? "viewer" : "canvas"}>{null}</Screen>;
+  return routeSkeleton(pathname) ?? <Screen bg={TICKET.test(pathname) ? "viewer" : "canvas"}>{null}</Screen>;
 }

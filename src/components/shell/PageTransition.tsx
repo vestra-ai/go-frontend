@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useState, type ReactNode } from "react";
+import { AUTH_CALLBACK_PATH } from "@/lib/auth";
 import { useSession } from "@/state";
 
 // The four trip tabs (home / itinerary / bookings / expenses) are separate routes that share one hero + tab bar.
@@ -10,9 +11,9 @@ const TRIP_TAB = /^\/trips\/([^/]+)(?:\/(?:itinerary|bookings|expenses))?$/;
 // Pages that keep a pinned header still and animate their own body instead (they mark it with `[[data-own]_&]:animate-page-in`).
 const OWN_TRANSITION = /^\/trips\/[^/]+\/(?:chat|expenses\/transactions)$/;
 
-// Pages that draw a skeleton of their own while the session is read (Home, the trip tabs, the chat): the skeleton is
-// the shell, so it shows at once.
-const OWN_SKELETON = /^\/(?:home|trips\/(?!new(?:\/|$))[^/]+(?:\/(?:itinerary|bookings|expenses|chat))?)$/;
+// Pages that draw a skeleton of their own while the session is read (Home, "Who's coming" at /trips/new, the trip tabs,
+// the chat): the skeleton is the shell, so it shows at once.
+const OWN_SKELETON = /^\/(?:home|trips\/[^/]+(?:\/(?:itinerary|bookings|expenses|chat))?)$/;
 
 // When the slide-up of the page now on screen was let go (`performance.now()`), and for which pathname.
 let released: { pathname: string; at: number } | null = null;
@@ -50,16 +51,22 @@ const keyOf = (pathname: string) => {
  * render an empty shell until the session has been read (client only), so the wrapper stays `pre` until then:
  * the slide-up plays on the real content instead of on the empty shell. (A page with its own skeleton, `OWN_SKELETON`,
  * is not held: its skeleton is what shows first.)
+ * The sign-in callback draws the skeleton of the page it routes on to, so that page takes over in place: same wrapper,
+ * no second slide-up (`inherited`).
  * (A root `template.tsx` would not do: it only remounts when the top-level segment changes.)
  */
 export function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   // "Hydrated" is: the session has been read, so the page is drawing its real content.
   const hydrated = useSession() !== "loading";
-  const [state, setState] = useState({ pathname, key: keyOf(pathname), tabSwitch: false, ready: true });
+  const [state, setState] = useState({ pathname, key: keyOf(pathname), tabSwitch: false, ready: true, inherited: false });
   if (state.pathname !== pathname) {
-    const key = keyOf(pathname);
-    setState({ pathname, key, tabSwitch: key === state.key, ready: false });
+    if (state.pathname === AUTH_CALLBACK_PATH && OWN_SKELETON.test(pathname)) {
+      setState({ ...state, pathname, inherited: true });
+    } else {
+      const tabSwitch = keyOf(pathname) === keyOf(state.pathname);
+      setState({ pathname, key: tabSwitch ? state.key : keyOf(pathname), tabSwitch, ready: false, inherited: false });
+    }
   }
 
   useEffect(() => {
@@ -78,8 +85,9 @@ export function PageTransition({ children }: { children: ReactNode }) {
     };
   }, [state.ready, state.pathname]);
 
-  const own = OWN_TRANSITION.test(state.pathname);
-  const skeleton = OWN_SKELETON.test(state.pathname);
+  // After the callback the wrapper has already slid up with the skeleton, so the page's own parts stay put.
+  const own = OWN_TRANSITION.test(state.pathname) && !state.inherited;
+  const skeleton = OWN_SKELETON.test(state.pathname) || state.pathname === AUTH_CALLBACK_PATH;
   const shown = state.ready && (hydrated || skeleton);
 
   useLayoutEffect(() => {
