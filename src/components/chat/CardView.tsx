@@ -404,21 +404,23 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
       ? (id: string | null) => id !== null && actions.tap(card.card_id, pick.actionId, { optionId: id })
       : () => {};
   const left = vote?.open && decision ? until(decision.closes_at) : "";
-  const voteLine = !vote
+  // A trip of one has no vote to run: its one tap is a choice, so the card says Choose and shows no tallies or countdown.
+  const solo = view.people.length === 1;
+  const voteLine = !vote || (solo && vote.open)
     ? ""
     : vote.open
       ? left && polls.closesIn(left)
       : decision?.status === "cancelled"
         ? polls.cancelled
         : vote.winner
-          ? polls.won(vote.winner)
+          ? solo ? polls.chosen(vote.winner) : polls.won(vote.winner)
           : polls.closed;
   const rail = {
     vote: vote?.mine ?? null,
     me: me.id,
     // Tallies only once the decision is here; until then, and on a card that is no vote, the button stands alone.
-    hideVotes: !vote,
-    voteLabel: decisionId ? undefined : pick?.label,
+    hideVotes: !vote || solo,
+    voteLabel: solo && decisionId ? copy.options.choose : decisionId ? undefined : pick?.label,
     disabled: decisionId ? !vote?.open : !pick || busy,
     // A closed vote shows its result with no button; a card that is no vote and has no per-option action has nothing to
     // press, so it draws no button either (it used to draw a greyed-out "Vote").
