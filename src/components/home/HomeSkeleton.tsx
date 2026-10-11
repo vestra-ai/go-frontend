@@ -47,6 +47,7 @@ export function HomeSkeleton() {
       <div aria-hidden>
         <HomeHeader
           eyebrow={<span className={SKELETON_BAR_ON_CANVAS}>{copy.eyebrowBack}</span>}
+          title={<span className={SKELETON_BAR_ON_CANVAS}>First name</span>}
           avatar={
             <span className="flex size-11 items-center justify-center rounded-full">
               <span className={cn("size-10 rounded-full", SKELETON_FILL)} />

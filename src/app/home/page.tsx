@@ -34,6 +34,7 @@ export default function HomePage() {
     <Screen>
       <HomeHeader
         eyebrow={hasTrips ? copy.eyebrowBack : copy.eyebrowZero}
+        title={hasTrips ? user.firstName : copy.title}
         avatar={
           <Link href="/profile" aria-label={copy.profileLabel} className="flex size-11 items-center justify-center rounded-full">
             <Avatar size={40} name={user.name} src={user.avatar} tone={user.tone} />
