@@ -32,10 +32,12 @@ type PlaceDetailsSheetProps = {
   onVote?: (id: PlaceOption["id"]) => void;
   /** The button's words when it is not a vote ("I'll take this"). */
   actionLabel?: string;
+  /** This option is my pick in the open vote: the button says "Voted ✓" instead of offering the vote again. */
+  voted?: boolean;
 };
 
 /** E2 (rich, Goa) and E3/E4 (light, Gokarna/Udaipur) place details (E-deciding.md §1.3). */
-export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, actionLabel }: PlaceDetailsSheetProps) {
+export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, actionLabel, voted = false }: PlaceDetailsSheetProps) {
   const userOf = useRoomUsers();
   // Keep the last place so the sheet keeps its content while it animates out after the query clears.
   const [last, setLast] = useState(place);
@@ -149,11 +151,18 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, a
       </SheetBody>
 
       <SheetFooter>
-        {onVote && (
-          <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
-            {/* A long name is cut with an ellipsis inside the button, not spilled past its ends. */}
-            <span className="truncate">{actionLabel ?? polls.voteFor(shown.name)}</span>
+        {voted ? (
+          // The card's green "Voted ✓"; tapping it does nothing.
+          <Button type="button" variant="success" size="xl" className="w-full" aria-pressed>
+            {polls.voted}
           </Button>
+        ) : (
+          onVote && (
+            <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
+              {/* A long name is cut with an ellipsis inside the button, not spilled past its ends. */}
+              <span className="truncate">{actionLabel ?? polls.voteFor(shown.name)}</span>
+            </Button>
+          )
         )}
         {rich && (
           <Button type="button" variant="link" className="h-11 text-16" onClick={() => onOpenChange(false)}>

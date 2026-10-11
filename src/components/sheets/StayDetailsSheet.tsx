@@ -24,10 +24,12 @@ type StayDetailsSheetProps = {
   onVote?: (id: Stay["id"]) => void;
   /** The button's words when it is not a vote ("I'll take this"). */
   actionLabel?: string;
+  /** This option is my pick in the open vote: the button says "Voted ✓" instead of offering the vote again. */
+  voted?: boolean;
 };
 
-/** E9–E11 stay details sheet (48px below the top of the screen): hero, name + rating, amenities, facts, "Vote for {name}". */
-export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, onVote, actionLabel }: StayDetailsSheetProps) {
+/** E9–E11 stay details sheet (48px below the top of the screen): hero, location + rating, amenities, facts, "Vote for {name}". */
+export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, onVote, actionLabel, voted = false }: StayDetailsSheetProps) {
   // Keep the last stay on screen while the sheet animates closed (the parent clears `stay` with the query).
   const [lastStay, setLastStay] = useState(stay);
   if (stay && stay !== lastStay) setLastStay(stay);
@@ -45,24 +47,23 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
           // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover
           <img src={shown.img} alt={shown.name} className="h-[190px] w-full rounded-5xl bg-skeleton object-cover text-transparent" />
         )}
-        <div className="flex items-start justify-between gap-2.5">
-          <div className="flex flex-col gap-0.5">
-            {/* Repeats the sheet title, as designed. */}
-            <span className="text-22 font-semibold tracking-h2">{shown.name}</span>
+        {/* The name is the sheet's title, so it is not said again here: where it is on the left, its rating on the right. */}
+        {(shown.areaLong || shown.rating) && (
+          <div className="flex items-center justify-between gap-2.5">
             {shown.areaLong && (
-              <span className="flex items-center gap-1 text-13 text-muted">
+              <span className="flex min-w-0 items-center gap-1 text-13 text-muted">
                 <MapPin className="size-[13px] shrink-0" />
-                {shown.areaLong}
+                <span className="truncate">{shown.areaLong}</span>
               </span>
             )}
+            {shown.rating && (
+              <Badge variant="white" size="rating" className="ml-auto shrink-0 gap-1">
+                ★ {shown.rating}
+                {shown.reviews && <span className="font-medium text-muted">· {shown.reviews}</span>}
+              </Badge>
+            )}
           </div>
-          {shown.rating && (
-            <Badge variant="white" size="rating" className="shrink-0 gap-1">
-              ★ {shown.rating}
-              {shown.reviews && <span className="font-medium text-muted">· {shown.reviews}</span>}
-            </Badge>
-          )}
-        </div>
+        )}
         <AmenityChips items={shown.amenities} />
         <FactRows
           rows={[
@@ -77,11 +78,18 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
         <OptionLinks extras={shown.extras} />
       </SheetBody>
       <SheetFooter>
-        {onVote && (
-          <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
-            {/* A long name is cut with an ellipsis inside the button, not spilled past its ends. */}
-            <span className="truncate">{actionLabel ?? polls.voteFor(shown.name)}</span>
+        {voted ? (
+          // The card's green "Voted ✓"; tapping it does nothing.
+          <Button type="button" variant="success" size="xl" className="w-full" aria-pressed>
+            {polls.voted}
           </Button>
+        ) : (
+          onVote && (
+            <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
+              {/* A long name is cut with an ellipsis inside the button, not spilled past its ends. */}
+              <span className="truncate">{actionLabel ?? polls.voteFor(shown.name)}</span>
+            </Button>
+          )
         )}
       </SheetFooter>
     </BottomSheet>

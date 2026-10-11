@@ -7,12 +7,14 @@ type PollRowProps = {
   value: string;
   sub: string;
   cta: string;
+  /** I have voted: the button is the green "Voted ✓". */
+  voted?: boolean;
   options: { id: string; name: string; img: string; votes: number }[];
   /** Deep-links to the stay poll in the chat; no vote is cast here. */
   onAction: () => void;
 };
 
-export function PollRow({ emoji, eyebrow, value, sub, cta, options, onAction }: PollRowProps) {
+export function PollRow({ emoji, eyebrow, value, sub, cta, voted = false, options, onAction }: PollRowProps) {
   return (
     <div className="flex flex-col gap-2.5 pt-3 pb-3.5">
       <div className="flex items-center gap-3">
@@ -24,7 +26,7 @@ export function PollRow({ emoji, eyebrow, value, sub, cta, options, onAction }: 
           <span className="text-16 leading-[1.3] font-semibold tracking-body">{value}</span>
           <span className="text-13 tracking-caption text-muted">{sub}</span>
         </div>
-        <Button variant="primary" size="sm" className="h-[34px] px-[18px] tracking-h4" onClick={onAction}>
+        <Button variant={voted ? "success" : "primary"} size="sm" className="h-[34px] px-[18px] tracking-h4" onClick={onAction}>
           {cta}
         </Button>
       </div>

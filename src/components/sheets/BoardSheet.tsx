@@ -43,6 +43,7 @@ export function BoardSheet({ board, open, onOpenChange, onAction }: BoardSheetPr
                 value={r.value}
                 sub={r.sub}
                 cta={r.cta}
+                voted={r.voted}
                 options={r.options}
                 onAction={() => onAction(r.key)}
               />

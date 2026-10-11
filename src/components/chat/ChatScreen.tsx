@@ -67,7 +67,7 @@ import {
 import { buildBoard, type BoardTarget } from "@/state/boardView";
 import { toPrivateDetails, toTicketDoc } from "@/state/bookingView";
 import { toCall, type CallModel } from "@/state/homeView";
-import { toCabCard, toPlaceOption, toRouteCard, toStay, voteShape, withDetails } from "@/state/optionView";
+import { myVoteIndex, toCabCard, toPlaceOption, toRouteCard, toStay, voteShape, withDetails } from "@/state/optionView";
 import { buildRoom } from "@/state/roomView";
 import { fromMinor, toTripDates, toUser, tripFromView, userOf, usersById } from "@/state/view";
 import { toWorking } from "@/state/workingView";
@@ -332,7 +332,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     void loadMoney(tripId).catch(() => {});
     sheets.open("board");
   }
-  const board = buildBoard(view, data.money, users);
+  const board = buildBoard(view, data.money, users, data.myVotes);
   const boardAction = (target: BoardTarget) => {
     if (target === "budget") return openBudget();
     const boardRow = board.rows.find((r) => r.key === target);
@@ -455,6 +455,9 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
           }
         : undefined;
   const optionLabel = option?.source === "card" ? cardPick?.label : undefined;
+  // The option is my pick in a vote that is still open: the sheet says so instead of offering the vote again.
+  const optionVoted =
+    optionDecision?.status === "open" && optionIndex >= 0 && myVoteIndex(optionDecision, data.myVotes[optionDecision.decision_id], me.id) === optionIndex;
 
   const bookings = data.bookings ?? view.bookings;
   const privateBooking = bookings.find((b) => b.booking_id === privateBookingId);
@@ -616,7 +619,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
         }}
         onClose={sheets.close}
       />
-      <PlaceDetailsSheet open={sheet === "place"} onOpenChange={closeOnFalse} place={place} voters={optionVoters} onVote={pressOption} actionLabel={optionLabel} />
+      <PlaceDetailsSheet open={sheet === "place"} onOpenChange={closeOnFalse} place={place} voters={optionVoters} onVote={pressOption} actionLabel={optionLabel} voted={optionVoted} />
       <StayDetailsSheet
         open={sheet === "stay"}
         onOpenChange={closeOnFalse}
@@ -625,6 +628,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
         dates={stayDetails?.dates ?? ""}
         onVote={pressOption}
         actionLabel={optionLabel}
+        voted={optionVoted}
       />
       <BudgetSheet open={sheet === "budget"} onOpenChange={closeOnFalse} {...budget} />
       <RouteSheet

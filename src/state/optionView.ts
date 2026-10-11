@@ -268,6 +268,12 @@ export interface CardVote {
   winner?: string;
 }
 
+/** The option I voted for: what the single-vote routes said, else my row in a vote that names its voters. Null with no pick, or "flexible". */
+export function myVoteIndex(decision: Decision, stored: MyVote | undefined, meId: Id): number | null {
+  const my = stored !== undefined ? stored : (decision.votes?.find((v) => v.person_id === meId) ?? null);
+  return my && "option_index" in my ? my.option_index : null;
+}
+
 /**
  * The vote an options card carries: the card option with `option_id` X is the decision option whose `option_ref` is X,
  * and that one's place in `decision.options` is the `option_index` to vote with.
@@ -277,9 +283,7 @@ export function cardVote(decision: Decision, card: OptionsCard, mine: MyVote | u
   decision.options.forEach((o, i) => {
     if (o.option_ref) index.set(o.option_ref, i);
   });
-  // My vote: what the single-vote routes said, else my row in a vote that names its voters.
-  const my = mine !== undefined ? mine : (decision.votes?.find((v) => v.person_id === meId) ?? null);
-  const myIndex = my && "option_index" in my ? my.option_index : null;
+  const myIndex = myVoteIndex(decision, mine, meId);
   return {
     decisionId: decision.decision_id,
     open: decision.status === "open",

@@ -500,6 +500,7 @@ export const board = {
         value: (n: number) => `${n} ${n === 1 ? "stay" : "stays"} in the running`,
         sub: (voted: number, of: number, closes: string) => [`${voted} of ${of} voted`, closes].filter(Boolean).join(" · "),
         cta: "Vote",
+        voted: "Voted ✓",
       },
       decidedSub: "Won the vote · booking next",
       bookedSub: (payer: string) => `Booked by ${payer}`,

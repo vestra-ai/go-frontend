@@ -1,10 +1,10 @@
-import type { Booking, Decision, Id, MoneyView, TripView } from "@/api/contract";
+import type { Booking, Decision, Id, MoneyView, MyVote, TripView } from "@/api/contract";
 import { board as copy } from "@/data/seed/copy";
 import type { User } from "@/data/types";
 import { formatDay, wallTime } from "@/lib/dates";
 import { kFormat } from "@/lib/format";
 import { isTravel, routeLine } from "@/state/bookingView";
-import { voteShape } from "@/state/optionView";
+import { myVoteIndex, voteShape } from "@/state/optionView";
 import { fromMinor, illustrationFor, placePhoto, toTripDates, userOf } from "@/state/view";
 
 // The Trip board (CONTRACT-APP §4.4, §4.8): where the trip stands, read from the trip itself. Nothing is edited here:
@@ -25,6 +25,8 @@ export type BoardRowModel =
       value: string;
       sub: string;
       cta: string;
+      /** I have picked a stay in it: the button says so, and still opens the vote to change the pick. */
+      voted: boolean;
       /** The open stay vote: its card is where the vote is cast. */
       decisionId: Id;
       options: { id: string; name: string; img: string; votes: number }[];
@@ -68,7 +70,14 @@ export function closesIn(iso: string | null | undefined, now: Date = new Date())
 
 const KIND_WORD: Record<string, string> = { flight: "Flight", train: "Train", bus: "Bus", cab: "Cab" };
 
-export function buildBoard(view: TripView, money: MoneyView | null, users: Record<Id, User>, now: Date = new Date()): BoardModel {
+export function buildBoard(
+  view: TripView,
+  money: MoneyView | null,
+  users: Record<Id, User>,
+  /** How I voted, from the single-vote reads (the only place an anonymous vote says it). */
+  myVotes: Record<Id, MyVote> = {},
+  now: Date = new Date(),
+): BoardModel {
   const R = copy.rows;
   const meId = view.me.person.person_id;
   const confirmed = view.bookings.filter((b) => b.status === "confirmed");
@@ -92,6 +101,7 @@ export function buildBoard(view: TripView, money: MoneyView | null, users: Recor
     const payer = stayBooking.payer_person_id === meId ? "you" : userOf(users, stayBooking.payer_person_id).firstName;
     stay = row("stay", R.stay.emoji, R.stay.eyebrow, stayBooking.title, R.stay.bookedSub(payer), { kind: "status", tone: "success", label: R.stay.status });
   } else if (openVote) {
+    const voted = myVoteIndex(openVote, myVotes[openVote.decision_id], meId) !== null;
     stay = {
       kind: "poll",
       key: "stay",
@@ -99,7 +109,8 @@ export function buildBoard(view: TripView, money: MoneyView | null, users: Recor
       eyebrow: R.stay.voteOpen.eyebrow,
       value: R.stay.voteOpen.value(openVote.options.length),
       sub: R.stay.voteOpen.sub(openVote.voted, openVote.of, closesIn(openVote.closes_at, now)),
-      cta: R.stay.voteOpen.cta,
+      cta: voted ? R.stay.voteOpen.voted : R.stay.voteOpen.cta,
+      voted,
       decisionId: openVote.decision_id,
       options: openVote.options.slice(0, 3).map((o, i) => ({
         id: String(i),
