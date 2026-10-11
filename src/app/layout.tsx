@@ -25,7 +25,11 @@ export const metadata: Metadata = {
   manifest: "/manifest.webmanifest",
   icons: { apple: "/pwa/apple-touch-icon.png" },
   appleWebApp: { capable: true, statusBarStyle: "default", title: "Go" },
-  formatDetection: { telephone: false },
+  // Nothing in the app's own text is the browser's to turn into a link. iOS Chrome reads a place name ("Marrakech") as
+  // an address and draws a dotted underline under it; `nointentdetection` is its opt-out for that and for the units
+  // and dates it also marks.
+  formatDetection: { telephone: false, date: false, address: false, email: false, url: false },
+  other: { chrome: "nointentdetection" },
 };
 
 export const viewport: Viewport = {
