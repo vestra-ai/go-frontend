@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { api } from "@/api/endpoints";
 import { errorMessage } from "@/api/http";
 import { IdentityCard } from "@/components/home/IdentityCard";
+import { Spinner } from "@/components/icons/custom/Spinner";
 import { SettingsList, type SettingsRow } from "@/components/home/SettingsList";
 import { FromCitySheet } from "@/components/sheets/FromCitySheet";
 import { GoPageSheet, type VaultStatus } from "@/components/sheets/GoPageSheet";
@@ -24,6 +25,8 @@ export default function ProfilePage() {
   const session = useRequireSession();
   const me = useGo((s) => s.me);
   const [fromOpen, setFromOpen] = useState(false);
+  // Signing out is a round trip to Supabase: the button shows a spinner until the page has moved on to `/`.
+  const [signingOut, setSigningOut] = useState(false);
   // Go's vault, framed in a sheet. The link is kept only here, for the frame: never logged, never stored.
   const [vault, setVault] = useState<{ url: string; open: boolean; pending: boolean }>({ url: "", open: false, pending: false });
 
@@ -99,11 +102,15 @@ export default function ProfilePage() {
           variant="danger-outline"
           size="lg"
           className="w-full tracking-normal"
+          aria-busy={signingOut}
           onClick={() => {
+            if (signingOut) return;
+            setSigningOut(true);
             // The Server keeps nothing per device: signing out is Supabase's alone.
             void signOut().finally(() => router.replace("/"));
           }}
         >
+          {signingOut && <Spinner className="size-[18px] border-danger/25 border-t-danger border-r-danger" />}
           {copy.signOut}
         </Button>
       </div>
