@@ -47,7 +47,7 @@ type BubbleProps = {
   /** Default: member 72 · go 76 · me 78. */
   maxWidth?: BubbleMaxWidth;
   /** QuoteBlock above the text: the message this one replies to, or asks Go about. */
-  quote?: { author: string; text: string };
+  quote?: { author: string; text: string; onOpen?: () => void; standIn?: boolean };
   /** One entry per emoji, most used first (`RoomMessage.reactions`); drawn as one pill under the bubble. `[]` = none yet, but the room for the pill is still kept (no layout shift when the first one lands); leave it out for a bubble that takes none. */
   reactions?: { emoji: string; count: number; mine: boolean }[];
   /** Extra rows after the body (GoBubble CTA / caption). */
@@ -164,7 +164,7 @@ export function Bubble({
           {label}
         </span>
       )}
-      {quote && <QuoteBlock author={quote.author} text={quote.text} />}
+      {quote && <QuoteBlock {...quote} />}
       <div className={cn("text-16 leading-[1.4] tracking-body text-pretty whitespace-pre-line", bodyClassName)}>
         {content}
       </div>

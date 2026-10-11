@@ -11,6 +11,7 @@ import { ComposerTray } from "@/components/chat/ComposerTray";
 import { EarlierMessagesRow } from "@/components/chat/EarlierMessagesRow";
 import { FactChipRow, type FactChipData } from "@/components/chat/FactChipRow";
 import { GoThinking } from "@/components/chat/GoThinking";
+import { jumpToMessage } from "@/components/chat/jumpToMessage";
 import { LongPressOverlay } from "@/components/chat/LongPressOverlay";
 import { MessageList } from "@/components/chat/MessageList";
 import { NewMessagesPill } from "@/components/chat/NewMessagesPill";
@@ -412,6 +413,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     // A quick reply is my own message: Go hears it as an ordinary `message.created`.
     quickReply: (text) => void sendMessage(tripId, { text }),
     retry: (clientId) => retrySend(tripId, clientId),
+    jumpTo: (messageId) => void jumpToMessage(messageId),
   };
 
   // -- Details sheet payloads -----------------------------------------------------------------------------------------

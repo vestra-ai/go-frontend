@@ -389,7 +389,13 @@ export const cards = {
   login: { done: "Logged in" },
   call: { failed: (who: string) => `Go couldn’t reach ${who}.` },
   checklist: { due: (day: string) => `due ${day}`, emoji: "📋", suggestion: "💡" },
-  message: { deleted: "Message deleted", sendFailed: "Not sent. Tap to try again.", sending: "Sending…" },
+  message: {
+    deleted: "Message deleted",
+    sendFailed: "Not sent. Tap to try again.",
+    sending: "Sending…",
+    /** A reply's quote while the message it answers is further back than the thread has loaded. */
+    quoteNotLoaded: "An earlier message",
+  },
 } as const;
 
 export const placeSheet = {

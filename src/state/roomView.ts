@@ -1,7 +1,7 @@
 import type { Attachment as ApiAttachment, Card, Id, Message, QuickReply } from "@/api/contract";
 import type { Attachment, User } from "@/data/types";
 import type { TripData } from "@/state/store";
-import { chat as copy } from "@/data/seed/copy";
+import { cards, chat as copy } from "@/data/seed/copy";
 import { userOf } from "@/state/view";
 
 // The room (CONTRACT-APP §4.6): stored messages by `seq`, then my sends still on their way. Each becomes one row the
@@ -19,7 +19,12 @@ export interface RoomMessage {
   attachments: Attachment[];
   /** A shared place (1.1): drawn as a line with a map link. */
   location?: { label: string; href: string };
-  quote?: { author: string; text: string };
+  /**
+   * The message this one replies to (or asks Go about). Every reply has one. `id` is where a tap on the quote goes; it
+   * is absent, with stand-in words, while that message is further back than the thread has loaded (the Server sends
+   * only its id, §2).
+   */
+  quote?: { id?: Id; author: string; text: string };
   /**
    * One entry per distinct emoji, most used first (a tie keeps the order the emoji were first given), so everyone in the
    * room sees the same summary under the bubble. `mine` marks the one I picked.
@@ -77,6 +82,14 @@ function authorName(m: Message, users: Record<Id, User>, meId: Id): string {
   return m.author.person_id === meId ? "You" : userOf(users, m.author.person_id).firstName;
 }
 
+/** A reply's quote: the message it answers when the thread holds it, else a stand-in that says only that there is one. */
+function quoteOf(data: TripData, id: Id | null | undefined, users: Record<Id, User>, meId: Id): Pick<RoomMessage, "quote"> {
+  if (!id) return {};
+  const quoted = data.messages[id];
+  if (!quoted) return { quote: { author: "", text: cards.message.quoteNotLoaded } };
+  return { quote: { id: quoted.message_id, author: authorName(quoted, users, meId), text: previewOf(quoted) } };
+}
+
 /** Who else receives a message only some people see; I am always one of them. */
 function onlyForLine(m: Message, users: Record<Id, User>, meId: Id): string | undefined {
   const ids = m.visible_to_person_ids;
@@ -87,7 +100,6 @@ function onlyForLine(m: Message, users: Record<Id, User>, meId: Id): string | un
 export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): RoomMessage[] {
   const rows: RoomMessage[] = data.order.map((id) => {
     const m = data.messages[id];
-    const quoted = data.messages[m.reply_to ?? m.about_message_id ?? ""];
     const mine = m.author.kind === "person" && m.author.person_id === meId;
     return {
       id: m.message_id,
@@ -97,7 +109,7 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
       text: m.deleted ? "" : (m.text ?? ""),
       deleted: m.deleted,
       ...(m.deleted ? { attachments: [] } : toAttachments(m.attachments)),
-      ...(quoted ? { quote: { author: authorName(quoted, users, meId), text: previewOf(quoted) } } : {}),
+      ...quoteOf(data, m.reply_to ?? m.about_message_id, users, meId),
       ...reactionsOf(m, meId),
       ...(m.card && !m.deleted ? { card: m.card } : {}),
       ...(m.deleted ? {} : { onlyFor: onlyForLine(m, users, meId) }),
@@ -108,7 +120,6 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
   for (const out of data.outbox) {
     // The stored copy is already in the thread (a live frame beat the POST's answer).
     if (out.echoedBy) continue;
-    const quoted = data.messages[out.replyTo ?? out.aboutMessageId ?? ""];
     const a = out.attachment;
     rows.push({
       id: out.clientId,
@@ -126,7 +137,7 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
                 : { kind: "file", name: a.name, size: a.sizeBytes, src: a.previewUrl, mime: a.mime },
           ]
         : [],
-      ...(quoted ? { quote: { author: authorName(quoted, users, meId), text: previewOf(quoted) } } : {}),
+      ...quoteOf(data, out.replyTo ?? out.aboutMessageId, users, meId),
       quickReplies: [],
       sending: { status: out.status, error: out.error },
     });

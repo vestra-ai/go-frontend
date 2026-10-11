@@ -23,6 +23,8 @@ export interface MessageActions extends RoomActions {
   quickReply(text: string): void;
   /** A send of mine that failed: try again with the same `client_message_id`. */
   retry(clientId: string): void;
+  /** Tap on a reply's quote: the thread goes to the quoted message. */
+  jumpTo(messageId: string): void;
 }
 
 // Same mount animation as Bubble's, for cards and pills appended after first render.
@@ -47,6 +49,13 @@ type MessageRendererProps = {
   onPressEnd(): void;
   actions: MessageActions;
 };
+
+/** The bubble's quote: a tap goes to the quoted message when the thread holds it; a stand-in for one not loaded yet does nothing. */
+function quoteProps(quote: RoomMessage["quote"], jumpTo: (id: string) => void) {
+  if (!quote) return undefined;
+  const { id, author, text } = quote;
+  return id ? { author, text, onOpen: () => jumpTo(id) } : { author, text, standIn: true };
+}
 
 /** One thread row. Every row carries `data-message` so a deep link (`?focus=`) can scroll to it. */
 export function MessageRenderer({ message: m, room, enter, className, pressHandlers, onPressStart, onPressEnd, actions }: MessageRendererProps) {
@@ -85,7 +94,7 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
         key={i}
         author={author}
         {...who}
-        quote={i === 0 ? m.quote : undefined}
+        quote={i === 0 ? quoteProps(m.quote, actions.jumpTo) : undefined}
         // `[]`, not undefined, on the message's last bubble: it keeps the room for the pill, so a first reaction shifts nothing.
         reactions={last && !m.deleted ? (m.reactions ?? []) : undefined}
         enter={enter}
