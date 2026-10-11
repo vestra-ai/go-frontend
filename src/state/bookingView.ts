@@ -88,9 +88,21 @@ export function bookingDetails(b: ApiBooking, users: Record<Id, User>, meId: Id)
 
 export const ticketHref = (tripId: Id, bookingId: Id) => `/trips/${tripId}/bookings/${encodeURIComponent(bookingId)}/ticket`;
 
-export function toBookingCard(b: ApiBooking, tripId: Id, users: Record<Id, User>, meId: Id): Booking {
+/** What a booking's ticket shows at its left end: its photo, else the carrier's wordmark, else the kind's emoji on a tint. */
+export function bookingMedia(b: ApiBooking): Booking["media"] {
   const photo = httpUrl(b.image_url) ?? httpUrl(placePhoto(b.place));
   const logo = httpUrl(b.journey?.logo_url);
+  return photo
+    ? { kind: "photo", src: photo, bg: "none" }
+    : logo
+      ? { kind: "logo", src: logo, alt: b.journey?.carrier_name ?? b.vendor, bg: "none" }
+      : { kind: "emoji", emoji: bookingEmoji(b.kind), bg: "stay-tint" };
+}
+
+/** The rule beside a ticket's graphic: green for a stay, blue for everything else. */
+export const bookingAccent = (b: ApiBooking): Booking["accent"] => (b.kind === "stay" ? "success" : "info");
+
+export function toBookingCard(b: ApiBooking, tripId: Id, users: Record<Id, User>, meId: Id): Booking {
   const documents = b.documents?.length ?? 0;
   return {
     id: b.booking_id,
@@ -99,12 +111,8 @@ export function toBookingCard(b: ApiBooking, tripId: Id, users: Record<Id, User>
     title: b.title,
     sub: subLine(b),
     memberIds: b.for_person_ids,
-    media: photo
-      ? { kind: "photo", src: photo, bg: "none" }
-      : logo
-        ? { kind: "logo", src: logo, alt: b.journey?.carrier_name ?? b.vendor, bg: "none" }
-        : { kind: "emoji", emoji: bookingEmoji(b.kind), bg: "stay-tint" },
-    accent: b.kind === "stay" ? "success" : "info",
+    media: bookingMedia(b),
+    accent: bookingAccent(b),
     stub: documents > 0 ? { kind: "count", n: documents } : { kind: "booked" },
     // A booking with my ticket opens the viewer; any other opens its row on Trip home.
     href: documents > 0 ? ticketHref(tripId, b.booking_id) : `/trips/${tripId}?open=${encodeURIComponent(b.booking_id)}`,

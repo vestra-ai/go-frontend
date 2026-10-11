@@ -31,12 +31,12 @@ import { inr } from "@/lib/format";
 import { SKELETON_BAR } from "@/lib/skeleton";
 import { cn } from "@/lib/utils";
 import { loadBooking, loadDecision, PAY_APPROVE } from "@/state/actions";
-import { bookingEmoji, coversMe, httpUrl, routeLine } from "@/state/bookingView";
+import { bookingAccent, bookingEmoji, bookingMedia, coversMe, httpUrl, routeLine } from "@/state/bookingView";
 import { closesIn } from "@/state/boardView";
 import { toSettlement } from "@/state/moneyView";
 import { cardVote, optionAction, toDateOption, toPlaceOption, toStay, voteShape } from "@/state/optionView";
 import type { TripData } from "@/state/store";
-import { fromMinor, illustrationFor, placePhoto, toTripDates, userOf } from "@/state/view";
+import { fromMinor, placePhoto, toTripDates, userOf } from "@/state/view";
 import { toWorking } from "@/state/workingView";
 import { Bubble } from "./Bubble";
 import { InChatCard } from "./InChatCard";
@@ -630,11 +630,12 @@ function TicketView({ bookingId, room, actions }: { bookingId: Id; room: RoomMod
   // The ticket opens the booking's own sheet: my seat and PNR, or the stay's dates, and each of its files (a return
   // flight has one e-ticket per leg). Only a booking that covers me has any of that to show (§1.7).
   const mine = coversMe(b, room.me.id);
+  const media = bookingMedia(b);
   return (
     <div className="mr-4 ml-[38px]">
       <BookedTicketCard
-        img={httpUrl(b.image_url) ?? httpUrl(placePhoto(b.place)) ?? illustrationFor(b.booking_id, b.place?.name ?? b.title)}
-        imgAlt={b.title}
+        media={media.kind === "photo" ? { ...media, alt: b.title } : media}
+        accent={bookingAccent(b)}
         eyebrow={b.status === "cancelled" ? copy.ticket.cancelled(kind) : copy.ticket.booked(kind)}
         title={b.title}
         dates={dates}

@@ -4,7 +4,7 @@ import { ListRow } from "@/components/common/ListRow";
 import { SectionHeader } from "@/components/common/SectionHeader";
 import { STUB_WIDTH } from "@/components/plan/BookingTicketCard";
 import { DayCard } from "@/components/plan/DayCard";
-import { TicketNotches } from "@/components/plan/TicketNotches";
+import { TICKET_SHADOW, TicketBody } from "@/components/plan/TicketNotches";
 import { Card } from "@/components/ui/card";
 import { segmentedItemVariants, segmentedListVariants } from "@/components/ui/segmented-control";
 import { BOOKINGS_COPY } from "@/data/seed/bookings";
@@ -137,27 +137,28 @@ function ItineraryBodySkeleton() {
 /** A ticket-stub card: the media well, the details, the torn stub with its notches. */
 function BookingCardSkeleton() {
   return (
-    <Card variant="float-sm" radius="xl" aria-hidden className="relative flex min-h-[108px] items-stretch">
-      <span className="w-[92px] shrink-0 rounded-l-5xl bg-line" />
-      <div className="flex min-w-0 flex-1 flex-col justify-center gap-px border-l-[3px] border-line p-3">
-        <Eyebrow className="leading-[1.35]">
-          <span className={SKELETON_BAR}>FLIGHT · DEL TO GOI</span>
-        </Eyebrow>
-        <span className="text-[19px] font-semibold leading-[1.2] tracking-[-0.016em]">
-          <span className={SKELETON_BAR}>Delhi to Goa</span>
-        </span>
-        <span className="text-13 tracking-caption">
-          <span className={SKELETON_BAR}>Fri 6 Nov · 6:05a</span>
-        </span>
-        <span className="mt-1 h-[22px] w-14 rounded-full bg-line" />
-      </div>
-      <div style={{ width: STUB_WIDTH }} className="relative flex shrink-0 flex-col items-center justify-center gap-1">
-        <span className="absolute inset-y-0 left-0 border-l border-dashed border-line-2" />
-        <span className="size-[30px] rounded-full bg-line" />
-        <span className="h-[13px] w-10 rounded-md bg-line" />
-      </div>
-      <TicketNotches stubWidth={STUB_WIDTH} />
-    </Card>
+    <div aria-hidden className={TICKET_SHADOW.sm}>
+      <TicketBody stubWidth={STUB_WIDTH} className="min-h-[108px]">
+        <span className="w-[92px] shrink-0 rounded-l-5xl bg-line" />
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-px border-l-[3px] border-line p-3">
+          <Eyebrow className="leading-[1.35]">
+            <span className={SKELETON_BAR}>FLIGHT · DEL TO GOI</span>
+          </Eyebrow>
+          <span className="text-[19px] font-semibold leading-[1.2] tracking-[-0.016em]">
+            <span className={SKELETON_BAR}>Delhi to Goa</span>
+          </span>
+          <span className="text-13 tracking-caption">
+            <span className={SKELETON_BAR}>Fri 6 Nov · 6:05a</span>
+          </span>
+          <span className="mt-1 h-[22px] w-14 rounded-full bg-line" />
+        </div>
+        <div style={{ width: STUB_WIDTH }} className="relative flex shrink-0 flex-col items-center justify-center gap-1">
+          <span className="absolute inset-y-0 left-0 border-l border-dashed border-line-2" />
+          <span className="size-[30px] rounded-full bg-line" />
+          <span className="h-[13px] w-10 rounded-md bg-line" />
+        </div>
+      </TicketBody>
+    </div>
   );
 }
 
