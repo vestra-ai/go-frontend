@@ -1,6 +1,9 @@
 # Go
 
-Go is a mobile-first group-trip planner. A friend group sets up a trip in a chat with "Go", an assistant that proposes dates, places, stays, travel and a budget, and the crew decides together. From there the trip gets a home screen, itinerary, bookings, shared expenses and web check-in. The app talks to the Go Server over HTTP plus one WebSocket, exactly as `docs/CONTRACT-APP.md` (rev 4) describes; sign-in is Supabase Auth. It is built as an installable PWA that renders inside a 450px phone-width frame, centered on desktop.
+Go is a mobile-first group-trip planner. A friend group sets up a trip in a chat with "Go", an assistant that proposes dates, places, stays, travel and a budget, and the crew decides together. From there the trip gets a home screen, itinerary, bookings, shared expenses and web check-in. The app talks to the Go Server over HTTP plus one WebSocket, exactly as the App ↔ Server contract (rev 4) describes; sign-in is Supabase Auth. It is built as an installable PWA that renders inside a 450px phone-width frame, centered on desktop.
+
+- Live build: https://go-frontend-three.vercel.app (sign in with Google)
+- Architecture and key details: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ## Stack
 
@@ -79,10 +82,12 @@ Icons that depend on state (animated or data-driven, such as `AudioBars`, `Spinn
 - `src/components/common`: shared composites used across screens.
 - `src/components/chat`, `sheets`, `trip`, `home`, `plan`, `money`, `checkin`, `board`: per-feature sections.
 - `src/components/icons`: `generated/` (svgr output) and `custom/` (hand-written).
-- `src/api`: the Server contract. `contract.ts` (wire shapes), `http.ts` (bearer token, `Idempotency-Key`, error body, one refresh on 401), `endpoints.ts` (all 70 routes), `live.ts` (the WebSocket: ticket, subscribe, reconnect), `env.ts`.
+- `src/api`: the Server contract. `contract.ts` (wire shapes), `http.ts` (bearer token, `Idempotency-Key`, error body, one refresh on 401), `endpoints.ts` (all 71 routes), `live.ts` (the WebSocket: ticket, subscribe, reconnect), `env.ts`.
 - `src/state`: what the app holds of the Server's data. `store.ts` (zustand + immer, nothing persisted), `actions.ts` (every read and write), `sync.ts` (session, live frames, re-read on resume), `hooks.ts`, and the `*View.ts` adapters that turn contract objects into what the components draw.
 - `src/data`: view-model types, UI copy and static config (`seed/*`), timing constants. No trip data lives here.
 - `src/lib`: helpers (`auth`, `supabase`, `links`, `share`, `assets`, `format`, `dates`, `routes`, `toast`, `utils`).
+
+Outside `src`: `plans` holds the build plan and screen specs of the first prototype (8 Oct, mock data, no Server), kept as history.
 
 ## Design rules
 

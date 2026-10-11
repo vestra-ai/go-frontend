@@ -27,7 +27,9 @@ export function EarlierMessagesRow({ label, loading, onPress, pageKey }: Earlier
   const scrolled = useRef(false);
   const fetchedFor = useRef<string | null>(null);
   const press = useRef(onPress);
-  press.current = onPress;
+  useEffect(() => {
+    press.current = onPress;
+  });
 
   useEffect(() => {
     const el = ref.current;
