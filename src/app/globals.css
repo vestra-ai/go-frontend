@@ -199,7 +199,9 @@ html[data-navigating] main { animation: navDim 200ms ease-out 100ms forwards; }
   /* The document is the only page scroller: screens grow with their content, headers/docks are `sticky`. */
   /* No rubber-band past the page's ends: it drags the sticky docks (the chat composer) up the screen with it. It is
      on `html` because WebKit (every iOS browser) reads the page scroller's overscroll-behavior from the root only. */
-  html { background: var(--color-frame-bg); -webkit-text-size-adjust: 100%; scrollbar-width: none; overscroll-behavior-y: none; }
+  /* The root's background is what shows past the page's ends wherever a browser still lets the page be dragged there
+     (iOS Chrome does), so on a phone it is the page's own colour. The desktop frame's grey starts at 451px, below. */
+  html { background: var(--color-canvas); -webkit-text-size-adjust: 100%; scrollbar-width: none; overscroll-behavior-y: none; }
   html::-webkit-scrollbar { display: none; }
   body { margin: 0; min-height: 100dvh; font-family: var(--font-sans); color: var(--color-ink); font-kerning: normal;
          font-feature-settings: "kern" 1; text-rendering: optimizeLegibility; -webkit-font-smoothing: antialiased;
@@ -229,6 +231,6 @@ html[data-navigating] main { animation: navDim 200ms ease-out 100ms forwards; }
 
 /* the phone frame on wide screens (see §4) */
 @media (min-width: 451px) {
-  body { background: var(--color-frame-bg); }
+  html, body { background: var(--color-frame-bg); }
   #app-frame { box-shadow: var(--shadow-frame); border-inline: 1px solid rgb(11 27 63 / 0.06); }
 }

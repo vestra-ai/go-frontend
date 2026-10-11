@@ -4,6 +4,7 @@ import { Figtree } from "next/font/google";
 import { SerwistProvider } from "@serwist/turbopack/react";
 import { AppFrame } from "@/components/shell/AppFrame";
 import { NavFeedback } from "@/components/shell/NavFeedback";
+import { OverscrollGuard } from "@/components/shell/OverscrollGuard";
 import { PageTransition } from "@/components/shell/PageTransition";
 import { SessionBoot } from "@/components/shell/SessionBoot";
 import { Toaster } from "@/components/ui/sonner";
@@ -43,6 +44,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
             @serwist/window's register() throws (unhandled) when register() yields no registration (SW-blocking harness). */}
         <SerwistProvider swUrl="/serwist/sw.js" disable={process.env.NODE_ENV !== "production"}>
           <SessionBoot />
+          <OverscrollGuard />
           <TooltipProvider>
             <AppFrame
               overlay={
