@@ -8,6 +8,7 @@ import { userOf } from "@/state/view";
 import { Bubble } from "./Bubble";
 import { CardView, type RoomActions, type RoomModel } from "./CardView";
 import { QuickReplyBlock } from "./QuickReplyBlock";
+import { SwipeToReply } from "./SwipeToReply";
 import { SystemPill } from "./SystemPill";
 import type { LongPressHandlers } from "./useLongPress";
 
@@ -25,6 +26,8 @@ export interface MessageActions extends RoomActions {
   retry(clientId: string): void;
   /** Tap on a reply's quote: the thread goes to the quoted message. */
   jumpTo(messageId: string): void;
+  /** A swipe to the right on a message's bubbles: the reply tray opens for it, as "Reply" in the long-press menu does. */
+  reply(messageId: string): void;
 }
 
 // Same mount animation as Bubble's, for cards and pills appended after first render.
@@ -131,7 +134,8 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
       // Sending → stored is the same row (see `RoomMessage.key`): only the opacity changes, so it eases there.
       className={cn("flex flex-col gap-2.5 transition-opacity duration-220 ease-out", sending?.status === "sending" && "opacity-60", className)}
     >
-      {rows}
+      {/* Every message with the long-press "Reply" also takes the swipe; its card stays put (a rail in it scrolls sideways). */}
+      {actionable && rows.length > 0 ? <SwipeToReply onReply={() => actions.reply(m.id)}>{rows}</SwipeToReply> : rows}
       {sending?.status === "failed" && (
         <button type="button" className="self-end text-13 font-semibold text-danger" onClick={() => actions.retry(m.id)}>
           {sending.error ?? copy.message.sendFailed}

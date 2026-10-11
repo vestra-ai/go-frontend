@@ -414,6 +414,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     quickReply: (text) => void sendMessage(tripId, { text }),
     retry: (clientId) => retrySend(tripId, clientId),
     jumpTo: (messageId) => void jumpToMessage(messageId),
+    reply: (messageId) => modes.setMode("reply", messageId),
   };
 
   // -- Details sheet payloads -----------------------------------------------------------------------------------------
