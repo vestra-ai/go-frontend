@@ -3,7 +3,7 @@ import { Card } from "@/components/ui/card";
 
 type ShowMoreTileProps = {
   title: string;
-  sub: string;
+  sub?: string;
   onPress(): void;
 };
 
@@ -21,7 +21,7 @@ export function ShowMoreTile({ title, sub, onPress }: ShowMoreTileProps) {
           <ArrowRight className="size-5" />
         </span>
         <span className="text-15 leading-[1.3] font-semibold">{title}</span>
-        <span className="text-13 text-muted">{sub}</span>
+        {sub && <span className="text-13 text-muted">{sub}</span>}
       </button>
     </Card>
   );

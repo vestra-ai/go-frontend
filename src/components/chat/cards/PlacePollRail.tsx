@@ -12,7 +12,7 @@ type PlacePollRailProps = {
   /** 'Voting closes in 3 hrs' */
   countdown?: string;
   /** 'Show more places' / 'Go has 6 more' */
-  more?: { title: string; sub: string };
+  more?: { title: string; sub?: string };
   /** An options card: the button's own words, no tallies. */
   voteLabel?: string;
   votedLabel?: string;

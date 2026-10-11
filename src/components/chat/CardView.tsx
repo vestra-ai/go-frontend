@@ -364,7 +364,7 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
   const pick = optionAction(card, me.id);
   const others = visible(card.actions, me.id).filter((a) => !a.per_option);
   const busy = actions.pending === card.card_id;
-  const extra = others.map((a) => <NextStepPill key={a.action_id} label={a.label} onPress={() => actions.tap(card.card_id, a.action_id)} />);
+  const pills = (list: CardAction[]) => list.map((a) => <NextStepPill key={a.action_id} label={a.label} onPress={() => actions.tap(card.card_id, a.action_id)} />);
 
   // Flights, trains, buses and cabs open a sheet: there are too many to pick from in a rail.
   if (card.option_kind === "flight" || card.option_kind === "train" || card.option_kind === "bus" || card.option_kind === "cab") {
@@ -372,13 +372,17 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
     return (
       <div className="flex flex-col gap-2.5">
         <TravelAskBubble text={`**${card.title}**\n${copy.options.count(card.options.length)} · ${checked}`} cta={copy.options.see} caption="" onCta={openSheet} />
-        {extra}
+        {pills(others)}
       </div>
     );
   }
 
   const onPick = pick ? (id: string | null) => id !== null && actions.tap(card.card_id, pick.actionId, { optionId: id }) : () => {};
   const stay = card.option_kind === "stay";
+  // Go's "See more" is the rail's last tile, not a pill under it. The contract names no id for it, so its id or its
+  // label has to say "more"; any other button stays a pill.
+  const more = others.find((a) => /more/i.test(a.action_id) || /\bmore\b/i.test(a.label));
+  const onMore = more && (() => actions.tap(card.card_id, more.action_id));
   return (
     <div className="flex flex-col gap-2.5">
       {stay ? (
@@ -391,6 +395,8 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
           disabled={!pick || busy}
           onVote={onPick}
           onDetails={(id) => actions.openOption({ source: "card", card, optionId: id, shape: "stay" })}
+          more={more && { title: more.label }}
+          onMore={onMore}
         />
       ) : (
         <PlacePollRail
@@ -402,10 +408,12 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
           disabled={!pick || busy}
           onVote={onPick}
           onDetails={(id) => actions.openOption({ source: "card", card, optionId: id, shape: "place" })}
+          more={more && { title: more.label }}
+          onMore={onMore}
         />
       )}
       <span className="ml-[38px] text-13 font-semibold text-muted">{checked}</span>
-      {extra}
+      {pills(others.filter((a) => a !== more))}
     </div>
   );
 }

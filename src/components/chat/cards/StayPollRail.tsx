@@ -9,7 +9,7 @@ type StayPollRailProps = {
   /** 'aarav' — appended to the voters of the card you voted for. */
   me: UserId;
   /** 'Show 5 more' / 'Same dates, same budget' */
-  more?: { title: string; sub: string };
+  more?: { title: string; sub?: string };
   /** An options card: the button's own words, no tallies. */
   voteLabel?: string;
   votedLabel?: string;
