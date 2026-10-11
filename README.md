@@ -2,7 +2,7 @@
 
 Go is a mobile-first group-trip planner. A friend group sets up a trip in a chat with "Go", an assistant that proposes dates, places, stays, travel and a budget, and the crew decides together. From there the trip gets a home screen, itinerary, bookings, shared expenses and web check-in. The app talks to the Go Server over HTTP plus one WebSocket, exactly as the App ↔ Server contract (rev 4) describes; sign-in is Supabase Auth. It is built as an installable PWA that renders inside a 450px phone-width frame, centered on desktop.
 
-- Live build: https://go-frontend-three.vercel.app (sign in with Google)
+- Live build: https://go.vestra.ai (sign in with Google)
 - Architecture and key details: [`ARCHITECTURE.md`](ARCHITECTURE.md)
 
 ## Stack

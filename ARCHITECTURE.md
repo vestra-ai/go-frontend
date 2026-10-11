@@ -4,7 +4,7 @@ Go is a group-trip agent. A friend group plans a trip in one chat with "Go", an 
 
 | | |
 | --- | --- |
-| Live build | https://go-frontend-three.vercel.app (sign in with Google) |
+| Live build | https://go.vestra.ai (sign in with Google) |
 | This repo | The app (Next.js 16, React 19, TypeScript, Tailwind 4) |
 | Talks to | The Go Server over HTTP and one WebSocket; Supabase Auth for sign-in |
 | API contract | The App ↔ Server contract, rev 4, 71 routes. The Server team maintains it outside this repository; `CONTRACT-APP §n` in code comments cites its sections. |
