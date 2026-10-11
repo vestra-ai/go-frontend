@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Photo } from "@/components/common/Photo"
 import { assets } from "@/lib/assets"
 import { cn } from "@/lib/utils"
 import { Avatar as AvatarPrimitive } from "radix-ui"
@@ -123,6 +124,20 @@ function Avatar({
     },
     [imageSrc]
   )
+  const imageProps = {
+    "data-slot": "avatar-image",
+    // People's photos are Google profile pictures (lh3.googleusercontent.com), which refuses a request that
+    // carries our page as its Referer: the image errors and the initials show instead.
+    referrerPolicy: "no-referrer" as const,
+    onLoad: (e: React.SyntheticEvent<HTMLImageElement>) => settle(e.currentTarget),
+    onError: (e: React.SyntheticEvent<HTMLImageElement>) => settle(e.currentTarget),
+    className: cn(
+      "absolute inset-0 m-auto",
+      // The trip art is a square SVG: it takes the root's radius (rounded-xl tile, or the circle shape) so its
+      // corners can never poke out of the avatar. A trip photo fills it instead.
+      kind === "trip" && !photo ? "size-[91%] rounded-[inherit] object-contain" : kind === "trip" ? "size-full rounded-[inherit] object-cover" : "size-full rounded-full object-cover"
+    ),
+  }
 
   return (
     <AvatarPrimitive.Root
@@ -140,26 +155,15 @@ function Avatar({
       {children}
       {/* A plain <img> over the fallback, not Radix's AvatarImage: that one renders nothing until hydration plus a
           JS preload, so server HTML and every first paint showed initials (or an empty circle for Go). */}
-      {imageSrc && imageState !== "error" && (
-        // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo inside a sized circle
-        <img
-          ref={settle}
-          data-slot="avatar-image"
-          src={imageSrc}
-          alt={name ?? ""}
-          // People's photos are Google profile pictures (lh3.googleusercontent.com), which refuses a request that
-          // carries our page as its Referer: the image errors and the initials show instead.
-          referrerPolicy="no-referrer"
-          onLoad={(e) => settle(e.currentTarget)}
-          onError={(e) => settle(e.currentTarget)}
-          className={cn(
-            "absolute inset-0 m-auto",
-            // The trip art is a square SVG: it takes the root's radius (rounded-xl tile, or the circle shape) so its
-            // corners can never poke out of the avatar. A trip photo fills it instead.
-            kind === "trip" && !photo ? "size-[91%] rounded-[inherit] object-contain" : kind === "trip" ? "size-full rounded-[inherit] object-cover" : "size-full rounded-full object-cover"
-          )}
-        />
-      )}
+      {imageSrc &&
+        imageState !== "error" &&
+        (kind === "trip" && photo ? (
+          // The trip's cover photo, at the size of the avatar rather than the full original.
+          <Photo ref={settle} src={imageSrc} alt={name ?? ""} sizes={`${size}px`} loading="eager" {...imageProps} />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo inside a sized circle
+          <img ref={settle} src={imageSrc} alt={name ?? ""} {...imageProps} />
+        ))}
     </AvatarPrimitive.Root>
   )
 }

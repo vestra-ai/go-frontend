@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Share } from "@/components/icons/generated";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { GlassIconButton } from "@/components/common/GlassIconButton";
+import { Photo } from "@/components/common/Photo";
 import type { User } from "@/data/types";
 
 export type TripHeroMedia = { kind: "image"; src: string; alt: string } | { kind: "gradient" };
@@ -30,8 +31,13 @@ export function TripHero({ hero, title, titleEmoji, meta, members, onShare }: Tr
         </>
       ) : (
         <>
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, full-bleed cover */}
-          <img src={hero.src} alt={hero.alt} className="absolute inset-0 size-full object-cover" />
+          <Photo
+            src={hero.src}
+            alt={hero.alt}
+            sizes="(min-width: 450px) 450px, 100vw"
+            loading="eager"
+            className="absolute inset-0 size-full object-cover"
+          />
           <span className="absolute inset-0 bg-[linear-gradient(180deg,rgb(11_27_63/0.25)_0%,rgb(11_27_63/0)_26%,rgb(11_27_63/0.08)_42%,rgb(11_27_63/0.4)_62%,rgb(11_27_63/0.72)_100%)]" />
         </>
       )}

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { Eyebrow } from "@/components/common/Eyebrow";
+import { Photo } from "@/components/common/Photo";
 import { ProgressiveBlur } from "@/components/common/ProgressiveBlur";
 import { ReactionChip } from "@/components/common/ReactionChip";
 import { WaxSeal } from "@/components/icons/custom/WaxSeal";
@@ -34,8 +35,7 @@ export function PlanCard({ eyebrow, place, dates, countdown, hero, seal, memberI
     <div className="relative">
       <InChatCard right={22}>
         <div className="relative h-[176px] bg-plan-hero">
-          {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo */}
-          {hero && <img src={hero.src} alt={hero.alt} className="size-full object-cover" />}
+          {hero && <Photo src={hero.src} alt={hero.alt} sizes="(min-width: 450px) 450px, 100vw" className="size-full object-cover" />}
           <ProgressiveBlur layers="hero" />
           <div className="absolute inset-0 bg-linear-to-b from-ink/0 from-45% via-ink/20 via-65% to-ink/55" />
           <WaxSeal {...seal} className="absolute top-1 right-1 size-[92px] -rotate-12 overflow-visible" />

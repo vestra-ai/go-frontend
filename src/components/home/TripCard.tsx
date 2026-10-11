@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AvatarStack } from "@/components/common/AvatarStack";
+import { Photo } from "@/components/common/Photo";
 import { ChevronRight } from "@/components/icons/generated";
 import { rowPress } from "@/components/home/IdeaCard";
 import { Card } from "@/components/ui/card";
@@ -29,8 +30,7 @@ export function TripCard({ href, name, cover, coverTitle, coverSub, members, sta
       <Link href={href}>
         <span className="relative block h-32">
           {cover.kind === "photo" ? (
-            // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, full-bleed cover
-            <img src={cover.src} alt={cover.alt} className="absolute inset-0 size-full object-cover" />
+            <Photo src={cover.src} alt={cover.alt} sizes="(min-width: 450px) 450px, 100vw" className="absolute inset-0 size-full object-cover" />
           ) : (
             <>
               <span className="absolute inset-0 bg-linear-160 from-cover-1 via-cover-2 via-45% to-cover-3" />

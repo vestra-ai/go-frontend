@@ -4,6 +4,7 @@ import { AvatarStack } from "@/components/common/AvatarStack";
 import { Eyebrow } from "@/components/common/Eyebrow";
 import { ListCard } from "@/components/common/ListCard";
 import { ListRow } from "@/components/common/ListRow";
+import { Photo } from "@/components/common/Photo";
 import { BottomSheet, SheetBody, SheetFooter, SheetHeader } from "@/components/shell/BottomSheet";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -62,8 +63,7 @@ export function InviteSheet({
         />
         <Card variant="shadow" radius="2xl" className="flex items-center gap-3 p-3.5">
           {media.kind === "photo" ? (
-            // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo
-            <img src={media.src} alt={media.alt} className="size-[76px] shrink-0 rounded-3xl object-cover" />
+            <Photo src={media.src} alt={media.alt} sizes="76px" loading="eager" className="size-[76px] shrink-0 rounded-3xl object-cover" />
           ) : (
             <span className={`flex size-[76px] shrink-0 items-center justify-center rounded-3xl ${trip.tintClass}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- SVG illustration */}

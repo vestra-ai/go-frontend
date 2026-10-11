@@ -1,6 +1,7 @@
 import { ArrowLeft, Share } from "@/components/icons/generated";
 import { AvatarStack } from "@/components/common/AvatarStack";
 import { GlassIconButton } from "@/components/common/GlassIconButton";
+import { Photo } from "@/components/common/Photo";
 import { TripTabs } from "@/components/trip/TripTabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import { invite as copy, tripShell } from "@/data/seed/copy";
@@ -22,8 +23,13 @@ export function TripHomeSkeleton({ tripId, city, dateShort, joinedCount, members
     <div inert aria-hidden className="flex flex-col">
       <div className="relative h-[250px] shrink-0 overflow-hidden bg-sunset">
         {hero && (
-          // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, full-bleed cover
-          <img src={hero.src} alt={hero.alt} className="absolute inset-0 size-full object-cover" />
+          <Photo
+            src={hero.src}
+            alt={hero.alt}
+            sizes="(min-width: 450px) 450px, 100vw"
+            loading="eager"
+            className="absolute inset-0 size-full object-cover"
+          />
         )}
         <span className="absolute inset-0 bg-[linear-gradient(180deg,rgb(11_27_63/0.22)_0%,rgb(11_27_63/0)_26%,rgb(11_27_63/0.08)_42%,rgb(11_27_63/0.4)_62%,rgb(11_27_63/0.72)_100%)]" />
         <GlassIconButton label={tripShell.back} icon={<ArrowLeft className="size-[22px]" />} className="absolute top-safe-hero left-3.5" />
