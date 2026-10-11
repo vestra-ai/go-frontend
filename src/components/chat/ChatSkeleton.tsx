@@ -6,7 +6,7 @@ import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
 import { chat as copy } from "@/data/seed/copy";
 import type { TripId } from "@/data/types";
-import { SKELETON_BAR, SKELETON_BAR_ON_PHOTO } from "@/lib/skeleton";
+import { SKELETON_BAR } from "@/lib/skeleton";
 import { chatHeaderClass, chatTitleClass } from "./ChatHeader";
 
 // The five fact chips' widths (where, when, stay, budget, from), roughly what they measure with their usual labels.
@@ -73,14 +73,14 @@ function IncomingSkeleton({ name, text }: { name: string; text: string }) {
   );
 }
 
-/** One of mine: right-aligned, no avatar or name. */
+/** One of mine: right-aligned, no avatar or name. Just the grey bubble: the text stays, invisible, so it is sized like the real one. */
 function OutgoingSkeleton({ text }: { text: string }) {
   return (
     <div className="flex justify-end">
       <div className="flex max-w-[78%] flex-col items-end">
         <div className="flex flex-col gap-1 rounded-5xl rounded-br-none bg-line-2 px-3.5 py-2.5 wrap-anywhere">
           <div className="text-16 leading-[1.4] tracking-body">
-            <span className={SKELETON_BAR_ON_PHOTO}>{text}</span>
+            <span className="text-transparent select-none">{text}</span>
           </div>
         </div>
         <div className="h-2 w-full shrink-0" />
