@@ -41,6 +41,10 @@ export interface ComposerModes {
   bottomPadding: 96 | 150 | 190;
   draft: string;
   setDraft(value: string): void;
+  /** Writes the draft for the person (a Board row's ask): the composer then takes the focus, caret after the words. */
+  prefill(text: string): void;
+  /** How many times `prefill` has run. */
+  prefills: number;
   trayDraft: string;
   setTrayDraft(value: string): void;
   recording: boolean;
@@ -81,6 +85,12 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[], people
     setDraftValue(value);
     // Fanned out to the others in the room (never to Go); the connection keeps it to one `on` per 2 s.
     live.typing(tripId, value.trim().length > 0);
+  }
+
+  const [prefills, setPrefills] = useState(0);
+  function prefill(text: string) {
+    setDraft(text);
+    setPrefills((n) => n + 1);
   }
 
   function setMode(next: ComposerMode, id?: string) {
@@ -186,6 +196,8 @@ export function useComposerModes(tripId: TripId, messages: RoomMessage[], people
     bottomPadding: PADDING[mode ?? "none"],
     draft,
     setDraft,
+    prefill,
+    prefills,
     // The tray's text is the composer's: it does not announce typing (the tray may be a message to Go).
     trayDraft: draft,
     setTrayDraft: setDraftValue,

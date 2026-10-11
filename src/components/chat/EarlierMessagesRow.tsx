@@ -13,8 +13,11 @@ type EarlierMessagesRowProps = {
   pageKey: string;
 };
 
-/** How far above the viewport the row still counts as reached, so the page starts loading just before the top. */
-const REACH_MARGIN = "240px";
+/**
+ * How far above the viewport the row still counts as reached. More than a screen, so the page is usually in before a
+ * reader scrolling up gets to the top.
+ */
+const REACH_MARGIN = "1200px";
 
 /** Top of the thread: a Go-coloured "↑ Show earlier messages" link centred between two hairlines. */
 export function EarlierMessagesRow({ label, loading, onPress, pageKey }: EarlierMessagesRowProps) {

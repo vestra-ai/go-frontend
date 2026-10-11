@@ -1,7 +1,7 @@
 "use client";
 
 import { useSearchParams } from "next/navigation";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { type CallCard, type GoCard, type OptionsCard, type Transfer, type WorkingCard } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -76,6 +76,7 @@ import type { OptionRef, RoomModel } from "./CardView";
 import { MessageRenderer, userAvatar, type MessageActions } from "./MessageRenderer";
 import { useChatSheets } from "./useChatSheets";
 import { useComposerModes } from "./useComposerModes";
+import { useHoldPlace } from "./useHoldPlace";
 
 /** Bubble-row rect relative to #app-frame's top-left, i.e. in page coordinates (the long-press overlay is absolute inside the page). */
 function frameRect(el: HTMLElement): FrameRect {
@@ -136,8 +137,11 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   const room: RoomModel = { tripId, view, data, users, me, features };
   const rows = buildRoom(data, users, me.id);
 
-  // Messages already in the thread on first render don't rise in.
+  // Only a message that arrives at the end rises in: not the ones in the thread on first render, nor a page of earlier
+  // messages added above them.
   const [historyIds] = useState(() => new Set(rows.map((m) => m.id)));
+  let lastHistory = rows.length - 1;
+  while (lastHistory >= 0 && !historyIds.has(rows[lastHistory].id)) lastHistory -= 1;
 
   // -- Quick start: asked once, until it is answered or dismissed -------------------------------------------------
   const vibe = VIBES.find((v) => view.me.person.know.includes(`${VIBE_PREFIX}${v}`)) ?? null;
@@ -256,22 +260,18 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   // back older pages never yanks the thread to its end.
   const thread = useThreadFollow(rows);
 
-  // "Earlier messages" adds a page above: keep what was on screen where it was.
+  // "Earlier messages" adds a page above: what is on screen stays where it is. The store's listeners run as the page
+  // goes in, before React draws it.
   const firstId = rows[0]?.id ?? "";
-  const fromBottom = useRef<number | null>(null);
-  useLayoutEffect(() => {
-    if (fromBottom.current === null) return;
-    window.scrollTo(0, document.documentElement.scrollHeight - fromBottom.current);
-    fromBottom.current = null;
-  }, [firstId]);
-  const loadEarlier = () => {
-    if (data.loadingHistory) return; // the row stays tappable while loading; a repeat tap must not re-anchor the scroll
-    fromBottom.current = document.documentElement.scrollHeight - window.scrollY;
-    void loadOlderMessages(tripId).catch((err) => {
-      fromBottom.current = null;
-      toastGo(errorMessage(err));
-    });
-  };
+  const holdPlace = useHoldPlace();
+  useEffect(
+    () =>
+      useGo.subscribe((now, was) => {
+        if (now.trips[tripId]?.order[0] !== was.trips[tripId]?.order[0]) holdPlace();
+      }),
+    [tripId, holdPlace],
+  );
+  const loadEarlier = () => void loadOlderMessages(tripId).catch((err) => toastGo(errorMessage(err)));
 
   // `?focus=<message>` (a "Pending on you" row, the Board's Vote): scroll to that message once, then drop the param.
   const [focus, setFocus] = useState<string | null>(() => params.get("focus"));
@@ -347,7 +347,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
       return;
     }
     if (target === "travel" && openRoute(latestOptions(["flight", "train", "bus"]))) return;
-    // Everything else is asked of Go in the room: the row's ask is put in the composer, ready to send.
+    // Everything else is asked of Go in the room: the row's ask is put in the composer, ready to edit or send (the
+    // keyboard comes up once the sheet has left).
     const set = boardRow?.kind === "row" && boardRow.trailing.kind !== "ask";
     const asks = boardCopy.asks;
     const text =
@@ -359,7 +360,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
             ? set ? asks.changeStay : asks.stay
             : board.reminder ? asks.returnTrip : asks.travel;
     sheets.close();
-    modes.setDraft(text);
+    modes.prefill(text);
   };
 
   // -- Card and message actions -----------------------------------------------------------------------------------
@@ -513,12 +514,12 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
           {data.hasMoreHistory && (
             <EarlierMessagesRow label={chatCopy.earlier} loading={data.loadingHistory} onPress={loadEarlier} pageKey={firstId} />
           )}
-          {rows.map((m) => (
+          {rows.map((m, i) => (
             <MessageRenderer
               key={m.key}
               message={m}
               room={room}
-              enter={!historyIds.has(m.id)}
+              enter={i > lastHistory}
               pressHandlers={pressHandlers}
               onPressStart={thread.hold}
               onPressEnd={thread.release}
@@ -555,6 +556,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
             value={modes.draft}
             onChange={modes.setDraft}
             onSend={modes.sendDraft}
+            prefills={modes.prefills}
             recording={modes.recording}
             recordingSeconds={modes.recordingSeconds}
             onCancelRecording={modes.cancelRecording}

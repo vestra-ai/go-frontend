@@ -1,17 +1,18 @@
 "use client";
 
-import { useId, useRef } from "react";
+import { useEffect, useId, useRef } from "react";
 import { Plus } from "@/components/icons/generated";
 import { FadeDock } from "@/components/shell/FadeDock";
 import { usePageInResume } from "@/components/shell/PageTransition";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { chat as copy } from "@/data/seed/copy";
 import type { AttachItem } from "@/data/types";
+import { focusAtEndAfterSheets } from "@/lib/focus";
 import type { MentionItem } from "@/lib/mentions";
 import { cn } from "@/lib/utils";
 import { AttachMenu } from "./AttachMenu";
+import { MentionInput } from "./MentionInput";
 import { MentionSuggestions } from "./MentionSuggestions";
 import { MicSendButton } from "./MicSendButton";
 import { RecordingBar } from "./RecordingBar";
@@ -22,6 +23,8 @@ type ComposerProps = {
   onChange(v: string): void;
   /** Trimmed, non-empty: MicSend press or Enter with a draft. */
   onSend(text: string): void;
+  /** Goes up each time the app writes the draft itself (a Board row's ask): the input takes the focus, caret after the words. */
+  prefills?: number;
   recording: boolean;
   /** MicSend press with an empty draft (start, or stop and send the voice note). */
   onMic(): void;
@@ -46,6 +49,7 @@ export function Composer({
   value,
   onChange,
   onSend,
+  prefills = 0,
   recording,
   recordingSeconds,
   onCancelRecording,
@@ -61,6 +65,15 @@ export function Composer({
   const resume = usePageInResume();
   const msgInput = useRef<HTMLInputElement>(null);
   const mentions = useMentionSuggest({ value, onChange, inputRef: msgInput, items: mentionItems });
+  // A draft the app wrote is easy to miss: the input takes the focus with the caret after the words, and the keyboard
+  // comes up once the sheet whose button wrote them has left. A passive effect, so the closing sheet has let go of its
+  // focus trap; it still runs inside the tap, which is the only place iOS takes a focus from.
+  const seenPrefills = useRef(prefills);
+  useEffect(() => {
+    if (seenPrefills.current === prefills) return;
+    seenPrefills.current = prefills;
+    if (msgInput.current) return focusAtEndAfterSheets(msgInput.current);
+  }, [prefills]);
   const photoInput = useRef<HTMLInputElement>(null);
   const pdfInput = useRef<HTMLInputElement>(null);
   const inputs: Record<AttachItem, React.RefObject<HTMLInputElement | null>> = { photo: photoInput, pdf: pdfInput };
@@ -99,8 +112,8 @@ export function Composer({
               </AttachMenu>
               <label htmlFor="msg" className="min-w-0 flex-1">
                 <span className="sr-only">{copy.composer.srLabel}</span>
-                <Input
-                  ref={msgInput}
+                <MentionInput
+                  inputRef={msgInput}
                   id="msg"
                   type="text"
                   shape="pill"

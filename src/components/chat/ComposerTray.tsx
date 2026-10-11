@@ -1,16 +1,17 @@
 "use client";
 
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ArrowRight, X } from "@/components/icons/generated";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Avatar } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
-import { Input } from "@/components/ui/input";
 import { chat as copy } from "@/data/seed/copy";
 import { assets } from "@/lib/assets";
+import { focusAtEnd } from "@/lib/focus";
 import type { MentionItem } from "@/lib/mentions";
 import { cn } from "@/lib/utils";
+import { MentionInput } from "./MentionInput";
 import { MentionSuggestions } from "./MentionSuggestions";
 import { useMentionSuggest } from "./useMentionSuggest";
 
@@ -37,15 +38,18 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
   const inputRef = useRef<HTMLInputElement>(null);
   const mentions = useMentionSuggest({ value, onChange, inputRef, items: mentionItems });
 
-  // Focus the input when the tray opens (or switches mode), caret after any prefilled draft.
+  // Focus the input when the tray opens (or switches mode) and when a suggestion chip writes the draft, caret after the
+  // words.
+  const [suggested, setSuggested] = useState(0);
   useEffect(() => {
-    const input = inputRef.current;
-    if (!input) return;
-    input.focus();
-    input.setSelectionRange(input.value.length, input.value.length);
-  }, [mode]);
+    if (inputRef.current) focusAtEnd(inputRef.current);
+  }, [mode, suggested]);
 
   const send = () => onSend(value.trim());
+  const suggest = (text: string) => {
+    onChange(text);
+    setSuggested((n) => n + 1);
+  };
 
   return (
     <StickyDock>
@@ -80,7 +84,7 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
         {mode === "askGo" && suggestions && suggestions.length > 0 && (
           <div className="-mx-4 flex gap-1.5 overflow-x-auto overscroll-x-contain px-4 scrollbar-none">
             {suggestions.map((s) => (
-              <Chip key={s} type="button" size="xs" variant="outline" className="shrink-0" onClick={() => onChange(s)}>
+              <Chip key={s} type="button" size="xs" variant="outline" className="shrink-0" onClick={() => suggest(s)}>
                 {s}
               </Chip>
             ))}
@@ -90,8 +94,8 @@ export function ComposerTray({ mode, banner, suggestions, value, onChange, place
         <div className="flex items-center gap-2.5">
           <label htmlFor={inputId} className="min-w-0 flex-1">
             <span className="sr-only">{placeholder}</span>
-            <Input
-              ref={inputRef}
+            <MentionInput
+              inputRef={inputRef}
               id={inputId}
               type="text"
               shape="pill-grey"
