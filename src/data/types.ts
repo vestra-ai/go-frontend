@@ -208,6 +208,12 @@ export interface DateOption {
   voters: UserId[];
 }
 
+/** One photo of a place's gallery. `label`: what it shows ("Deluxe room"), when Go said. */
+export interface StayPhoto {
+  src: string;
+  label?: string;
+}
+
 export interface Stay {
   id: string;
   name: string;
@@ -218,6 +224,8 @@ export interface Stay {
   reviews: string;
   tags: string;
   img: string;
+  /** The gallery, cover first. Empty when the place has no photo of its own (`img` is then an illustration). */
+  photos: StayPhoto[];
   amenities: string[];
   dates: string;
   totalFor4: string;

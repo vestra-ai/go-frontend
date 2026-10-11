@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import { cn } from "@/lib/utils";
 
 const MAX_SCALE = 3;
@@ -79,6 +80,16 @@ interface PanZoomLayerProps {
   zoomOutLabel: string;
   /** A tap on the bare map (not on a pin, a route or a control). */
   onBackgroundTap?: () => void;
+  /**
+   * The swipes left to the browser at the resting view, where there is nothing to pan: vertical ones (default: the
+   * page scrolls past the map), or horizontal ones (the layer is a slide of a sideways row).
+   */
+  restTouchAction?: "pan-y" | "pan-x";
+  /**
+   * Where the +/− buttons are drawn: on the layer (default), nowhere (`false`), or in another element, at its top
+   * right. A row of layers hands that element to the one on screen, so the buttons stay put while the layers slide.
+   */
+  controls?: boolean | HTMLElement;
   className?: string;
 }
 
@@ -87,7 +98,7 @@ interface PanZoomLayerProps {
  * every touch (`touch-action: none`); at the resting view (nothing to pan) it leaves vertical swipes to the browser
  * (`pan-y`), so the page scrolls natively and the map never traps or fights it. The layer is clipped by its parent.
  */
-export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoomOutLabel, onBackgroundTap, className }: PanZoomLayerProps) {
+export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoomOutLabel, onBackgroundTap, restTouchAction = "pan-y", controls = true, className }: PanZoomLayerProps) {
   const surface = useRef<HTMLDivElement>(null);
   // Re-centred before first paint (the real size is only known once mounted), so this start value never shows.
   const [t, setT] = useState<Transform>({ s: home.s, x: 0, y: 0 });
@@ -236,6 +247,24 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
 
   const zoomed = !isHome(t, home);
 
+  // Presses on the buttons are theirs alone: no pan, pinch or double-tap on the layer underneath.
+  const buttons = (
+    <div
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerMove={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onPointerCancel={(e) => e.stopPropagation()}
+      className="pointer-events-auto absolute top-2.5 right-2.5 z-2 flex flex-col overflow-hidden rounded-full bg-white/92 shadow-[0_2px_10px_rgb(11_27_63/0.12)]"
+    >
+      <ZoomButton label={zoomInLabel} disabled={t.s >= MAX_SCALE} onPress={() => zoomBy(BUTTON_ZOOM)}>
+        <path d="M7 1v12M1 7h12" />
+      </ZoomButton>
+      <ZoomButton label={zoomOutLabel} disabled={!zoomed} onPress={() => zoomBy(1 / BUTTON_ZOOM)}>
+        <path d="M1 7h12" />
+      </ZoomButton>
+    </div>
+  );
+
   return (
     <div
       ref={surface}
@@ -244,7 +273,7 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
       // Zoomed in, the map owns every touch (pan, pinch). At the resting view there is nothing to pan, so the browser
       // keeps vertical swipes (native scroll and momentum, no fight with the map); pinch and horizontal moves still
       // reach the map. The value is read when a touch starts, so it takes effect from the next gesture.
-      style={{ touchAction: zoomed ? "none" : "pan-y" }}
+      style={{ touchAction: zoomed ? "none" : restTouchAction }}
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={(e) => endPointer(e, false)}
@@ -268,21 +297,7 @@ export function PanZoomLayer({ children, home, bleed, homeKey, zoomInLabel, zoom
       >
         {children}
       </div>
-      {/* Presses on the buttons are theirs alone: no pan, pinch or double-tap on the layer underneath. */}
-      <div
-        onPointerDown={(e) => e.stopPropagation()}
-        onPointerMove={(e) => e.stopPropagation()}
-        onPointerUp={(e) => e.stopPropagation()}
-        onPointerCancel={(e) => e.stopPropagation()}
-        className="absolute top-2.5 right-2.5 z-2 flex flex-col overflow-hidden rounded-full bg-white/92 shadow-[0_2px_10px_rgb(11_27_63/0.12)]"
-      >
-        <ZoomButton label={zoomInLabel} disabled={t.s >= MAX_SCALE} onPress={() => zoomBy(BUTTON_ZOOM)}>
-          <path d="M7 1v12M1 7h12" />
-        </ZoomButton>
-        <ZoomButton label={zoomOutLabel} disabled={!zoomed} onPress={() => zoomBy(1 / BUTTON_ZOOM)}>
-          <path d="M1 7h12" />
-        </ZoomButton>
-      </div>
+      {controls === true ? buttons : controls ? createPortal(buttons, controls) : null}
     </div>
   );
 }

@@ -134,7 +134,8 @@ export function SheetHeader({
         </div>
         {close && (
           <DrawerClose asChild>
-            <Button variant="white" size="icon-sm" aria-label={closeLabel} className="-mr-1.5">
+            {/* shrink-0: a title that wraps must not squeeze the button into an oval. */}
+            <Button variant="white" size="icon-sm" aria-label={closeLabel} className="-mr-1.5 shrink-0">
               <X className="size-[18px]" />
             </Button>
           </DrawerClose>

@@ -151,7 +151,8 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, a
       <SheetFooter>
         {onVote && (
           <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
-            {actionLabel ?? polls.voteFor(shown.name)}
+            {/* A long name is cut with an ellipsis inside the button, not spilled past its ends. */}
+            <span className="truncate">{actionLabel ?? polls.voteFor(shown.name)}</span>
           </Button>
         )}
         {rich && (

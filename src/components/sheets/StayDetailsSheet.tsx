@@ -10,6 +10,7 @@ import type { Stay } from "@/data/types";
 import { AmenityChips } from "./AmenityChips";
 import { FactRows } from "./FactRows";
 import { OptionLinks } from "./OptionLinks";
+import { PhotoCarousel } from "./PhotoCarousel";
 
 type StayDetailsSheetProps = {
   open: boolean;
@@ -37,8 +38,13 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
     <BottomSheet open={open} onOpenChange={onOpenChange} inset={48} aria-label={shown.name}>
       <SheetBody className="gap-3 pb-[120px]">
         <SheetHeader title={shown.name} subtitle={subtitle} />
-        {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
-        <img src={shown.img} alt={shown.name} className="h-[190px] w-full rounded-5xl bg-skeleton object-cover text-transparent" />
+        {shown.photos.length > 1 ? (
+          // Keyed by its first photo: another stay's gallery opens on its cover.
+          <PhotoCarousel key={shown.photos[0].src} photos={shown.photos} name={shown.name} className="h-[190px]" />
+        ) : (
+          // eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover
+          <img src={shown.img} alt={shown.name} className="h-[190px] w-full rounded-5xl bg-skeleton object-cover text-transparent" />
+        )}
         <div className="flex items-start justify-between gap-2.5">
           <div className="flex flex-col gap-0.5">
             {/* Repeats the sheet title, as designed. */}
@@ -73,7 +79,8 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
       <SheetFooter>
         {onVote && (
           <Button type="button" variant="primary" size="xl" className="w-full" onClick={() => onVote(shown.id)}>
-            {actionLabel ?? polls.voteFor(shown.name)}
+            {/* A long name is cut with an ellipsis inside the button, not spilled past its ends. */}
+            <span className="truncate">{actionLabel ?? polls.voteFor(shown.name)}</span>
           </Button>
         )}
       </SheetFooter>

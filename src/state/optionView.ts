@@ -1,6 +1,6 @@
 import type { DateRange, Decision, DecisionOption, Id, Journey, MyVote, Option, OptionDetailsFull, OptionsCard } from "@/api/contract";
 import { details as detailsCopy } from "@/data/seed/copy";
-import type { CabOption, DateOption, OptionExtras, PlaceOption, RouteLeg, RouteMode, RouteOption, Stay } from "@/data/types";
+import type { CabOption, DateOption, OptionExtras, PlaceOption, RouteLeg, RouteMode, RouteOption, Stay, StayPhoto } from "@/data/types";
 import { daysBetween, formatClock, formatDay, formatDayClock, formatDayRange, formatDayShort, formatHHMM, parseDay, wallTime } from "@/lib/dates";
 import { inr, kFormat } from "@/lib/format";
 import { httpUrl } from "@/state/bookingView";
@@ -51,6 +51,27 @@ function norm(o: AnyOption): Norm {
     area: card?.place?.address ?? card?.place?.name ?? "",
     hasRooms: (o.room_types?.length ?? 0) > 0,
   };
+}
+
+/** §7: at most 12 `photos`. */
+const MAX_PHOTOS = 12;
+
+/**
+ * A stay's gallery, cover first: its labelled `photos`, or `details.gallery_urls` when it has none (§7: when both
+ * arrive, show `photos`). The cover is the first of `photos` when there are any; one that is not among them leads.
+ */
+function galleryOf(o: AnyOption, n: Norm): StayPhoto[] {
+  const labelled = (o.photos ?? []).map((p) => ({ src: httpUrl(p.url), ...(p.label ? { label: p.label } : {}) }));
+  const all = labelled.length > 0 ? labelled : (n.details.gallery_urls ?? []).map((url) => ({ src: httpUrl(url) }));
+  const seen = new Set<string>();
+  const photos: StayPhoto[] = [];
+  for (const photo of all) {
+    if (!photo.src || seen.has(photo.src)) continue;
+    seen.add(photo.src);
+    photos.push({ ...photo, src: photo.src });
+  }
+  if (n.image && !seen.has(n.image)) photos.unshift({ src: n.image });
+  return photos.slice(0, MAX_PHOTOS);
 }
 
 const TINTS = ["bg-amber-soft", "bg-info-tint", "bg-info-tint-3", "bg-green-tint", "bg-peach-tint"] as const;
@@ -200,6 +221,7 @@ export function toStay(o: AnyOption, id: string, voters: Id[], ctx: StayContext)
     reviews: d.review_count != null ? `${d.review_count} reviews` : "",
     tags: n.highlights.slice(0, 2).join(" · ") || (d.amenities ?? []).slice(0, 2).join(" · "),
     img: n.image ?? illustrationFor(`${ctx.seed}:${id}`, n.name),
+    photos: galleryOf(o, n),
     amenities: d.amenities ?? n.highlights,
     dates,
     totalFor4: total != null ? money(total) : "",

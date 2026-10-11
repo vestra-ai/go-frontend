@@ -430,6 +430,17 @@ export const details = {
 export const staySheet = {
   subtitle: "What Go found for your dates.",
   facts: { dates: "Dates", total: "Total", share: "Each", cancellation: "Cancellation" },
+  photos: {
+    label: (name: string) => `Photos of ${name}`,
+    prev: "Previous photo",
+    next: "Next photo",
+    count: (at: number, of: number) => `Photo ${at} of ${of}`,
+    at: (at: number, of: number) => `${at} / ${of}`,
+    open: (at: number, of: number) => `Open photo ${at} of ${of} full screen`,
+    close: "Close",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+  },
 } as const;
 
 export const paySheet = {
