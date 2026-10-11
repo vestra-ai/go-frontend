@@ -25,7 +25,8 @@ type LiveViewSheetProps = {
 /**
  * Go's screen, full height, in the viewer chrome (contract 1.3, `WorkingCard.live_url`). While Go is at it and the card
  * carries a stream, the stream is framed over the latest picture; a fresh link from Go swaps the frame; once the task is
- * done or failed (the link comes back `null`) the frame goes and the final picture stays. All the steps sit under it.
+ * done or failed (the link comes back `null`) the frame goes and the final picture stays. All the steps sit under it,
+ * with how the task stands (Live, Done, Failed) on their heading's line.
  */
 export function LiveViewSheet({ open, onOpenChange, work }: LiveViewSheetProps) {
   // The frame is only mounted while the sheet is open, so closing it ends the stream at once.
@@ -38,14 +39,10 @@ export function LiveViewSheet({ open, onOpenChange, work }: LiveViewSheetProps) 
             <Button type="button" variant="ghost" size="icon" aria-label={BOOKINGS_COPY.viewer.close} onClick={() => onOpenChange(false)}>
               <X className="size-[22px]" strokeWidth={2} />
             </Button>
-            <div className="flex min-w-0 flex-1 flex-col gap-px">
+            <div className="flex min-w-0 flex-1 flex-col gap-px pr-1">
               <h1 className="truncate text-16 font-semibold leading-[1.3] tracking-body">{work.title}</h1>
               <span className="truncate text-13 tracking-caption text-muted">{work.line}</span>
             </div>
-            <span aria-live="polite" className={cn("flex shrink-0 items-center gap-1.5 pr-1 text-13 font-semibold", work.liveUrl ? "text-success-ink" : STATUS_TONE[work.status.tone])}>
-              {work.liveUrl && <LiveDot size={8} />}
-              {work.liveUrl ? copy.live : work.status.text}
-            </span>
           </div>
 
           {work.address && (
@@ -65,9 +62,16 @@ export function LiveViewSheet({ open, onOpenChange, work }: LiveViewSheetProps) 
             {liveUrl && <LiveFrame key={liveUrl} url={liveUrl} />}
           </div>
 
-          {work.steps.length > 0 && (
-            <div className="flex max-h-[40%] shrink-0 flex-col gap-1 overflow-y-auto overscroll-contain bg-white px-4 pt-3.5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-[0_-1px_0_rgb(11_27_63/0.06)] scrollbar-none">
-              <span className="text-12 font-bold tracking-caption text-muted">{copy.steps}</span>
+          <div className="flex max-h-[40%] shrink-0 flex-col gap-1 overflow-y-auto overscroll-contain bg-white px-4 pt-3.5 pb-[max(20px,env(safe-area-inset-bottom))] shadow-[0_-1px_0_rgb(11_27_63/0.06)] scrollbar-none">
+            {/* How the task stands sits here, by the steps, and not in the header's corner: there "Done" read as a button that closes the sheet. */}
+            <div className="flex items-center justify-between gap-3">
+              {work.steps.length > 0 && <span className="text-12 font-bold tracking-caption text-muted">{copy.steps}</span>}
+              <span aria-live="polite" className={cn("ml-auto flex shrink-0 items-center gap-1.5 text-13 font-semibold", work.liveUrl ? "text-success-ink" : STATUS_TONE[work.status.tone])}>
+                {work.liveUrl && <LiveDot size={8} />}
+                {work.liveUrl ? copy.live : work.status.text}
+              </span>
+            </div>
+            {work.steps.length > 0 && (
               <ol className="flex flex-col">
                 {work.steps.map((step, i) => (
                   <li key={i} aria-current={step.state === "doing" ? "step" : undefined} className="flex items-start gap-2.5 py-1.5">
@@ -86,8 +90,8 @@ export function LiveViewSheet({ open, onOpenChange, work }: LiveViewSheetProps) 
                   </li>
                 ))}
               </ol>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       )}
     </BottomSheet>
