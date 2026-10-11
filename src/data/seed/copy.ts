@@ -386,7 +386,7 @@ export const cards = {
     steps: "STEPS",
     stepState: { todo: "To do", doing: "Now", done: "Done", failed: "Didn’t work" },
   },
-  page: { opening: "Opening…" },
+  page: { opening: "Opening…", vaultFailed: "That didn’t go through in Go’s vault. Try again." },
   login: { done: "Logged in" },
   call: { failed: (who: string) => `Go couldn’t reach ${who}.` },
   checklist: { due: (day: string) => `due ${day}`, emoji: "📋", suggestion: "💡" },

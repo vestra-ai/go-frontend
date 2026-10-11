@@ -6,6 +6,7 @@ import { BottomSheet } from "@/components/shell/BottomSheet";
 import { Button } from "@/components/ui/button";
 import { BOOKINGS_COPY } from "@/data/seed/bookings";
 import { cards } from "@/data/seed/copy";
+import { toastGo } from "@/lib/toast";
 import { cn } from "@/lib/utils";
 
 const copy = cards.page;
@@ -14,6 +15,12 @@ const copy = cards.page;
 const ENDED = "vestra:ended";
 /** What Go's vault posts to the app when the person is done there (CONTRACT-APP §4.1). */
 const VAULT = "go-vault";
+/**
+ * What the framed page may ask the browser for: a passkey (Face ID to unlock the vault, and to set one up) and a
+ * payment. A browser refuses these to a page framed from another site unless the frame grants them. They go to the
+ * page's own origin only, which is the attribute's default.
+ */
+const ALLOW = "publickey-credentials-get; publickey-credentials-create; payment";
 
 export type VaultStatus = "saved" | "cancelled" | "failed";
 const VAULT_STATUSES: readonly string[] = ["saved", "cancelled", "failed"];
@@ -25,10 +32,13 @@ type GoPageSheetProps = {
   url: string | null;
   title: string;
   /**
-   * The page is Go's vault, opened with `display: "embedded"`: it posts `{ type: "go-vault", status }` when the person
-   * is done. Called with the status, after which the caller closes the sheet.
+   * The page is Go's vault, and it has posted `{ type: "go-vault", status }`: the person is done there. Called with the
+   * status, after which the caller closes the sheet. Without it the sheet answers the vault itself: `saved` is the
+   * page's end (`onEnded`), `failed` says so in a toast, and all three close it.
    */
   onVault?: (status: VaultStatus) => void;
+  /** The page is known to be the vault (the profile's link): it may open a browser tab of its own. */
+  vault?: boolean;
   /** The page posted `vestra:ended` (the login was detected), as opposed to the person closing the sheet. It closes after. */
   onEnded?: () => void;
 };
@@ -43,13 +53,21 @@ function hostOf(url: string): string {
 
 /**
  * A page Go answered a tap with, framed full height in the viewer chrome: the "Log in to ixigo" card's login view
- * (contract 1.3). It is never opened in a new tab. The sheet closes when the page posts `{ type: "vestra:ended" }`;
- * the caller also closes it when Go replaces the card ("Logged in"). The same frame holds Go's vault (`onVault`).
+ * (contract 1.3), or a page of Go's vault ("Add your details", Approve on a `pay` card, the profile's link). It is
+ * never opened in a new tab. The sheet closes when the page posts `{ type: "vestra:ended" }` or the vault's
+ * `{ type: "go-vault", status }`; the caller also closes it when Go replaces the card ("Logged in").
  */
-export function GoPageSheet({ open, onOpenChange, url, title, onVault, onEnded }: GoPageSheetProps) {
+export function GoPageSheet({ open, onOpenChange, url, title, onVault, vault = false, onEnded }: GoPageSheetProps) {
   const host = url ? hostOf(url) : "";
   const ended = () => {
     onEnded?.();
+    onOpenChange(false);
+  };
+  // A card's vault page: saving there is what the card was waiting for, so it ends as the login view does.
+  const vaultDone = (status: VaultStatus) => {
+    if (onVault) return onVault(status);
+    if (status === "saved") return ended();
+    if (status === "failed") toastGo(copy.vaultFailed);
     onOpenChange(false);
   };
   return (
@@ -73,7 +91,7 @@ export function GoPageSheet({ open, onOpenChange, url, title, onVault, onEnded }
           <div className="relative min-h-0 flex-1">
             <p className="absolute inset-0 m-auto h-fit text-center text-15 text-muted">{copy.opening}</p>
             {/* Only mounted while the sheet is open, so closing it leaves the page at once. */}
-            {open && <PageFrame key={url} url={url} title={title} onEnded={ended} onVault={onVault} />}
+            {open && <PageFrame key={url} url={url} title={title} popups={vault || looksLikeVault(url)} onEnded={ended} onVault={vaultDone} />}
           </div>
         </div>
       )}
@@ -89,7 +107,29 @@ function originOf(url: string): string {
   }
 }
 
-function PageFrame({ url, title, onEnded, onVault }: { url: string; title: string; onEnded: () => void; onVault?: (status: VaultStatus) => void }) {
+/**
+ * A card's page is the vault when its link says so (`vault-….example/l/…`, `…/vault/approve`). Only that decides
+ * whether the frame may open a tab of its own; the passkey grant and the vault's closing word do not depend on it.
+ */
+function looksLikeVault(url: string): boolean {
+  try {
+    const { hostname, pathname } = new URL(url);
+    return /^vault\b/i.test(hostname) || /^\/vault(\/|$)/i.test(pathname);
+  } catch {
+    return false;
+  }
+}
+
+type PageFrameProps = {
+  url: string;
+  title: string;
+  /** The page may open a browser tab of its own. */
+  popups: boolean;
+  onEnded: () => void;
+  onVault: (status: VaultStatus) => void;
+};
+
+function PageFrame({ url, title, popups, onEnded, onVault }: PageFrameProps) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [loaded, setLoaded] = useState(false);
   const ended = useRef(onEnded);
@@ -109,7 +149,7 @@ function PageFrame({ url, title, onEnded, onVault }: { url: string; title: strin
       const { type, status } = data as { type?: unknown; status?: unknown };
       if (type === ENDED) ended.current();
       // The vault's word is taken only from the origin the link itself is on (§4.1).
-      else if (type === VAULT && vault.current && origin && event.origin === origin && typeof status === "string" && VAULT_STATUSES.includes(status)) {
+      else if (type === VAULT && origin && event.origin === origin && typeof status === "string" && VAULT_STATUSES.includes(status)) {
         vault.current(status as VaultStatus);
       }
     };
@@ -123,8 +163,9 @@ function PageFrame({ url, title, onEnded, onVault }: { url: string; title: strin
       src={url}
       title={title}
       // A page to sign in on: its scripts, its own origin and its forms. No pop-ups, and it cannot take the app elsewhere.
-      // The vault may also open a browser tab of its own: adding a card or a login happens there, not in a frame (§4.1).
-      sandbox={onVault ? "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" : "allow-scripts allow-same-origin allow-forms"}
+      // The vault may also open a browser tab of its own (a first Face ID set-up on a browser that refuses one in a frame).
+      sandbox={popups ? "allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox" : "allow-scripts allow-same-origin allow-forms"}
+      allow={ALLOW}
       referrerPolicy="no-referrer"
       onLoad={() => setLoaded(true)}
       className={cn("absolute inset-0 size-full border-0 bg-white transition-opacity duration-220", loaded ? "opacity-100" : "opacity-0")}

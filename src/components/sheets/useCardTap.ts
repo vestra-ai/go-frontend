@@ -10,12 +10,14 @@ import { cards as copy } from "@/data/seed/copy";
 import { buttonGone, tapCard } from "@/state";
 
 /**
- * The two answers that must open in the browser itself, never framed (CONTRACT-APP §4.7): the vault (`approve`) and the
- * listen-in page (`listen`). Their tab is opened inside the tap. Every other page Go answers with opens inside the app.
+ * The one answer that opens in the browser itself, never framed (CONTRACT-APP §4.7): a call's listen-in page (`listen`).
+ * Its tab is opened inside the tap. Every other page Go answers with opens inside the app, the vault's included
+ * (Approve on a `pay` card, "Add your details"): since 11 Oct 2026 every vault page lets the app frame it, with Face ID
+ * working inside the frame (`GoPageSheet`).
  */
-const OPENS_IN_BROWSER = new Set(["approve", "listen"]);
+const OPENS_IN_BROWSER = new Set(["listen"]);
 
-/** A page Go answered a tap with (its "Log in to ixigo" view, a page to watch): framed in a sheet, never a new tab. */
+/** A page Go answered a tap with (its "Log in to ixigo" view, a vault page, a page to watch): framed in a sheet, never a new tab. */
 export interface GoPage {
   /** The card and the button that opened it: the page is done with once Go takes that button off the card. */
   cardId: string;
@@ -61,7 +63,7 @@ export interface CardTap {
 /**
  * One press of a Go card button: sends it, then does what Go answered. `done` / `refused` show the toast; `open` opens
  * one of the app's own screens for a `go://` link, or an `https://` page at once: framed in a sheet (`onPage`), except
- * the vault and the listen-in page, which open in the browser. Never retried on its own.
+ * the listen-in page, which opens in the browser. Never retried on its own.
  *
  * @param offered Whether the card still offers me the button that opened a page (see `offers`).
  */

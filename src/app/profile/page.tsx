@@ -126,7 +126,7 @@ export default function ProfilePage() {
         }}
         onClose={() => setFromOpen(false)}
       />
-      <GoPageSheet open={vault.open} onOpenChange={(open) => !open && closeVault()} url={vault.url || null} title={copy.rows.payment.title} onVault={onVault} />
+      <GoPageSheet open={vault.open} onOpenChange={(open) => !open && closeVault()} url={vault.url || null} title={copy.rows.payment.title} vault onVault={onVault} />
     </Screen>
   );
 }
