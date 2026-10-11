@@ -52,6 +52,7 @@ import {
   loadBookings,
   loadMoney,
   loadOlderMessages,
+  loadOptionDetails,
   loadRoom,
   markRead,
   react,
@@ -66,9 +67,9 @@ import {
 import { buildBoard, type BoardTarget } from "@/state/boardView";
 import { toPrivateDetails, toTicketDoc } from "@/state/bookingView";
 import { toCall, type CallModel } from "@/state/homeView";
-import { toCabCard, toPlaceOption, toRouteCard, toStay, voteShape } from "@/state/optionView";
+import { toCabCard, toPlaceOption, toRouteCard, toStay, voteShape, withDetails } from "@/state/optionView";
 import { buildRoom } from "@/state/roomView";
-import { fromMinor, toTripDates, toUser, tripFromView, usersById } from "@/state/view";
+import { fromMinor, toTripDates, toUser, tripFromView, userOf, usersById } from "@/state/view";
 import { toWorking } from "@/state/workingView";
 import { kFormat } from "@/lib/format";
 import type { OptionRef, RoomModel } from "./CardView";
@@ -183,6 +184,20 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     for (let i = data.order.length - 1; i >= 0; i--) {
       const card = data.messages[data.order[i]].card;
       if (card?.kind === "options" && kinds.includes((card as OptionsCard).option_kind)) return card as OptionsCard;
+    }
+    return null;
+  };
+  /**
+   * Where an option's Details are read from: Go's options card and the option's id on it. A vote's option has one when
+   * it came from a card (`option_ref`) and that card is in the room.
+   */
+  const detailsSource = (ref: OptionRef): { cardId: string; optionId: string } | null => {
+    if (ref.source === "card") return { cardId: ref.card.card_id, optionId: ref.optionId };
+    const optionRef = view.decisions.find((d) => d.decision_id === ref.decisionId)?.options[ref.index]?.option_ref;
+    if (!optionRef) return null;
+    for (let i = data.order.length - 1; i >= 0; i--) {
+      const card = data.messages[data.order[i]].card;
+      if (card?.kind === "options" && (card as OptionsCard).options.some((o) => o.option_id === optionRef)) return { cardId: card.card_id, optionId: optionRef };
     }
     return null;
   };
@@ -369,6 +384,10 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
     openOption: (ref) => {
       setOption(ref);
       sheets.open(ref.shape);
+      // What Go has collected about the place is read when Details open (§4.7); the card's own details show meanwhile,
+      // and stay if the read fails.
+      const from = detailsSource(ref);
+      if (from) void loadOptionDetails(tripId, from.cardId, from.optionId).catch(() => {});
     },
     openRoute: (card) => void openRoute(card),
     openCab: (card) => void openCab(card),
@@ -395,27 +414,40 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   };
 
   // -- Details sheet payloads -----------------------------------------------------------------------------------------
-  const optionDecision = option?.source === "vote" ? view.decisions.find((d) => d.decision_id === option.decisionId) : undefined;
-  const optionVoters =
-    option?.source === "vote" ? (optionDecision?.votes ?? []).filter((v) => v.option_index === option.index).map((v) => v.person_id) : [];
+  // The vote an option belongs to: its own, or the one its options card carries (§4.7), where the card's option is the
+  // decision option whose `option_ref` is its id.
+  const optionDecisionId = option?.source === "vote" ? option.decisionId : (option?.card.decision_id ?? null);
+  const optionDecision = optionDecisionId ? view.decisions.find((d) => d.decision_id === optionDecisionId) : undefined;
+  const optionIndex = !option
+    ? -1
+    : option.source === "vote"
+      ? option.index
+      : (optionDecision?.options.findIndex((o) => o.option_ref === option.optionId) ?? -1);
+  const optionVoters = optionIndex >= 0 ? (optionDecision?.votes ?? []).filter((v) => v.option_index === optionIndex).map((v) => v.person_id) : [];
   const cardOption = option?.source === "card" ? option.card.options.find((o) => o.option_id === option.optionId) : undefined;
-  const cardPick = option?.source === "card" ? (option.card.actions ?? []).find((a) => a.per_option && (!a.only_for_person_ids || a.only_for_person_ids.includes(me.id))) : undefined;
+  const cardPick =
+    option?.source === "card" && !option.card.decision_id
+      ? (option.card.actions ?? []).find((a) => a.per_option && (!a.only_for_person_ids || a.only_for_person_ids.includes(me.id)))
+      : undefined;
   const stayCtx = { dates: view.dates, people: view.people.length, seed: option?.source === "vote" ? option.decisionId : (option?.card.card_id ?? "") };
-  const raw = option?.source === "vote" ? optionDecision?.options[option.index] : cardOption;
+  const optionSource = option ? detailsSource(option) : null;
+  const optionFull = optionSource ? data.optionDetails[`${optionSource.cardId}|${optionSource.optionId}`] : undefined;
+  const bare = option?.source === "vote" ? optionDecision?.options[option.index] : cardOption;
+  const raw = bare && withDetails(bare, optionFull);
   const optionId = option ? (option.source === "vote" ? String(option.index) : option.optionId) : "";
   const place = option?.shape === "place" && raw ? toPlaceOption(raw, optionId, optionVoters, stayCtx.seed, option.source === "vote" ? option.index : 0) : null;
   const stayDetails = option?.shape === "stay" && raw ? toStay(raw, optionId, optionVoters, stayCtx) : null;
   // The sheet's button: my vote while the vote is open, or the options card's own per-option action.
   const pressOption = !option
     ? undefined
-    : option.source === "vote"
-      ? optionDecision?.status === "open"
+    : optionDecisionId
+      ? optionDecision?.status === "open" && optionIndex >= 0
         ? () => {
-            actions.vote(option.decisionId, option.index);
+            actions.vote(optionDecisionId, optionIndex);
             sheets.close();
           }
         : undefined
-      : cardPick
+      : option.source === "card" && cardPick
         ? () => {
             actions.tap(option.card.card_id, cardPick.action_id, { optionId: option.optionId });
             sheets.close();
@@ -456,7 +488,8 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   const target = modes.target;
   // Who the message is from: a member, me or Go. The tray words it as "Replying to Arjun / yourself / Go".
   const targetAuthor = !target ? null : target.mine ? "me" : target.author.kind === "go" ? "go" : "member";
-  const targetUser = target?.author.kind === "person" && !target.mine ? (users[target.author.id] ?? null) : null;
+  // Someone who has left the trip is still a person to reply to: "Former member" (§4.6).
+  const targetUser = target?.author.kind === "person" && !target.mine ? userOf(users, target.author.id) : null;
   const targetName = targetAuthor === "me" ? chatCopy.tray.yourself : targetAuthor === "go" ? chatCopy.goName : targetUser?.firstName;
   const trayMode = modes.mode === "reply" || modes.mode === "askGo" ? modes.mode : null;
   const subtitle = view.dates ? toTripDates(view.dates).short : chatCopy.subtitle.people(view.people.length);

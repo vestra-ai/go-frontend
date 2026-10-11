@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import type { NeedsYouItem } from "@/api/contract";
 import type { RecordTarget } from "@/components/sheets/RecordPaymentSheet";
 import type { CallModel } from "@/state/homeView";
 
 // Sheet state for the trip home route. Which sheet is open lives in component state and opens only from a tap: no query
 // param opens, names or closes a sheet. (`?open=<booking>` expands a Done row, not a sheet.)
 
-export type TripHomeSheet = "recording" | "checkin" | "record" | "budget";
+export type TripHomeSheet = "recording" | "checkin" | "record" | "budget" | "pending";
 export type CheckinStep = "details" | "seat";
 
 type Open = { sheet: TripHomeSheet; step: CheckinStep };
@@ -21,6 +22,10 @@ export interface TripHomeSheets {
   /** The flight being checked in, and the open step. */
   checkinBookingId: string | null;
   checkinStep: CheckinStep | null;
+  /** The "Pending on you" row last opened, kept after close so its sheet can animate out. */
+  pending: NeedsYouItem | null;
+  /** A vote, a mandate, one of Go's cards or an open line: its own card, in a sheet. */
+  openPending(item: NeedsYouItem): void;
   openRecording(call: CallModel): void;
   /** "Check in now" → step details. */
   openCheckin(bookingId: string): void;
@@ -37,6 +42,7 @@ export function useTripHomeSheets(): TripHomeSheets {
   const [call, setCall] = useState<CallModel | null>(null);
   const [record, setRecord] = useState<RecordTarget | null>(null);
   const [checkinBookingId, setCheckinBookingId] = useState<string | null>(null);
+  const [pending, setPending] = useState<NeedsYouItem | null>(null);
 
   const show = (sheet: TripHomeSheet, step: CheckinStep = "details") => setOpen({ sheet, step });
   const sheet = open?.sheet ?? null;
@@ -47,6 +53,11 @@ export function useTripHomeSheets(): TripHomeSheets {
     record,
     checkinBookingId,
     checkinStep: open?.sheet === "checkin" ? open.step : null,
+    pending,
+    openPending: (item) => {
+      setPending(item);
+      show("pending");
+    },
     openRecording: (next) => {
       setCall(next);
       show("recording");

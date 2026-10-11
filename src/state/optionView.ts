@@ -1,6 +1,7 @@
-import type { DateRange, Decision, DecisionOption, Id, Journey, Option, OptionDetails, OptionsCard } from "@/api/contract";
-import type { CabOption, DateOption, PlaceOption, RouteLeg, RouteMode, RouteOption, Stay } from "@/data/types";
-import { daysBetween, formatClock, formatDay, formatDayRange, formatDayShort, parseDay, wallTime } from "@/lib/dates";
+import type { DateRange, Decision, DecisionOption, Id, Journey, MyVote, Option, OptionDetailsFull, OptionsCard } from "@/api/contract";
+import { details as detailsCopy } from "@/data/seed/copy";
+import type { CabOption, DateOption, OptionExtras, PlaceOption, RouteLeg, RouteMode, RouteOption, Stay } from "@/data/types";
+import { daysBetween, formatClock, formatDay, formatDayClock, formatDayRange, formatDayShort, formatHHMM, parseDay, wallTime } from "@/lib/dates";
 import { inr, kFormat } from "@/lib/format";
 import { httpUrl } from "@/state/bookingView";
 import { fromMinor, illustrationFor } from "@/state/view";
@@ -20,7 +21,9 @@ interface Norm {
   priceMinMinor?: number | null;
   priceMaxMinor?: number | null;
   priceNote: string;
-  details: OptionDetails;
+  /** The card's own `details`, with what the Details route added when it has been read (`withDetails`). */
+  details: OptionDetailsFull;
+  url?: string | null;
   rating?: number | null;
   refundableUntil?: string | null;
   area: string;
@@ -42,6 +45,7 @@ function norm(o: AnyOption): Norm {
     priceMaxMinor: o.price_max_minor,
     priceNote: card?.price_note ?? "",
     details: o.details ?? {},
+    url: card?.url,
     rating: card?.rating ?? o.details?.rating,
     refundableUntil: card?.refundable_until,
     area: card?.place?.address ?? card?.place?.name ?? "",
@@ -63,6 +67,57 @@ function priceLabel(n: Norm): string {
   if (n.priceMinMinor != null) return `from ${short(n.priceMinMinor)} each`;
   if (n.priceMinor != null) return n.priceNote ? `${short(n.priceMinor)} ${n.priceNote}` : short(n.priceMinor);
   return "";
+}
+
+/**
+ * An option with what `GET …/options/:option_id/details` answered laid over its card's own `details` (§4.7). Every
+ * field is optional and Go may still be collecting: a field the answer leaves out or sends empty keeps the card's value.
+ */
+export function withDetails<T extends AnyOption>(o: T, full: OptionDetailsFull | undefined): T {
+  if (!full) return o;
+  const filled = Object.fromEntries(Object.entries(full).filter(([, v]) => v != null && !(Array.isArray(v) && v.length === 0)));
+  return { ...o, details: { ...(o.details ?? {}), ...filled } };
+}
+
+/** "14:00" → "2:00 pm"; a full date-time → "Fri 6 Nov · 2:00 pm"; anything else as Go wrote it. */
+function clockOf(value: string): string {
+  if (/^\d{1,2}:\d{2}$/.test(value)) return formatHHMM(value);
+  if (/^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value))) return formatDayClock(wallTime(value));
+  return value;
+}
+
+/** "www.ixigo.com" → "ixigo": the site's own name, for "View on ixigo". */
+function siteOf(url: string): string {
+  try {
+    const labels = new URL(url).hostname.replace(/^www\./, "").split(".");
+    const generic = new Set(["co", "com", "org", "net"]);
+    const at = labels.length >= 3 && generic.has(labels[labels.length - 2]) ? labels.length - 3 : Math.max(labels.length - 2, 0);
+    return labels[at] ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/** `address` is a row of its own on a place; a stay shows it under its name instead. */
+function extrasOf(n: Norm, withAddress: boolean): OptionExtras | undefined {
+  const d = n.details;
+  const copy = detailsCopy;
+  const type = [d.property_type, d.stars ? copy.stars(d.stars) : null].filter(Boolean).join(" · ");
+  const facts = [
+    ...(type ? [{ label: copy.type, value: type }] : []),
+    ...(d.check_in ? [{ label: copy.checkIn, value: clockOf(d.check_in) }] : []),
+    ...(d.check_out ? [{ label: copy.checkOut, value: clockOf(d.check_out) }] : []),
+    ...(withAddress && d.address ? [{ label: copy.address, value: d.address }] : []),
+  ];
+  const map = d.map && Number.isFinite(d.map.lat) && Number.isFinite(d.map.lng) ? d.map : null;
+  const href = httpUrl(d.url) ?? httpUrl(n.url);
+  const site = href ? siteOf(href) : "";
+  if (facts.length === 0 && !map && !href) return undefined;
+  return {
+    facts,
+    ...(map ? { mapHref: `https://www.google.com/maps?q=${map.lat},${map.lng}` } : {}),
+    ...(href ? { link: { label: site ? copy.viewOn(site) : copy.view, href } } : {}),
+  };
 }
 
 /** What kind of rail a vote draws as: photo cards for places and stays, a plain list for everything else. */
@@ -98,6 +153,7 @@ export function toPlaceOption(o: AnyOption, id: string, voters: Id[], seed: stri
     photo: Boolean(n.image),
     tint,
     voters,
+    extras: extrasOf(n, true),
     details: rich
       ? {
           layout: "rich",
@@ -137,7 +193,7 @@ export function toStay(o: AnyOption, id: string, voters: Id[], ctx: StayContext)
     id,
     name: n.name,
     area: n.area || n.subtitle,
-    areaLong: n.area || n.subtitle,
+    areaLong: d.address ?? (n.area || n.subtitle),
     // The photo's pill is the price and the rating alone: the Server's `price_note` ("per night, per room, …") can run long.
     priceLabel: priceLabel({ ...n, priceNote: "" }),
     rating: n.rating != null ? String(n.rating) : "",
@@ -150,6 +206,7 @@ export function toStay(o: AnyOption, id: string, voters: Id[], ctx: StayContext)
     yourShare: share,
     cancellation: d.cancellation ?? (n.refundableUntil ? `Free cancellation till ${formatDay(wallTime(n.refundableUntil))}` : ""),
     voters,
+    extras: extrasOf(n, false),
   };
 }
 
@@ -167,6 +224,54 @@ export function toDateOption(o: DecisionOption, id: string, voters: Id[]): DateO
     fit: o.price_minor != null ? money(o.price_minor) : "",
     fitTone: "muted",
     voters,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// An options card that is a vote (§4.7)
+// ---------------------------------------------------------------------------
+
+export interface CardVote {
+  decisionId: Id;
+  open: boolean;
+  /** The card option I voted for, when it is one of this card's (the vote can span several of Go's messages). */
+  mine: Id | null;
+  /** `option_id` → its `option_index` in the decision; undefined for an option the decision does not hold. */
+  indexOf(optionId: Id): number | undefined;
+  /** Who voted for an option, without me (the rails add me to my pick). Empty in an anonymous vote. */
+  votersOf(optionId: Id): Id[];
+  /** The option's tally when the voters are not named. */
+  tallyOf(optionId: Id): number | undefined;
+  /** The winning option's name once the vote has closed with a result. */
+  winner?: string;
+}
+
+/**
+ * The vote an options card carries: the card option with `option_id` X is the decision option whose `option_ref` is X,
+ * and that one's place in `decision.options` is the `option_index` to vote with.
+ */
+export function cardVote(decision: Decision, card: OptionsCard, mine: MyVote | undefined, meId: Id): CardVote {
+  const index = new Map<Id, number>();
+  decision.options.forEach((o, i) => {
+    if (o.option_ref) index.set(o.option_ref, i);
+  });
+  // My vote: what the single-vote routes said, else my row in a vote that names its voters.
+  const my = mine !== undefined ? mine : (decision.votes?.find((v) => v.person_id === meId) ?? null);
+  const myIndex = my && "option_index" in my ? my.option_index : null;
+  return {
+    decisionId: decision.decision_id,
+    open: decision.status === "open",
+    mine: myIndex === null ? null : (card.options.find((o) => index.get(o.option_id) === myIndex)?.option_id ?? null),
+    indexOf: (optionId) => index.get(optionId),
+    votersOf: (optionId) => {
+      const at = index.get(optionId);
+      return at === undefined ? [] : (decision.votes ?? []).filter((v) => v.option_index === at && v.person_id !== meId).map((v) => v.person_id);
+    },
+    tallyOf: (optionId) => {
+      const at = index.get(optionId);
+      return decision.votes || at === undefined ? undefined : decision.tally[at];
+    },
+    winner: decision.result_index != null ? decision.options[decision.result_index]?.label : undefined,
   };
 }
 

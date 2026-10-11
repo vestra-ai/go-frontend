@@ -170,6 +170,15 @@ export type PlaceDetails =
       goNote: string;
     };
 
+/** What Go collected about an option beyond its card (CONTRACT-APP §4.7): extra facts, where it is, its own page. */
+export interface OptionExtras {
+  facts: { label: string; value: string }[];
+  /** Opens the place on a map. */
+  mapHref?: string;
+  /** The option's own page: "View on ixigo". */
+  link?: { label: string; href: string };
+}
+
 export interface PlaceOption {
   id: string; // the option's index in its vote, or an options card's `option_id`
   /** `img` is a real photo (covers the tile) rather than a centred illustration. */
@@ -181,7 +190,10 @@ export interface PlaceOption {
   img: string;
   tint: string;
   voters: UserId[];
+  /** The tally when the voters are not named (an anonymous vote). */
+  votes?: number;
   details: PlaceDetails;
+  extras?: OptionExtras;
 }
 
 export interface DateOption {
@@ -212,6 +224,9 @@ export interface Stay {
   yourShare: string;
   cancellation: string;
   voters: UserId[];
+  /** The tally when the voters are not named (an anonymous vote). */
+  votes?: number;
+  extras?: OptionExtras;
 }
 
 // ---------------------------------------------------------------------------

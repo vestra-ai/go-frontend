@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { errorMessage } from "@/api/http";
 import { CheckinSheet } from "@/components/checkin/CheckinSheet";
@@ -10,12 +10,12 @@ import { RecordPaymentSheet } from "@/components/sheets/RecordPaymentSheet";
 import { useGroupBudget } from "@/components/sheets/useGroupBudget";
 import { recordTargetFor } from "@/components/sheets/useRecordTarget";
 import { CALL_COPY } from "@/data/seed/calls";
-import { tripHome as copy } from "@/data/seed/copy";
+import { cards as cardCopy, tripHome as copy } from "@/data/seed/copy";
 import type { TripId } from "@/data/types";
 import { openIn, preopenTab } from "@/lib/links";
 import { dropQueryParams } from "@/lib/query";
 import { toastGo } from "@/lib/toast";
-import { loadCalls, loadNeedsYou, sendMessage, tapCard, useGo, useTripGate } from "@/state";
+import { buttonGone, loadCalls, loadNeedsYou, sendMessage, tapCard, useGo, useTripGate } from "@/state";
 import { httpUrl } from "@/state/bookingView";
 import { buildDone, toPendingRow, type CallModel, type DoneRowModel, type PendingRowModel } from "@/state/homeView";
 import { usersById } from "@/state/view";
@@ -24,6 +24,7 @@ import { CheckinCard } from "./CheckinCard";
 import { DoneList, type AskDraft } from "./DoneList";
 import { TripHomeZero } from "./empty/TripHomeZero";
 import { PendingCard } from "./PendingCard";
+import { PendingSheet } from "./PendingSheet";
 import { RecordingSheet } from "./RecordingSheet";
 import { useTripShellActions } from "./TripShell";
 import { PendingSkeleton } from "./TripBodySkeletons";
@@ -37,7 +38,6 @@ const LEADING_NON_LETTERS = new RegExp("^[^\\p{L}]+", "u");
  * "Pending on you" (the needs-you list), and "Done" (bookings, the record, Go's calls with their recordings).
  */
 export function TripHomeScreen({ tripId }: { tripId: TripId }) {
-  const router = useRouter();
   const params = useSearchParams();
   const data = useTripGate(tripId);
   const { openShare } = useTripShellActions();
@@ -98,9 +98,8 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
       sheets.openRecord(recordTargetFor(view, item.target.transfer));
       return;
     }
-    // A vote, a mandate, one of Go's cards, an open line: each lives in the room, at its message when there is one.
-    const at = item.target.message_id ? `?focus=${encodeURIComponent(item.target.message_id)}` : "";
-    router.push(`/trips/${tripId}/chat${at}`);
+    // A vote, a mandate, one of Go's cards, an open line: its own card opens here, in a sheet (§4.2).
+    sheets.openPending(item);
   };
 
   const setAsk = (key: string, patch: Partial<AskDraft>) =>
@@ -128,7 +127,7 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
       }
     } catch (err) {
       tab?.close();
-      toastGo(errorMessage(err));
+      toastGo(buttonGone(tripId, err) ? cardCopy.changed : errorMessage(err));
     }
   };
 
@@ -187,6 +186,16 @@ export function TripHomeScreen({ tripId }: { tripId: TripId }) {
       )}
 
       <RecordingSheet tripId={tripId} call={sheets.call} open={sheets.sheet === "recording"} onOpenChange={(open) => !open && sheets.close()} />
+      <PendingSheet
+        tripId={tripId}
+        view={view}
+        data={data}
+        features={features}
+        item={sheets.pending}
+        open={sheets.sheet === "pending"}
+        onOpenChange={(open) => !open && sheets.close()}
+        onRecord={(transfer) => sheets.openRecord(recordTargetFor(view, transfer))}
+      />
       <RecordPaymentSheet open={sheets.sheet === "record"} onOpenChange={(open) => !open && sheets.close()} target={sheets.record} />
       <BudgetSheet open={sheets.sheet === "budget"} onOpenChange={(open) => !open && sheets.close()} {...budget} />
       {features?.checkin && (

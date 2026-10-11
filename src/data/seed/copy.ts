@@ -94,6 +94,7 @@ export const profile = {
     fromSaved: "Saved. New trips start from here.",
     failed: "Couldn’t save that. Try again.",
     vaultFailed: "Couldn’t open Go’s vault. Try again.",
+    vaultNotSaved: "Go’s vault couldn’t save that. Try again.",
   },
 } as const;
 
@@ -241,6 +242,13 @@ export const chat = {
     reactFailed: "Couldn’t save your reaction. Try again.",
     copied: "Message copied",
   },
+  /** Under a message of Go's that only some people receive: "Only you and Rahul can see this". */
+  onlyFor: (others: string[]) =>
+    others.length === 0
+      ? "Only you can see this"
+      : others.length === 1
+        ? `Only you and ${others[0]} can see this`
+        : `Only you, ${others.slice(0, -1).join(", ")} and ${others[others.length - 1]} can see this`,
 } as const;
 
 // Canned attach-menu sends, in AttachMenu row order (photo, pdf, location, poll).
@@ -326,6 +334,8 @@ export const polls = {
 export const cards = {
   checked: (ago: string) => `checked ${ago}`,
   options: { count: (n: number) => `${n} ${n === 1 ? "option" : "options"}`, see: "See options", pending: "Sending…" },
+  /** A button that is no longer on the card (a pay card already paid, expired or declined): the tap never reached Go. */
+  changed: "This has changed",
   mandate: {
     badge: "✅ READY TO BOOK",
     upTo: (amount: string) => `Up to ${amount}`,
@@ -403,6 +413,18 @@ export const budgetSheet = {
   save: "Save budget",
   saved: "Saved ✓",
   failed: "Couldn’t save the budget. Try again.",
+} as const;
+
+/** Rows and links the option Details add when Go has collected more about the place (CONTRACT-APP §4.7). */
+export const details = {
+  type: "Type",
+  stars: (n: number) => `${n}★`,
+  checkIn: "Check-in",
+  checkOut: "Check-out",
+  address: "Address",
+  map: "Open in Maps",
+  viewOn: (site: string) => `View on ${site}`,
+  view: "View the listing",
 } as const;
 
 export const staySheet = {
@@ -602,6 +624,13 @@ export const tripHome = {
     lineSub: { decided: "Decided by vote", agreed: "Agreed in the chat", open: "Done", doing: "Done", booked: "Booked" },
     settled: { emoji: "🤝", title: "Settled up", sub: "You owe nobody right now" },
     budget: { emoji: "💰", title: "Budget set", sub: (amount: string) => `${amount} per person · for the whole group` },
+  },
+  /** The sheet a "Pending on you" row opens: the same card the chat shows, to act on without leaving the page. */
+  pending: {
+    loading: "Loading…",
+    gone: "This is no longer waiting on you.",
+    openChat: "Open in chat",
+    line: { eyebrow: "ON THE TRIP RECORD", who: (names: string[]) => `For ${names.join(", ")}` },
   },
   asked: (who: string) => `Asked Go to call ${who}. Watch the trip chat.`,
   askFailed: "Couldn’t reach the trip chat. Try again.",

@@ -6,7 +6,8 @@ import type { CardActionResult } from "@/api/contract";
 import { errorMessage } from "@/api/http";
 import { openIn, parseGoRoute, preopenTab, type GoRoute } from "@/lib/links";
 import { toastGo } from "@/lib/toast";
-import { tapCard } from "@/state";
+import { cards as copy } from "@/data/seed/copy";
+import { buttonGone, tapCard } from "@/state";
 
 /**
  * The two answers that must open in the browser itself, never framed (CONTRACT-APP §4.7): the vault (`approve`) and the
@@ -83,7 +84,7 @@ export function useCardTap(
       return result;
     } catch (err) {
       tab?.close();
-      toastGo(errorMessage(err));
+      toastGo(buttonGone(tripId, err) ? copy.changed : errorMessage(err));
       return null;
     } finally {
       setPending(null);

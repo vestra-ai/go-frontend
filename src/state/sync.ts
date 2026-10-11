@@ -25,6 +25,10 @@ const get = useGo.getState;
 const TYPING_MS = { go: 10000, person: 6000 } as const;
 /** Several frames of one action arrive together: one re-read for the burst. */
 const REFRESH_DEBOUNCE_MS = 150;
+/** `home_changed` fires on votes, mandates, cards, record lines and money, often several at once (§3.1). */
+const HOME_DEBOUNCE_MS = 300;
+/** After a trip's own change, long enough for that trip's re-read to go first. */
+const HOME_AFTER_TRIP_MS = 600;
 const RESUME_GAP_MS = 5000;
 
 const typingKey = (who: { kind: "go" } | { kind: "person"; person_id: Id }) =>
@@ -41,6 +45,7 @@ interface Queued {
 }
 const pending = new Map<Id, Queued>();
 let homeTimer: ReturnType<typeof setTimeout> | null = null;
+let homeDue = 0;
 
 function queueRefresh(tripId: Id, kinds: TripChangeKind[] | null | undefined, messages: boolean) {
   const queued = pending.get(tripId);
@@ -56,17 +61,23 @@ function queueRefresh(tripId: Id, kinds: TripChangeKind[] | null | undefined, me
     }, REFRESH_DEBOUNCE_MS),
   };
   pending.set(tripId, entry);
-  queueHome();
+  queueHome(HOME_AFTER_TRIP_MS);
 }
 
-/** A trip's `attention` (and what I owe) changes with the trip, not with `home_changed` (§3.1): re-read home too. */
-function queueHome() {
+/**
+ * One `GET /home` for a burst of frames. Only when home has been read: the Home screen reads it itself when it opens.
+ * A timer already running is kept when it fires sooner, so a `home_changed` is never pushed back by a trip's change.
+ */
+function queueHome(delay: number) {
   if (!get().home) return;
+  const due = Date.now() + delay;
+  if (homeTimer && homeDue <= due) return;
   if (homeTimer) clearTimeout(homeTimer);
+  homeDue = due;
   homeTimer = setTimeout(() => {
     homeTimer = null;
     void loadHome().catch(() => {});
-  }, 600);
+  }, delay);
 }
 
 // -- typing ------------------------------------------------------------------
@@ -121,7 +132,9 @@ function onFrame(frame: ServerFrame) {
           t.view.chat.unread_count += 1;
         }
       });
-      // A jump of more than one change means something was missed: re-read before trusting the socket (§3.3).
+      // A jump of more than one change means something may have been missed: re-read before trusting the socket (§3.3).
+      // A message of Go's that I am not shown still takes a change number, so a gap can also be nothing at all (§4.6):
+      // the re-read then brings nothing and marks the room complete up to here.
       if (held > 0 && message.updated_seq > held + 1) queueRefresh(tripId, null, true);
       return;
     }
@@ -137,6 +150,7 @@ function onFrame(frame: ServerFrame) {
         const t = tripDraft(s, tripId);
         const message = t.messages[messageId];
         if (message) message.card = card;
+        if (t.goCards[card.card_id]) t.goCards[card.card_id].card = card;
         if (t.calls && card.kind === "call") {
           const at = t.calls.findIndex((c) => c.card.card_id === card.card_id);
           if (at >= 0) t.calls[at].card = card;
@@ -175,14 +189,17 @@ function onFrame(frame: ServerFrame) {
       return;
     }
     case "home_changed":
-      void loadHome().catch(() => {});
+      queueHome(HOME_DEBOUNCE_MS);
       return;
     case "resync":
       void resyncTrip(frame.trip_id);
       return;
     case "error":
       // `forbidden`: I am no longer in that trip. `too_many_trips` cannot happen from the screens of one app.
-      if (frame.code === "forbidden") void loadTrip(frame.trip_id).catch(() => {});
+      if (frame.code === "forbidden") {
+        live.forget(frame.trip_id);
+        void loadTrip(frame.trip_id).catch(() => {});
+      }
       return;
     default:
       return; // hello, and any frame type this build does not know (§3.1)
@@ -262,6 +279,8 @@ function enterSignedOut() {
   forgetCaches();
   pending.forEach((p) => clearTimeout(p.timer));
   pending.clear();
+  if (homeTimer) clearTimeout(homeTimer);
+  homeTimer = null;
   typingTimers.forEach((t) => clearTimeout(t));
   typingTimers.clear();
   openTrips.clear();

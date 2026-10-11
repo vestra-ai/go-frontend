@@ -7,13 +7,13 @@ import { errorMessage } from "@/api/http";
 import { IdentityCard } from "@/components/home/IdentityCard";
 import { SettingsList, type SettingsRow } from "@/components/home/SettingsList";
 import { FromCitySheet } from "@/components/sheets/FromCitySheet";
+import { GoPageSheet, type VaultStatus } from "@/components/sheets/GoPageSheet";
 import { Screen } from "@/components/shell/Screen";
 import { TopBar } from "@/components/shell/TopBar";
 import { Button } from "@/components/ui/button";
 import { CIT } from "@/data/seed/cities";
 import { profile as copy } from "@/data/seed/copy";
 import { signOut } from "@/lib/auth";
-import { openIn, preopenTab } from "@/lib/links";
 import { toastGo } from "@/lib/toast";
 import { loadMe, updateMe, useGo, useRequireSession } from "@/state";
 import { toUser } from "@/state/view";
@@ -24,6 +24,8 @@ export default function ProfilePage() {
   const session = useRequireSession();
   const me = useGo((s) => s.me);
   const [fromOpen, setFromOpen] = useState(false);
+  // Go's vault, framed in a sheet. The link is kept only here, for the frame: never logged, never stored.
+  const [vault, setVault] = useState<{ url: string; open: boolean; pending: boolean }>({ url: "", open: false, pending: false });
 
   useEffect(() => {
     // The counts move with every trip: read `Me` again on each visit.
@@ -37,16 +39,27 @@ export default function ProfilePage() {
   const user = toUser({ person_id: me.person_id, name: me.name, photo_url: me.photo_url }, { email: me.email });
   const from = me.from_city ? (CIT.find((c) => c.name === me.from_city) ?? { id: me.from_city.toLowerCase(), name: me.from_city }) : null;
 
-  /** Cards and logins live in Go's vault: the link is opened at once, in the browser (it expires in 5 minutes). */
+  /**
+   * Cards and logins live in Go's vault. Its home opens inside the app (`display: "embedded"`, CONTRACT-APP §4.1), framed
+   * at once: the link expires in 5 minutes.
+   */
   const openVault = async () => {
-    const tab = preopenTab();
+    if (vault.pending) return;
+    setVault((v) => ({ ...v, pending: true }));
     try {
-      const link = await api.vaultLink({ start: "home" });
-      openIn(tab, link.url);
+      const link = await api.vaultLink({ start: "home", display: "embedded" });
+      setVault({ url: link.url, open: true, pending: false });
     } catch (err) {
-      tab?.close();
+      setVault((v) => ({ ...v, pending: false }));
       toastGo(errorMessage(err, copy.toasts.vaultFailed));
     }
+  };
+  const closeVault = () => setVault((v) => ({ ...v, open: false }));
+  /** The vault's own word that the person is done there: close the frame; what it saved shows on `Me`. */
+  const onVault = (status: VaultStatus) => {
+    closeVault();
+    if (status === "saved") void loadMe().catch(() => {});
+    else if (status === "failed") toastGo(copy.toasts.vaultNotSaved);
   };
 
   const rows: SettingsRow[] = [
@@ -106,6 +119,7 @@ export default function ProfilePage() {
         }}
         onClose={() => setFromOpen(false)}
       />
+      <GoPageSheet open={vault.open} onOpenChange={(open) => !open && closeVault()} url={vault.url || null} title={copy.rows.payment.title} onVault={onVault} />
     </Screen>
   );
 }

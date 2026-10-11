@@ -1,6 +1,7 @@
 import type { Attachment as ApiAttachment, Card, Id, Message, QuickReply } from "@/api/contract";
 import type { Attachment, User } from "@/data/types";
 import type { TripData } from "@/state/store";
+import { chat as copy } from "@/data/seed/copy";
 import { userOf } from "@/state/view";
 
 // The room (CONTRACT-APP §4.6): stored messages by `seq`, then my sends still on their way. Each becomes one row the
@@ -26,6 +27,8 @@ export interface RoomMessage {
   reactions?: { emoji: string; count: number; mine: boolean }[];
   myReaction?: string;
   card?: Card;
+  /** One of Go's messages that only some people receive (§1.7): "Only you can see this" / "Only you and Rahul can see this". */
+  onlyFor?: string;
   quickReplies: QuickReply[];
   /** Only on a send of mine that the Server has not stored yet. */
   sending?: { status: "sending" | "failed"; error?: string };
@@ -74,6 +77,13 @@ function authorName(m: Message, users: Record<Id, User>, meId: Id): string {
   return m.author.person_id === meId ? "You" : userOf(users, m.author.person_id).firstName;
 }
 
+/** Who else receives a message only some people see; I am always one of them. */
+function onlyForLine(m: Message, users: Record<Id, User>, meId: Id): string | undefined {
+  const ids = m.visible_to_person_ids;
+  if (!ids || ids.length === 0) return undefined;
+  return copy.onlyFor(ids.filter((id) => id !== meId).map((id) => userOf(users, id).firstName));
+}
+
 export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): RoomMessage[] {
   const rows: RoomMessage[] = data.order.map((id) => {
     const m = data.messages[id];
@@ -90,6 +100,7 @@ export function buildRoom(data: TripData, users: Record<Id, User>, meId: Id): Ro
       ...(quoted ? { quote: { author: authorName(quoted, users, meId), text: previewOf(quoted) } } : {}),
       ...reactionsOf(m, meId),
       ...(m.card && !m.deleted ? { card: m.card } : {}),
+      ...(m.deleted ? {} : { onlyFor: onlyForLine(m, users, meId) }),
       quickReplies: m.deleted ? [] : (m.quick_replies ?? []),
     };
   });

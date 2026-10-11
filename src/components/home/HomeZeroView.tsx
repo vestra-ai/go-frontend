@@ -30,6 +30,7 @@ function duration(minutes: number): string {
 
 function toIdea(idea: ApiIdea, index: number): Idea {
   const travel = TRAVEL[idea.travel.mode] ?? TRAVEL.car;
+  const photo = httpUrl(idea.image_url) ?? httpUrl(idea.photos?.[0]?.url);
   return {
     id: idea.idea_id,
     name: idea.name,
@@ -37,9 +38,10 @@ function toIdea(idea: ApiIdea, index: number): Idea {
     travelEmoji: travel.emoji,
     travel: `${duration(idea.travel.duration_minutes)} ${travel.word}`,
     tintClass: TINTS[index % TINTS.length],
-    // `image_url` may be absent (CONTRACT-APP §4.2): the illustration is the fallback, and also what shows if the photo fails.
+    // Go fills an idea's photos in over time (CONTRACT-APP §4.2): `image_url` is the first of them. The illustration is
+    // the fallback for an idea without any, and also what shows if the photo fails.
     img: illustrationFor(idea.idea_id, idea.name),
-    ...(httpUrl(idea.image_url) ? { photo: httpUrl(idea.image_url) } : {}),
+    ...(photo ? { photo } : {}),
   };
 }
 

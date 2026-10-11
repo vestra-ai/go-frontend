@@ -6,7 +6,7 @@ import type { TripTab } from "@/components/trip/TripTabs";
 import { planZero } from "@/data/seed/copy";
 import type { TripId, User } from "@/data/types";
 import { useTripData } from "@/state";
-import { toUser, tripFromView } from "@/state/view";
+import { toUser, tripFromView, unknownUser } from "@/state/view";
 
 /** The TripShell props every trip tab shares; the tabs' layout adds `children` and `forceCollapsed`. */
 export type TripShellBindings = Pick<
@@ -35,7 +35,7 @@ function chatPreview(view: TripView, users: User[]): TripShellProps["chatPreview
         : last.author.kind === "person"
           ? last.author.person_id === view.me.person.person_id
             ? "You"
-            : (byId.get(last.author.person_id)?.firstName ?? "")
+            : (byId.get(last.author.person_id) ?? unknownUser(last.author.person_id)).firstName
           : "";
     text = who ? `${who}: ${last.text_preview}` : last.text_preview;
   }

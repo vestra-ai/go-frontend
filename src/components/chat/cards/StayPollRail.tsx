@@ -16,6 +16,8 @@ type StayPollRailProps = {
   hideVotes?: boolean;
   /** The vote is closed, or a tap is on its way. */
   disabled?: boolean;
+  /** The vote has ended: no Vote buttons, only Details. */
+  noVote?: boolean;
   /** `voteStay`: re-tapping your card un-votes (null). */
   onVote: (id: Stay["id"] | null) => void;
   onDetails: (id: Stay["id"]) => void;
@@ -23,7 +25,7 @@ type StayPollRailProps = {
 };
 
 /** E8 stay poll: snap rail of StayCards closed by the dashed "Show 5 more" tile. No countdown. */
-export function StayPollRail({ stays, vote, me, more, onVote, onDetails, onMore, voteLabel, votedLabel, hideVotes, disabled }: StayPollRailProps) {
+export function StayPollRail({ stays, vote, me, more, onVote, onDetails, onMore, voteLabel, votedLabel, hideVotes, disabled, noVote }: StayPollRailProps) {
   return (
     <HorizontalRail>
       {stays.map((stay) => {
@@ -38,6 +40,7 @@ export function StayPollRail({ stays, vote, me, more, onVote, onDetails, onMore,
             votedLabel={votedLabel}
             hideVotes={hideVotes}
             disabled={disabled}
+            noVote={noVote}
             onDetails={() => onDetails(stay.id)}
             onVote={() => onVote(mine ? null : stay.id)}
           />

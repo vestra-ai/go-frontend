@@ -34,7 +34,7 @@ import { loadDecision } from "@/state/actions";
 import { bookingEmoji, httpUrl, routeLine } from "@/state/bookingView";
 import { closesIn } from "@/state/boardView";
 import { toSettlement } from "@/state/moneyView";
-import { optionAction, toDateOption, toPlaceOption, toStay, voteShape } from "@/state/optionView";
+import { cardVote, optionAction, toDateOption, toPlaceOption, toStay, voteShape } from "@/state/optionView";
 import type { TripData } from "@/state/store";
 import { fromMinor, illustrationFor, placePhoto, toTripDates, userOf } from "@/state/view";
 import { toWorking } from "@/state/workingView";
@@ -359,12 +359,22 @@ function NoticeView({ card, room, actions }: { card: NoticeCard; room: RoomModel
 // ---------------------------------------------------------------------------
 
 function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomModel; actions: RoomActions }) {
-  const { me, view } = room;
+  const { me, view, tripId, data, features } = room;
   const checked = copy.checked(timeAgo(card.checked_at));
   const pick = optionAction(card, me.id);
   const others = visible(card.actions, me.id).filter((a) => !a.per_option);
   const busy = actions.pending === card.card_id;
   const pills = (list: CardAction[]) => list.map((a) => <NextStepPill key={a.action_id} label={a.label} onPress={() => actions.tap(card.card_id, a.action_id)} />);
+
+  // The card can be a vote (§4.7): every option then has its own Vote button, with no "put it to a vote" step first.
+  const decisionId = card.decision_id ?? null;
+  const decision = decisionId ? view.decisions.find((d) => d.decision_id === decisionId) : undefined;
+  // The single-vote read is the one that says how I voted in an anonymous vote; it also brings a decision the trip read
+  // has not delivered yet.
+  const unread = decisionId !== null && data.myVotes[decisionId] === undefined;
+  useEffect(() => {
+    if (unread && decisionId) void loadDecision(tripId, decisionId).catch(() => {});
+  }, [unread, tripId, decisionId]);
 
   // Flights, trains, buses and cabs open a sheet: there are too many to pick from in a rail.
   if (card.option_kind === "flight" || card.option_kind === "train" || card.option_kind === "bus" || card.option_kind === "cab") {
@@ -377,42 +387,75 @@ function OptionsView({ card, room, actions }: { card: OptionsCard; room: RoomMod
     );
   }
 
-  const onPick = pick ? (id: string | null) => id !== null && actions.tap(card.card_id, pick.actionId, { optionId: id }) : () => {};
+  const vote = decision ? cardVote(decision, card, data.myVotes[decision.decision_id], me.id) : null;
+  // As a vote, the button is the app's own and goes to the vote route, never to the card's actions.
+  const onPick = vote
+    ? (id: string | null) => {
+        if (!vote.open) return;
+        // Taking a vote back is behind a flag; without it a re-tap leaves the pick as it is.
+        if (id === null) {
+          if (features?.vote_retract) actions.vote(vote.decisionId, null);
+          return;
+        }
+        const index = vote.indexOf(id);
+        if (index !== undefined) actions.vote(vote.decisionId, index);
+      }
+    : pick && !decisionId
+      ? (id: string | null) => id !== null && actions.tap(card.card_id, pick.actionId, { optionId: id })
+      : () => {};
+  const left = vote?.open && decision ? until(decision.closes_at) : "";
+  const voteLine = !vote
+    ? ""
+    : vote.open
+      ? left && polls.closesIn(left)
+      : decision?.status === "cancelled"
+        ? polls.cancelled
+        : vote.winner
+          ? polls.won(vote.winner)
+          : polls.closed;
+  const rail = {
+    vote: vote?.mine ?? null,
+    me: me.id,
+    // Tallies only once the decision is here; until then, and on a card that is no vote, the button stands alone.
+    hideVotes: !vote,
+    voteLabel: decisionId ? undefined : pick?.label,
+    disabled: decisionId ? !vote?.open : !pick || busy,
+    noVote: Boolean(vote && !vote.open),
+    onVote: onPick,
+  };
+  const votes = (id: string) => (vote ? { voters: vote.votersOf(id), tally: vote.tallyOf(id) } : { voters: [], tally: undefined });
+
   const stay = card.option_kind === "stay";
-  // Go's "See more" is the rail's last tile, not a pill under it. The contract names no id for it, so its id or its
-  // label has to say "more"; any other button stays a pill.
-  const more = others.find((a) => /more/i.test(a.action_id) || /\bmore\b/i.test(a.label));
+  // Go's "See more" (`more_options`) is the rail's last tile, not a pill under it; any other button stays a pill. On a
+  // vote, Go answers it with a new message whose card carries the same decision, and the vote grows.
+  const more = others.find((a) => a.action_id === "more_options") ?? others.find((a) => /more/i.test(a.action_id) || /\bmore\b/i.test(a.label));
   const onMore = more && (() => actions.tap(card.card_id, more.action_id));
   return (
     <div className="flex flex-col gap-2.5">
       {stay ? (
         <StayPollRail
-          stays={card.options.map((o) => toStay(o, o.option_id, [], { dates: view.dates, people: view.people.length, seed: card.card_id }))}
-          vote={null}
-          me={me.id}
-          hideVotes
-          voteLabel={pick?.label}
-          disabled={!pick || busy}
-          onVote={onPick}
+          stays={card.options.map((o) => {
+            const v = votes(o.option_id);
+            return { ...toStay(o, o.option_id, v.voters, { dates: view.dates, people: view.people.length, seed: card.card_id }), votes: v.tally };
+          })}
+          {...rail}
           onDetails={(id) => actions.openOption({ source: "card", card, optionId: id, shape: "stay" })}
           more={more && { title: more.label }}
           onMore={onMore}
         />
       ) : (
         <PlacePollRail
-          places={card.options.map((o, i) => toPlaceOption(o, o.option_id, [], card.card_id, i))}
-          vote={null}
-          me={me.id}
-          hideVotes
-          voteLabel={pick?.label}
-          disabled={!pick || busy}
-          onVote={onPick}
+          places={card.options.map((o, i) => {
+            const v = votes(o.option_id);
+            return { ...toPlaceOption(o, o.option_id, v.voters, card.card_id, i), votes: v.tally };
+          })}
+          {...rail}
           onDetails={(id) => actions.openOption({ source: "card", card, optionId: id, shape: "place" })}
           more={more && { title: more.label }}
           onMore={onMore}
         />
       )}
-      <span className="ml-[38px] text-13 font-semibold text-muted">{checked}</span>
+      <span className="ml-[38px] text-13 font-semibold text-muted">{[voteLine, checked].filter(Boolean).join(" · ")}</span>
       {pills(others.filter((a) => a !== more))}
     </div>
   );

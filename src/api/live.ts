@@ -87,6 +87,7 @@ class LiveConnection {
     return () => {
       if (released) return;
       released = true;
+      if (!this.trips.has(tripId)) return; // already dropped by `forget`
       const left = (this.trips.get(tripId) ?? 1) - 1;
       if (left > 0) {
         this.trips.set(tripId, left);
@@ -96,6 +97,16 @@ class LiveConnection {
       this.lastTypingOn.delete(tripId);
       this.send({ type: "unsubscribe", trip_ids: [tripId] });
     };
+  }
+
+  /**
+   * I am no longer in this trip (I left, or the Server answered `error forbidden`): stop following it, whatever screens
+   * still hold it, so a reconnect does not subscribe it again (§4.4).
+   */
+  forget(tripId: Id) {
+    if (!this.trips.delete(tripId)) return;
+    this.lastTypingOn.delete(tripId);
+    this.send({ type: "unsubscribe", trip_ids: [tripId] });
   }
 
   /** Only for a trip this socket subscribed. `off` always goes through; `on` at most once per 2 s. */

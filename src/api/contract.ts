@@ -1,7 +1,7 @@
-// Wire shapes of the App ↔ Server contract, rev 4 (docs/CONTRACT-APP.md), on top of the Server ↔ Go objects
-// (llms-full.txt 1.0.0 plus the 1.1 additions). Field names are snake_case exactly as sent. In answers null and
-// missing mean the same thing (§1.3), so optional fields are typed `?` and read with `??`. Unknown fields, frame types
-// and card kinds are ignored (§1.1).
+// Wire shapes of the App ↔ Server contract, rev 4 (docs/CONTRACT-APP.md) plus the changes of 11 Oct 2026
+// (docs/changes_app.md), on top of the Server ↔ Go objects (llms-full.txt 1.0.0 plus the 1.1 additions). Field names
+// are snake_case exactly as sent. In answers null and missing mean the same thing (§1.3), so optional fields are typed
+// `?` and read with `??`. Unknown fields, frame types and card kinds are ignored (§1.1).
 
 export type Id = string;
 /** ISO 8601 with an offset. */
@@ -16,7 +16,8 @@ export type Category = "stay" | "food" | "getting_around" | "activities" | "othe
 // People, places, journeys
 // ---------------------------------------------------------------------------
 
-export type Actor = { kind: "person"; person_id: Id } | { kind: "go" } | { kind: "system" };
+/** `former`: the person left the trip or deleted their account, and is no longer in `TripView.people` (§4.6). */
+export type Actor = { kind: "person"; person_id: Id; former?: boolean | null } | { kind: "go" } | { kind: "system" };
 
 export interface Person {
   person_id: Id;
@@ -75,6 +76,7 @@ export interface Journey {
 // Who I am (§4.1)
 // ---------------------------------------------------------------------------
 
+/** `photo_url`, `from_city` and `upi_id_masked` are always sent: a string, or `null` for "not set" (§2). */
 export interface Me {
   person_id: Id;
   name: string;
@@ -149,7 +151,12 @@ export interface Idea {
   name: string;
   tag: string;
   travel: { mode: "flight" | "car" | "train" | "bus"; duration_minutes: number };
+  /** The first of `photos` when there are any. */
   image_url?: string | null;
+  /** Up to 12; Go fills them in over time, so an idea may have none. */
+  photos?: Photo[] | null;
+  /** Months 1–12. */
+  best_months?: number[] | null;
   destination_hint: string;
 }
 
@@ -158,6 +165,8 @@ export interface Home {
   trips: TripSummary[];
   past_trips: PastTripSummary[];
   owes: Owed[];
+  /** Every open item of mine across my active trips: at most 50 listed, `total` is the real count. */
+  needs_you?: { items: HomeNeedsYouItem[]; total: number } | null;
   seq_hint: number;
 }
 
@@ -205,6 +214,23 @@ export interface OptionDetails {
   rating?: number | null;
   review_count?: number | null;
   go_note?: string | null;
+}
+
+/**
+ * `GET …/cards/:card_id/options/:option_id/details` (§4.7): everything the card's `details` has, plus what Go collected
+ * about the place. Every field is optional. `rooms`, `policies`, `reviews` and `nearby` are also sent; this build does
+ * not read them.
+ */
+export interface OptionDetailsFull extends OptionDetails {
+  address?: string | null;
+  map?: { lat: number; lng: number } | null;
+  check_in?: string | null;
+  check_out?: string | null;
+  property_type?: string | null;
+  stars?: number | null;
+  url?: string | null;
+  /** `false`: Go is still collecting. Show it, and ask again the next time Details opens. */
+  complete?: boolean | null;
 }
 
 export interface RoomType {
@@ -476,6 +502,8 @@ export interface Reaction {
   emoji: string;
   /** Absent = Go's reaction. */
   person_id?: Id | null;
+  /** By someone who has left the trip. */
+  former?: boolean | null;
 }
 
 export interface CardAction {
@@ -514,6 +542,8 @@ export interface Option {
   price_min_minor?: number | null;
   price_max_minor?: number | null;
   room_types?: RoomType[] | null;
+  /** The option's own page: a small link inside its details, not a button. */
+  url?: string | null;
 }
 
 // Record cards: an id; drawn from the Server's own rows.
@@ -555,6 +585,11 @@ export interface OptionsCard extends CardBase {
   option_kind: OptionKind | (string & {});
   checked_at: Iso;
   options: Option[];
+  /**
+   * The vote these options are in: each option is the decision option whose `option_ref` is its `option_id`, and that
+   * one's place in `Decision.options` is the `option_index` to vote with (§4.7).
+   */
+  decision_id?: Id | null;
   actions?: CardAction[] | null;
 }
 export interface WorkingCard extends CardBase {
@@ -605,7 +640,7 @@ export interface PayCard extends CardBase {
   purpose: string;
   refundable_until?: Iso | null;
   expires_at: Iso;
-  state: "waiting" | "paid" | "declined" | "expired" | "failed" | "cancelled";
+  state: "waiting" | "paid" | "declined" | "expired" | "failed";
   actions?: CardAction[] | null;
 }
 export interface NoticeCard extends CardBase {
@@ -726,6 +761,8 @@ export interface Message {
   quick_replies?: QuickReply[] | null;
   /** On a money line (a system message), app reads only. */
   ledger?: Ledger | null;
+  /** One of Go's messages that only these people receive (§1.7): I am always in the list when I hold the message. */
+  visible_to_person_ids?: Id[] | null;
 }
 
 export interface MessagesPage {
@@ -875,6 +912,12 @@ export interface NeedsYouItem {
     transfer?: { to_person_id: Id; amount_minor: number; currency: Currency } | null;
     cancels_booking_id?: Id | null;
   };
+}
+
+/** An item of `Home.needs_you`: the same item, with the trip it belongs to. */
+export interface HomeNeedsYouItem extends NeedsYouItem {
+  trip_id: Id;
+  trip_title: string;
 }
 
 // ---------------------------------------------------------------------------

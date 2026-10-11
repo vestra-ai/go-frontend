@@ -2,6 +2,7 @@ import type {
   AddBooking,
   Booking,
   CardActionResult,
+  CardInRoom,
   CheckinState,
   CreateTripBody,
   Decision,
@@ -11,6 +12,7 @@ import type {
   JoinAnswers,
   Message,
   MyVote,
+  OptionDetailsFull,
   PatchCheckinBody,
   PatchTripBody,
   PostMessageBody,
@@ -22,6 +24,7 @@ import type {
 } from "@/api/contract";
 import { api, putUpload } from "@/api/endpoints";
 import { errorMessage, isApiError, newKey } from "@/api/http";
+import { live } from "@/api/live";
 import {
   advanceSeq,
   emptyTrip,
@@ -210,8 +213,10 @@ export async function setGoPaused(tripId: Id, paused: boolean) {
   return person;
 }
 
+/** After a leave the Server stops sending that trip's frames, and subscribing again answers `error forbidden` (§4.4). */
 export async function leaveTrip(tripId: Id) {
   await api.leaveTrip(tripId);
+  live.forget(tripId);
   set((s) => {
     delete s.trips[tripId];
   });
@@ -238,6 +243,19 @@ export const loadNeedsYou = (tripId: Id) =>
       });
     }
     return res.items;
+  });
+
+/** The trip record on its own (`GET …/record`): what an open line's "Pending on you" row reads before it shows the line. */
+export const loadRecord = (tripId: Id) =>
+  once(`record|${tripId}`, async () => {
+    const res = await api.record(tripId);
+    if (isFresh(tripId, "record", res.seq)) {
+      set((s) => {
+        const view = tripDraft(s, tripId).view;
+        if (view && res.seq >= view.seq) view.record = res.lines;
+      });
+    }
+    return res.lines;
   });
 
 export const loadBookings = (tripId: Id) =>
@@ -600,6 +618,58 @@ export function tapCard(
     ...(opts.optionId ? { option_id: opts.optionId } : {}),
     ...(opts.payload ? { payload: opts.payload } : {}),
   });
+}
+
+/** Every kind of card that is Go's own (§4.7): the ones with buttons, read by `GET …/cards`. */
+const GO_CARD_KINDS = "options,working,call,pay,notice,checklist,rooms";
+
+/**
+ * Go's cards as they stand now (`GET …/cards`: the latest version of each). A "Pending on you" row opens its card from
+ * here, and a tap the Server refused because the button is gone re-reads the card the same way. Messages already in
+ * the room get the fresh card too. Resolves with the card asked for, when it is there.
+ */
+export const loadGoCards = (tripId: Id, cardId?: Id): Promise<CardInRoom | undefined> =>
+  once(`cards|${tripId}`, async () => {
+    const res = await api.cards(tripId, { kind: GO_CARD_KINDS });
+    set((s) => {
+      const t = tripDraft(s, tripId);
+      t.goCards = Object.fromEntries(res.items.map((item) => [item.card.card_id, item]));
+      for (const item of res.items) {
+        const message = t.messages[item.message_id];
+        if (message?.card?.card_id === item.card.card_id) message.card = item.card;
+      }
+      for (const call of t.calls ?? []) {
+        const fresh = t.goCards[call.card.card_id];
+        if (fresh) call.card = fresh.card;
+      }
+    });
+    return res.items;
+  }).then((items) => (cardId ? items.find((item) => item.card.card_id === cardId) : undefined));
+
+/**
+ * An option's Details (§4.7), read when a person opens them. An answer that is `complete` is kept for the session; a
+ * partial one is shown and asked for again the next time. Failing (404, 429, Go away) leaves what the card itself said.
+ */
+export function loadOptionDetails(tripId: Id, cardId: Id, optionId: Id): Promise<OptionDetailsFull | undefined> {
+  const key = `${cardId}|${optionId}`;
+  const held = get().trips[tripId]?.optionDetails[key];
+  if (held && held.complete !== false) return Promise.resolve(held);
+  return once(`details|${tripId}|${key}`, async () => {
+    const details = await api.optionDetails(tripId, cardId, optionId);
+    set((s) => void (tripDraft(s, tripId).optionDetails[key] = details));
+    return details;
+  });
+}
+
+/**
+ * A tap on a button that is no longer on the card (a pay card Go already marked paid, expired or declined): the Server
+ * answers 422 on `action_id` and the tap never reaches Go (§4.7). The card on screen is old: the caller says "This has
+ * changed", and the card is read again here.
+ */
+export function buttonGone(tripId: Id, err: unknown): boolean {
+  if (!(isApiError(err) && err.status === 422 && err.field === "action_id")) return false;
+  void loadGoCards(tripId).catch(() => {});
+  return true;
 }
 
 export async function shareCallRecording(tripId: Id, cardId: Id) {

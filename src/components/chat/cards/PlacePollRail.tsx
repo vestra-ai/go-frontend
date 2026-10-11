@@ -19,13 +19,15 @@ type PlacePollRailProps = {
   hideVotes?: boolean;
   /** The vote is closed, or a tap is on its way. */
   disabled?: boolean;
+  /** The vote has ended: no Vote buttons, only Details. */
+  noVote?: boolean;
   onVote: (id: PlaceOption["id"] | null) => void;
   onDetails: (id: PlaceOption["id"]) => void;
   onMore?: () => void;
 };
 
 /** E1 place poll: snapping rail of PlaceCards + ShowMoreTile, then the countdown (E-deciding.md §1.3). */
-export function PlacePollRail({ places, vote, me, countdown, more, onVote, onDetails, onMore, voteLabel, votedLabel, hideVotes, disabled }: PlacePollRailProps) {
+export function PlacePollRail({ places, vote, me, countdown, more, onVote, onDetails, onMore, voteLabel, votedLabel, hideVotes, disabled, noVote }: PlacePollRailProps) {
   return (
     <div className="flex flex-col gap-2.5">
       <HorizontalRail>
@@ -41,6 +43,7 @@ export function PlacePollRail({ places, vote, me, countdown, more, onVote, onDet
               votedLabel={votedLabel}
               hideVotes={hideVotes}
               disabled={disabled}
+              noVote={noVote}
               onDetails={() => onDetails(place.id)}
               // Re-tapping your card un-votes; another card moves the vote.
               onVote={() => onVote(mine ? null : place.id)}

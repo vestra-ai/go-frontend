@@ -22,10 +22,12 @@ type PlaceCardProps = {
   hideVotes?: boolean;
   /** The vote is closed, or a tap is on its way. */
   disabled?: boolean;
+  /** No Vote button at all: the vote has ended. */
+  noVote?: boolean;
 };
 
 /** 236px place card in the E1 rail: illustration on a tint, price pill, why line, tally, Details / Vote (E-deciding.md §1.3). */
-export function PlaceCard({ place, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false }: PlaceCardProps) {
+export function PlaceCard({ place, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false, noVote = false }: PlaceCardProps) {
   const userOf = useRoomUsers();
   return (
     <Card
@@ -50,25 +52,27 @@ export function PlaceCard({ place, voters, mine, onDetails, onVote, voteLabel, v
           {voters.length > 0 && (
             <AvatarStack avatars={voters.map((id) => stackAvatar(userOf(id)))} size={20} overlap={6} ring="white" max={3} />
           )}
-          {!hideVotes && copy.votes(voters.length)}
+          {!hideVotes && copy.votes(Math.max(place.votes ?? 0, voters.length))}
         </div>
         <div className="mt-auto flex gap-1.5 pt-1.5">
           <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onDetails}>
             {copy.details}
           </Button>
           {/* Design weight is 600 on both fills, over the filled variants' font-medium. */}
-          <Button
-            type="button"
-            variant={mine ? "success" : "primary"}
-            size="sm"
-            weight="semibold"
-            className="flex-1"
-            aria-pressed={mine}
-            disabled={disabled}
-            onClick={onVote}
-          >
-            {mine ? (votedLabel ?? copy.voted) : (voteLabel ?? copy.vote)}
-          </Button>
+          {!noVote && (
+            <Button
+              type="button"
+              variant={mine ? "success" : "primary"}
+              size="sm"
+              weight="semibold"
+              className="flex-1"
+              aria-pressed={mine}
+              disabled={disabled}
+              onClick={onVote}
+            >
+              {mine ? (votedLabel ?? copy.voted) : (voteLabel ?? copy.vote)}
+            </Button>
+          )}
         </div>
       </div>
     </Card>

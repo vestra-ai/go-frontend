@@ -1,4 +1,5 @@
 import { AttachmentContent, photoBubbleClass } from "./AttachmentContent";
+import { Lock } from "@/components/icons/generated";
 import { cards as copy } from "@/data/seed/copy";
 import type { Attachment, AvatarSpec, User } from "@/data/types";
 import { cn } from "@/lib/utils";
@@ -109,7 +110,7 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
   });
 
   const sending = m.sending;
-  const chipsHugBubble = bubbles.length > 0 && !card && sending?.status !== "failed" && !m.reactions?.length;
+  const chipsHugBubble = bubbles.length > 0 && !card && !m.onlyFor && sending?.status !== "failed" && !m.reactions?.length;
   return (
     <div
       data-message={m.id}
@@ -128,6 +129,13 @@ export function MessageRenderer({ message: m, room, enter, className, pressHandl
         </button>
       )}
       {card}
+      {m.onlyFor && (
+        // On the bubble column, under the message and its card.
+        <span className={cn("ml-[38px] flex items-center gap-1 text-13 tracking-caption text-muted", enter && enterClass)}>
+          <Lock className="size-[12px] shrink-0" />
+          {m.onlyFor}
+        </span>
+      )}
       {isGo && m.quickReplies.length > 0 && (
         // Chips belong to the bubble above them: pulled up over the reaction slot's 8px + the thread's 10px gap (to 12px),
         // unless a card or the retry line sits in between, or a reaction pill hangs there. They then get 18px, not 10px, before the next message.

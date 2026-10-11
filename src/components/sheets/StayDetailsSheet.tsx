@@ -9,6 +9,7 @@ import { polls, staySheet as copy } from "@/data/seed/copy";
 import type { Stay } from "@/data/types";
 import { AmenityChips } from "./AmenityChips";
 import { FactRows } from "./FactRows";
+import { OptionLinks } from "./OptionLinks";
 
 type StayDetailsSheetProps = {
   open: boolean;
@@ -63,8 +64,11 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
             { label: copy.facts.total, value: shown.totalFor4 },
             { label: copy.facts.share, value: shown.yourShare },
             { label: copy.facts.cancellation, value: shown.cancellation },
+            // What Go collected about the place, when the Details read has answered.
+            ...(shown.extras?.facts ?? []),
           ].filter((row) => row.value)}
         />
+        <OptionLinks extras={shown.extras} />
       </SheetBody>
       <SheetFooter>
         {onVote && (

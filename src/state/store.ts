@@ -15,6 +15,7 @@ import type {
   MoneyView,
   MyVote,
   NeedsYouItem,
+  OptionDetailsFull,
   PersonPage,
   Transaction,
   TransactionFilter,
@@ -106,6 +107,10 @@ export interface TripData {
   itinerary: { everyone: Day[] | null; me: Day[] | null };
   /** Latest version of each `call` card in the room, newest first (§4.11). */
   calls: CardInRoom[] | null;
+  /** Go's cards read on their own, by `card_id`: what a "Pending on you" row opens, kept current by `card` frames. */
+  goCards: Record<Id, CardInRoom>;
+  /** What Go collected about an option, by `card_id|option_id` (§4.7). Read again on opening while `complete` is false. */
+  optionDetails: Record<string, OptionDetailsFull>;
   checkin: Record<Id, CheckinState>;
 }
 
@@ -143,6 +148,8 @@ export function emptyTrip(): TripData {
     bookings: null,
     itinerary: { everyone: null, me: null },
     calls: null,
+    goCards: {},
+    optionDetails: {},
     checkin: {},
   };
 }

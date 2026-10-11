@@ -18,6 +18,8 @@ import type { PlaceOption, UserId } from "@/data/types";
 import { stackAvatar } from "@/lib/avatars";
 import { splitEmoji } from "@/lib/emoji";
 import { cn } from "@/lib/utils";
+import { FactRows } from "./FactRows";
+import { OptionLinks } from "./OptionLinks";
 
 type PlaceDetailsSheetProps = {
   open: boolean;
@@ -115,6 +117,9 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, a
               </div>
             )}
 
+            {(shown.extras?.facts.length ?? 0) > 0 && <FactRows rows={shown.extras?.facts ?? []} />}
+            <OptionLinks extras={shown.extras} />
+
             {voters.length > 0 && (
               <Card variant="outline" radius="lg" className="flex items-center gap-2.5 px-3.5 py-3">
                 <AvatarStack avatars={voters.map((id) => stackAvatar(userOf(id)))} size={26} overlap={8} ring="white" />
@@ -129,13 +134,14 @@ export function PlaceDetailsSheet({ open, onOpenChange, place, voters, onVote, a
               <img src={details.img} alt={shown.name} className={shown.photo ? "size-full rounded-5xl object-cover" : "size-[110px]"} />
             </div>
 
-            {details.facts.length > 0 && (
+            {details.facts.length + (shown.extras?.facts.length ?? 0) > 0 && (
               <ListCard variant="outline" radius="lg" className="px-3.5 py-1">
-                {details.facts.map((fact) => (
+                {[...details.facts, ...(shown.extras?.facts ?? [])].map((fact) => (
                   <KVRow key={fact.label} label={fact.label} value={fact.value} size={14} />
                 ))}
               </ListCard>
             )}
+            <OptionLinks extras={shown.extras} />
 
             {details.goNote && <GoNote>{details.goNote}</GoNote>}
           </>

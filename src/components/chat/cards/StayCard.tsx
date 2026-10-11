@@ -23,10 +23,12 @@ type StayCardProps = {
   hideVotes?: boolean;
   /** The vote is closed, or a tap is on its way. */
   disabled?: boolean;
+  /** No Vote button at all: the vote has ended. */
+  noVote?: boolean;
 };
 
 /** 236px stay poll card in the E8 rail: photo with a price pill and a rating pill, area, tags, voters, Details / Vote. */
-export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false }: StayCardProps) {
+export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, votedLabel, hideVotes = false, disabled = false, noVote = false }: StayCardProps) {
   const userOf = useRoomUsers();
   // Seed tags lead with an emoji ("🏊 Private pool · 3 rooms"); it stays text, hidden from screen readers.
   const tag = splitEmoji(stay.tags);
@@ -74,25 +76,27 @@ export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, vot
               max={3}
             />
           )}
-          {!hideVotes && copy.votes(voters.length)}
+          {!hideVotes && copy.votes(Math.max(stay.votes ?? 0, voters.length))}
         </div>
         <div className="mt-auto flex gap-1.5 pt-1.5">
           <Button type="button" variant="secondary" size="sm" className="flex-1" onClick={onDetails}>
             {copy.details}
           </Button>
           {/* Design weight is 600, over the filled variants' 500. The atom already fades its fill over 160ms. */}
-          <Button
-            type="button"
-            variant={mine ? "success" : "primary"}
-            size="sm"
-            weight="semibold"
-            aria-pressed={mine}
-            className="flex-1"
-            disabled={disabled}
-            onClick={onVote}
-          >
-            {mine ? (votedLabel ?? copy.voted) : (voteLabel ?? copy.vote)}
-          </Button>
+          {!noVote && (
+            <Button
+              type="button"
+              variant={mine ? "success" : "primary"}
+              size="sm"
+              weight="semibold"
+              aria-pressed={mine}
+              className="flex-1"
+              disabled={disabled}
+              onClick={onVote}
+            >
+              {mine ? (votedLabel ?? copy.voted) : (voteLabel ?? copy.vote)}
+            </Button>
+          )}
         </div>
       </div>
     </Card>

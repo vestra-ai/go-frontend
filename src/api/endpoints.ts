@@ -27,6 +27,7 @@ import type {
   MoneyView,
   MyTripAnswers,
   NeedsYouItem,
+  OptionDetailsFull,
   PatchCheckinBody,
   PatchTripBody,
   Person,
@@ -47,7 +48,7 @@ import type {
 } from "@/api/contract";
 import { http, requestBlob, type RequestOptions } from "@/api/http";
 
-// Every route of CONTRACT-APP Appendix C (70), one function each, in the document's order. Paths are under /app/v1.
+// Every route of CONTRACT-APP Appendix C (71), one function each, in the document's order. Paths are under /app/v1.
 // Bodies carry exactly the fields the route names: the Server refuses unknown ones with 422 (§1.3).
 
 const seg = encodeURIComponent;
@@ -67,9 +68,13 @@ export const api = {
     http.patch<Me>("/me", { body }),
   putUpi: (upiId: string) => http.put<Me>("/me/upi", { body: { upi_id: upiId } }),
   deleteUpi: () => http.delete<Me>("/me/upi"),
-  /** Open the answer's `url` at once in the browser (never ahead of time): links expire after 5 minutes. */
+  /**
+   * Open the answer's `url` at once (never ahead of time): links expire after 5 minutes. `display: "embedded"` is for
+   * `start: "home"` only (422 otherwise) and gives a page to frame inside the app; every other start opens in the browser.
+   */
   vaultLink: (body: {
     start?: "home" | "add_card" | "add_login" | "add_documents";
+    display?: "embedded";
     context?: { trip_id: Id; purpose: "visa" };
   } = {}) => http.post<VaultLink>("/me/vault-link", { body }),
   deleteMe: () => http.delete<void>("/me", { body: { confirm: true } }),
@@ -123,13 +128,19 @@ export const api = {
   /** One reaction per person per message: a new emoji replaces the old one, `null` takes it back. */
   react: (tripId: Id, messageId: Id, emoji: string | null) =>
     http.put<Message>(`${trip(tripId)}/messages/${seg(messageId)}/reaction`, { body: { emoji } }),
-  /** `undefined` (204) when not away long enough, or Go did not answer in time. */
+  /** `undefined` (204) when not away long enough, when Go has nothing to say, or when Go did not answer in time. */
   catchUp: (tripId: Id, o?: CallOpts) => http.get<CatchUp | undefined>(`${trip(tripId)}/catch-up`, o),
 
   // -- §4.7 Go's cards -------------------------------------------------------
   /** Go's answer is passed through; a timeout is `{ result: "refused" }`, never an HTTP error. Do not retry on your own. */
   cardAction: (tripId: Id, cardId: Id, body: CardActionBody) =>
     http.post<CardActionResult>(`${trip(tripId)}/cards/${seg(cardId)}/actions`, { body, idempotencyKey: body.press_id }),
+  /**
+   * What a person sees on opening an option's Details. 404 when the card or option is not mine to see; 429 above 10
+   * lookups a minute per person per trip.
+   */
+  optionDetails: (tripId: Id, cardId: Id, optionId: Id, o?: CallOpts) =>
+    http.get<OptionDetailsFull>(`${trip(tripId)}/cards/${seg(cardId)}/options/${seg(optionId)}/details`, o),
 
   // -- §4.8 Votes, mandate, record --------------------------------------------
   decision: (tripId: Id, decisionId: Id, o?: CallOpts) =>
@@ -217,7 +228,7 @@ export const api = {
     http.get<{ days: Day[]; seq: number }>(`${trip(tripId)}/itinerary`, { ...o, query: { scope } }),
 
   // -- §4.11 Trip home -------------------------------------------------------
-  /** The latest version of each card in the room, newest first, at most 100. `state` is a comma list. */
+  /** The latest version of each card in the room, newest first, at most 100. `kind` and `state` are comma lists. */
   cards: (tripId: Id, q: { kind: string; state?: string }, o?: CallOpts) =>
     http.get<{ items: CardInRoom[] }>(`${trip(tripId)}/cards`, { ...o, query: q }),
   /** Shares an ended call's recording in the room. Needs `features.calls` (409 otherwise). */
