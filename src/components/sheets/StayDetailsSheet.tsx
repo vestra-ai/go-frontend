@@ -37,7 +37,7 @@ export function StayDetailsSheet({ open, onOpenChange, stay, subtitle, dates, on
       <SheetBody className="gap-3 pb-[120px]">
         <SheetHeader title={shown.name} subtitle={subtitle} />
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
-        <img src={shown.img} alt={shown.name} className="h-[190px] w-full rounded-5xl object-cover" />
+        <img src={shown.img} alt={shown.name} className="h-[190px] w-full rounded-5xl bg-skeleton object-cover text-transparent" />
         <div className="flex items-start justify-between gap-2.5">
           <div className="flex flex-col gap-0.5">
             {/* Repeats the sheet title, as designed. */}

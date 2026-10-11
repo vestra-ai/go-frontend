@@ -33,9 +33,10 @@ export function StayCard({ stay, voters, mine, onDetails, onVote, voteLabel, vot
 
   return (
     <Card variant="float" radius="xl" className="flex w-[236px] shrink-0 snap-start flex-col overflow-hidden">
-      <div className="relative h-[132px]">
+      {/* The grey shows until the photo has loaded (and its alt text stays out of it). */}
+      <div className="relative h-[132px] bg-skeleton">
         {/* eslint-disable-next-line @next/next/no-img-element -- SVG placeholder / design photo, cover */}
-        <img src={stay.img} alt={stay.name} className="size-full object-cover" />
+        <img src={stay.img} alt={stay.name} className="size-full object-cover text-transparent" />
         {/* Price on the left, rating on the right; a long price truncates before it reaches the rating. */}
         <div className="absolute inset-x-2.5 top-2.5 flex items-start gap-1.5">
           {stay.priceLabel && (
