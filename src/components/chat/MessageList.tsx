@@ -1,4 +1,4 @@
-import type { ReactNode, RefObject } from "react";
+import type { ReactNode } from "react";
 import { usePageInResume } from "@/components/shell/PageTransition";
 import { cn } from "@/lib/utils";
 
@@ -10,25 +10,15 @@ const padClass = {
   190: "pb-[calc(190px+var(--dock-rise))]",
 } as const;
 
-// DESIGN-ASSUMPTION: the sentinel sits above the bottom padding, so `scrollIntoView({block:'end'})` alone
-// would leave the last message under the composer (the design's bug). A matching scroll margin scrolls past it.
-const endMarginClass = {
-  96: "scroll-mb-[calc(96px+var(--dock-rise))]",
-  150: "scroll-mb-[calc(150px+var(--dock-rise))]",
-  190: "scroll-mb-[calc(190px+var(--dock-rise))]",
-} as const;
-
 type MessageListProps = {
   bottomPadding: keyof typeof padClass;
-  /** End sentinel; pass the same ref to `useThreadFollow`. */
-  anchorRef: RefObject<HTMLSpanElement | null>;
   /** Slide up with the page (default). Off when the thread replaces the skeleton in place. */
   slideIn?: boolean;
   children: ReactNode;
 };
 
 /** The chat thread, in the document flow (the body scrolls). No date separators, timestamps or receipts (as designed); the only typing row is Go's (`GoThinking`). */
-export function MessageList({ bottomPadding, anchorRef, slideIn = true, children }: MessageListProps) {
+export function MessageList({ bottomPadding, slideIn = true, children }: MessageListProps) {
   const resume = usePageInResume();
   return (
     <div
@@ -40,7 +30,8 @@ export function MessageList({ bottomPadding, anchorRef, slideIn = true, children
       )}
     >
       {children}
-      <span ref={anchorRef} data-chat-end="" className={cn("block h-px", endMarginClass[bottomPadding])} />
+      {/* The thread's end: with the gap, 11px of room between the newest row and the composer's fade. */}
+      <span aria-hidden className="block h-px" />
     </div>
   );
 }

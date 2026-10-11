@@ -29,13 +29,13 @@ const place = (): Place => ({ height: document.documentElement.offsetHeight, vie
 const toEnd = (p: Place) => p.height - p.y - p.view;
 const distanceToEnd = () => toEnd(place());
 
-function scrollToEnd(anchor: HTMLElement | null, animated: boolean) {
-  try {
-    // A page in the background runs no animation: a smooth scroll started there never moves.
-    anchor?.scrollIntoView({ behavior: animated && document.visibilityState === "visible" ? scrollBehavior() : "auto", block: "end" });
-  } catch {
-    // Older engines reject the options object; staying put is fine.
-  }
+// The scroll position is worked out here and not left to `scrollIntoView({ block: "end" })` on the thread's end: iOS
+// Safari stops that some 60px short of the end (it counts the status bar the page is drawn under), and every further
+// call moves the page 20-50px up or down from there.
+function scrollToEnd(animated: boolean) {
+  const { height, view } = place();
+  // A page in the background runs no animation: a smooth scroll started there never moves.
+  window.scrollTo({ top: Math.max(0, height - view), behavior: animated && document.visibilityState === "visible" ? scrollBehavior() : "auto" });
 }
 
 interface FollowEvents {
@@ -51,7 +51,7 @@ interface FollowEvents {
  * away and the reader did not go up). The order the browser reports them in does not matter, and it is not the same
  * on iOS, where a scroll event can arrive after the page has already grown.
  */
-function createFollow(anchorRef: React.RefObject<HTMLElement | null>, on: FollowEvents) {
+function createFollow(on: FollowEvents) {
   // True while the reader is at the end or within `FOLLOW_PX` of it. Only a scroll up takes them off it.
   let following = true;
   // The end is not where a reader who is following has it yet. The room opens owing its end.
@@ -75,7 +75,7 @@ function createFollow(anchorRef: React.RefObject<HTMLElement | null>, on: Follow
     if (!following || !owed || holdTimer !== null) return;
     if (distanceToEnd() <= 1 || tries >= MAX_TRIES) return clear();
     tries += 1;
-    scrollToEnd(anchorRef.current, tries === 1 && performance.now() - openedAt > OPENING_MS);
+    scrollToEnd(tries === 1 && performance.now() - openedAt > OPENING_MS);
     // A scroll that never starts sends no event to wait on.
     settleSoon(START_MS);
   };
@@ -134,7 +134,7 @@ function createFollow(anchorRef: React.RefObject<HTMLElement | null>, on: Follow
   };
 
   // Next scrolls a new page to its top after the layout effect that opened the room at its end.
-  scrollToEnd(anchorRef.current, false);
+  scrollToEnd(false);
   last = place();
   pinSoon();
 
@@ -179,7 +179,7 @@ function createFollow(anchorRef: React.RefObject<HTMLElement | null>, on: Follow
       owed = true;
       tries = 1;
       on.left(false);
-      scrollToEnd(anchorRef.current, true);
+      scrollToEnd(true);
       settleSoon(START_MS);
     },
     stop() {
@@ -222,7 +222,7 @@ function newestStoredKey(rows: readonly ThreadRow[]): string | undefined {
  * `hold` / `release` are for the long-press (the 3A contract: `useLongPress` cancels on any scroll): nothing scrolls
  * while a press is armed, and the thread catches up when it ends.
  */
-export function useThreadFollow(anchorRef: React.RefObject<HTMLElement | null>, rows: readonly ThreadRow[]) {
+export function useThreadFollow(rows: readonly ThreadRow[]) {
   const follow = useRef<ReturnType<typeof createFollow> | null>(null);
 
   // The reader went up the thread and has not been back to its end.
@@ -233,10 +233,10 @@ export function useThreadFollow(anchorRef: React.RefObject<HTMLElement | null>, 
   const newestRef = useRef(newestStored);
 
   // Before the first paint, so a room that replaces its skeleton in place is never seen from its top.
-  useLayoutEffect(() => scrollToEnd(anchorRef.current, false), [anchorRef]);
+  useLayoutEffect(() => scrollToEnd(false), []);
 
   useEffect(() => {
-    const started = createFollow(anchorRef, {
+    const started = createFollow({
       left: setLeft,
       reached: () => {
         setSeen(newestRef.current);
@@ -248,7 +248,7 @@ export function useThreadFollow(anchorRef: React.RefObject<HTMLElement | null>, 
       started.stop();
       follow.current = null;
     };
-  }, [anchorRef]);
+  }, []);
 
   const newest = rows[rows.length - 1];
   const newestKey = newest?.key;

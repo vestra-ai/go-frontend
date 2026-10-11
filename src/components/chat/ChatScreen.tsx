@@ -127,7 +127,6 @@ export function ChatScreen({ tripId }: { tripId: TripId }) {
 
 function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slideIn: boolean }) {
   const view = data.view!;
-  const anchorRef = useRef<HTMLSpanElement>(null);
   const params = useSearchParams();
   const features = useGo((s) => s.config?.features);
 
@@ -255,7 +254,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   // A reader at the end goes with it whenever it moves: a new message, Go's typing row, a card that grew in place, the
   // reply / ask-Go tray. One who has scrolled up stays where they are, with a button that counts what came in. Reading
   // back older pages never yanks the thread to its end.
-  const thread = useThreadFollow(anchorRef, rows);
+  const thread = useThreadFollow(rows);
 
   // "Earlier messages" adds a page above: keep what was on screen where it was.
   const firstId = rows[0]?.id ?? "";
@@ -509,7 +508,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
           <FactChipRow chips={chipData} />
         </ChatHeader>
 
-        <MessageList bottomPadding={modes.bottomPadding} anchorRef={anchorRef} slideIn={slideIn}>
+        <MessageList bottomPadding={modes.bottomPadding} slideIn={slideIn}>
           {data.hasMoreHistory && (
             <EarlierMessagesRow label={chatCopy.earlier} loading={data.loadingHistory} onPress={loadEarlier} pageKey={firstId} />
           )}
