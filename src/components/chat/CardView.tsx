@@ -307,6 +307,8 @@ function NoticeView({ card, room, actions }: { card: NoticeCard; room: RoomModel
   const mine = visible(card.actions, room.me.id);
   const first = mine[0];
   const press = (action: CardAction) => () => actions.tap(card.card_id, action.action_id);
+  // Go takes a moment to answer a press (a page to open, a sheet): the button spins meanwhile.
+  const pending = actions.pending === card.card_id;
   const caption = [card.source?.name, card.deadline_at ? formatDay(wallTime(card.deadline_at)) : null].filter(Boolean).join(" · ");
   const text = `**${card.title}**\n${card.body}`;
 
@@ -322,16 +324,16 @@ function NoticeView({ card, room, actions }: { card: NoticeCard; room: RoomModel
         total=""
         sub={card.body}
         state="open"
-        cta={{ label: claim.label, pending: actions.pending === card.card_id, onPress: press(claim) }}
+        cta={{ label: claim.label, pending, onPress: press(claim) }}
         helper={caption || undefined}
       />
     );
   }
   // A card for me alone with one thing to open: my own booking, kept out of the group's view.
   if (first && card.for_person_ids?.length === 1 && card.for_person_ids[0] === room.me.id) {
-    return <PrivateTeaserCard label={card.title.toUpperCase()} lines={card.body.split("\n").filter(Boolean)} cta={first.label} onView={press(first)} />;
+    return <PrivateTeaserCard label={card.title.toUpperCase()} lines={card.body.split("\n").filter(Boolean)} cta={first.label} onView={press(first)} pending={pending} />;
   }
-  if (first) return <BudgetAskBubble text={text} cta={first.label} caption={caption} onCta={press(first)} />;
+  if (first) return <BudgetAskBubble text={text} cta={first.label} caption={caption} onCta={press(first)} pending={pending} />;
   return (
     <Bubble author="go" maxWidth={80}>
       {caption ? `${text}\n${caption}` : text}

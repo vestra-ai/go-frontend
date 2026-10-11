@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Spinner } from "@/components/icons/custom/Spinner";
 import { Lock } from "@/components/icons/generated";
 import { Button } from "@/components/ui/button";
 import type { BubbleMaxWidth } from "@/data/types";
@@ -7,8 +8,8 @@ import { Bubble } from "./Bubble";
 type GoBubbleProps = {
   children: ReactNode;
   maxWidth?: BubbleMaxWidth;
-  /** Full-width black CTA under the text (budget / travel / visa asks). */
-  cta?: { label: string; onPress(): void };
+  /** Full-width black CTA under the text (budget / travel / visa asks). `pending`: the press is on its way, so the lock becomes a spinner. */
+  cta?: { label: string; onPress(): void; pending?: boolean };
   /** Terracotta line under the CTA, e.g. "Only you and Go see what you add". */
   caption?: string;
 };
@@ -29,8 +30,8 @@ export function GoBubble({ children, maxWidth, cta, caption }: GoBubbleProps) {
           <>
             {cta && (
               // Every in-bubble ask is a private input, so the CTA always leads with the lock (as designed).
-              <Button type="button" variant="primary" size="base" weight="semibold" className="mt-1 gap-1.5" onClick={cta.onPress}>
-                <Lock className="size-[15px]" />
+              <Button type="button" variant="primary" size="base" weight="semibold" className="mt-1 gap-1.5" aria-busy={cta.pending} onClick={cta.onPress}>
+                {cta.pending ? <Spinner className="size-[15px] border-white/30 border-t-white border-r-white" /> : <Lock className="size-[15px]" />}
                 {cta.label}
               </Button>
             )}
