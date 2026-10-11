@@ -12,6 +12,7 @@ import { TripSkeleton } from "@/components/trip/TripSkeleton";
 import { invite as copy } from "@/data/seed/copy";
 import type { Invite, Trip } from "@/data/types";
 import { signInWithGoogle } from "@/lib/auth";
+import { invitePhoto } from "@/lib/inviteOg";
 import { toastGo } from "@/lib/toast";
 import { acceptInvite, useSession } from "@/state";
 import { illustrationFor, toTripDates, toUser } from "@/state/view";
@@ -20,7 +21,7 @@ import { illustrationFor, toTripDates, toUser } from "@/state/view";
 function previewTrip(preview: InvitePreview): Trip {
   const { trip } = preview;
   const place = trip.destination?.name;
-  const photo = trip.photo_url ?? trip.destination?.photo_url ?? undefined;
+  const photo = invitePhoto(trip);
   const cover = photo ? { src: photo, alt: place ?? trip.title } : undefined;
   return {
     id: trip.trip_id,
