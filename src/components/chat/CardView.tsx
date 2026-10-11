@@ -303,9 +303,18 @@ function PayView({ card, room, actions }: { card: PayCard; room: RoomModel; acti
   );
 }
 
+/**
+ * Go's "Log out" button, on its login card once I am logged in (contract 1.3). The app never offers logging out. The
+ * button's id is not in the contract yet, so its label is matched as well.
+ */
+const isLogout = (action: CardAction) => /^log_?out$/.test(action.action_id) || /^log\s?out$/i.test(action.label.trim());
+
 function NoticeView({ card, room, actions }: { card: NoticeCard; room: RoomModel; actions: RoomActions }) {
-  const mine = visible(card.actions, room.me.id);
+  const offered = visible(card.actions, room.me.id);
+  const loggedIn = offered.some(isLogout);
+  const mine = offered.filter((a) => !isLogout(a));
   const first = mine[0];
+  const forMeAlone = card.for_person_ids?.length === 1 && card.for_person_ids[0] === room.me.id;
   const press = (action: CardAction) => () => actions.tap(card.card_id, action.action_id);
   // Go takes a moment to answer a press (a page to open, a sheet): the button spins meanwhile.
   const pending = actions.pending === card.card_id;
@@ -329,8 +338,12 @@ function NoticeView({ card, room, actions }: { card: NoticeCard; room: RoomModel
       />
     );
   }
+  // My own login, settled: the card says so, readable, with nothing to press.
+  if (loggedIn && forMeAlone) {
+    return <PrivateTeaserCard label={card.title.toUpperCase()} lines={card.body.split("\n").filter(Boolean)} status={copy.login.done} />;
+  }
   // A card for me alone with one thing to open: my own booking, kept out of the group's view.
-  if (first && card.for_person_ids?.length === 1 && card.for_person_ids[0] === room.me.id) {
+  if (first && forMeAlone) {
     return <PrivateTeaserCard label={card.title.toUpperCase()} lines={card.body.split("\n").filter(Boolean)} cta={first.label} onView={press(first)} pending={pending} />;
   }
   if (first) return <BudgetAskBubble text={text} cta={first.label} caption={caption} onCta={press(first)} pending={pending} />;

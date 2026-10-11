@@ -372,6 +372,7 @@ export const cards = {
     stepState: { todo: "To do", doing: "Now", done: "Done", failed: "Didn’t work" },
   },
   page: { opening: "Opening…" },
+  login: { done: "Logged in" },
   call: { failed: (who: string) => `Go couldn’t reach ${who}.` },
   checklist: { due: (day: string) => `due ${day}`, emoji: "📋", suggestion: "💡" },
   message: { deleted: "Message deleted", sendFailed: "Not sent. Tap to try again.", sending: "Sending…" },
