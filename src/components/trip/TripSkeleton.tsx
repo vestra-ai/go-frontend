@@ -20,21 +20,22 @@ function HeroSkeleton() {
         <Link href="/home" />
       </GlassIconButton>
       <span aria-hidden className="absolute right-3.5 top-safe-hero size-10 rounded-full bg-white/60" />
-      <div aria-hidden className="absolute inset-x-5 bottom-[42px] flex items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-0.5">
-          <span className="flex text-40 font-bold tracking-display">
-            <span className={SKELETON_BAR_ON_PHOTO}>Trip name</span>
+      {/* The same rows as `TripHero`: the name's one line, a meta line, then the last meta line beside the crew. */}
+      <div aria-hidden className="absolute inset-x-5 bottom-[42px] flex flex-col gap-0.5">
+        <span className="flex h-10 items-center text-40 font-bold tracking-display">
+          <span className={SKELETON_BAR_ON_PHOTO}>Trip name</span>
+        </span>
+        <div className="mt-1 flex flex-col gap-0.5">
+          <span className="flex text-15 font-medium leading-[1.35] whitespace-nowrap">
+            <span className={SKELETON_BAR_ON_PHOTO}>Fri 6 Nov – Sun 8 Nov</span>
           </span>
-          <div className="mt-1 flex flex-col gap-0.5">
-            <span className="flex text-15 font-medium leading-[1.35] whitespace-nowrap">
-              <span className={SKELETON_BAR_ON_PHOTO}>Fri 6 Nov – Sun 8 Nov</span>
-            </span>
+          <div className="flex min-h-7 items-center justify-between gap-3">
             <span className="flex text-15 font-medium leading-[1.35] whitespace-nowrap">
               <span className={SKELETON_BAR_ON_PHOTO}>In 26 days</span>
             </span>
+            <span className="h-7 w-[72px] shrink-0 rounded-full bg-white/60" />
           </div>
         </div>
-        <span className="mb-0.5 h-7 w-[72px] shrink-0 rounded-full bg-white/60" />
       </div>
     </div>
   );

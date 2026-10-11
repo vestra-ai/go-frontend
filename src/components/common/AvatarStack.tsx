@@ -6,6 +6,7 @@ const overlapMap = {
   6: "-ml-[6px]",
   7: "-ml-[7px]",
   8: "-ml-2",
+  10: "-ml-[10px]",
   12: "-ml-3",
   14: "-ml-3.5",
 } as const
