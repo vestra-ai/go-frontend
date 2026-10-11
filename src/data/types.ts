@@ -310,9 +310,13 @@ export interface TicketDoc {
   flight: string; // PDF centre label "6E 5313 · Economy"
   from: { code: string; place: string; time: string };
   to: { code: string; place: string; time: string };
-  /** The stored file behind it: fetched through `GET …/bookings/:id/documents/:document_id` for Download / Save / Share. */
+  /**
+   * The stored file behind it, for Download / Save / Share: fetched from `url` (the signed link the booking was last
+   * read with, valid 1 hour), else through `GET …/bookings/:id/documents/:document_id`.
+   */
   bookingId?: Id;
   documentId?: Id;
+  url?: string;
   mime?: string;
   /** The carrier's wordmark, when the booking has one. */
   logoUrl?: string;
@@ -341,17 +345,28 @@ export interface Booking {
 }
 
 // F7 just-for-me sheet (F-travel.md §1.4).
+/** One file of a booking in its sheet: which document, and what its button says. */
+export interface BookingFileRef {
+  documentId: Id;
+  label: string;
+}
+
+/** My own view of one booking: a journey's onward leg (with the way back under it), or a stay. */
 export interface PrivateDetails {
+  /** The carrier and its wordmark; for a stay, the hotel's name and no logo. */
   airline: { name: string; logo: string };
+  /** "6E 5313"; for a stay, the booking reference. */
   flight: string;
+  /** "BLR" / "Fri 8:40 pm"; for a stay, "1 Nov" / "Sun". */
   from: { code: string; time: string };
   to: { code: string; time: string };
-  seat: string;
-  boards: string;
-  pnr: string;
-  bookingId: string; // the travel-out booking (ticket viewer target)
-  /** The way back, when the booking has one. */
-  ret?: { emoji: string; title: string; sub: string };
+  /** The three facts under the route: seat, departs and PNR for a journey; check-in, check-out and nights for a stay. */
+  cells: { label: string; value: string }[];
+  bookingId: string;
+  /** This leg's own file (its e-ticket, the stay's voucher), when the booking carries one for me. */
+  file?: BookingFileRef;
+  /** The way back, when the booking has one, with its own e-ticket. */
+  ret?: { emoji: string; title: string; sub: string; file?: BookingFileRef };
 }
 
 export type ItineraryDay = "fri" | "sat" | "sun" | "mon";

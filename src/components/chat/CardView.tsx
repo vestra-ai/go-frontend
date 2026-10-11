@@ -30,8 +30,8 @@ import { daysBetween, formatDay, formatDayShort, formatHHMM, monthShort, parseDa
 import { inr } from "@/lib/format";
 import { SKELETON_BAR } from "@/lib/skeleton";
 import { cn } from "@/lib/utils";
-import { loadDecision } from "@/state/actions";
-import { bookingEmoji, httpUrl, routeLine } from "@/state/bookingView";
+import { loadBooking, loadDecision, PAY_APPROVE } from "@/state/actions";
+import { bookingEmoji, coversMe, httpUrl, routeLine } from "@/state/bookingView";
 import { closesIn } from "@/state/boardView";
 import { toSettlement } from "@/state/moneyView";
 import { cardVote, optionAction, toDateOption, toPlaceOption, toStay, voteShape } from "@/state/optionView";
@@ -94,6 +94,8 @@ export interface RoomActions {
   openRecording(card: CallCard): void;
   /** Go's screen, full height: the live stream while it works, else the latest picture (contract 1.3). */
   openLive(card: WorkingCard): void;
+  /** A booking that covers me, in its own sheet: my seat and PNR or the stay's dates, and its files to open. */
+  openBooking(bookingId: Id): void;
 }
 
 const money = (minor: number) => inr(fromMinor(minor));
@@ -271,9 +273,12 @@ function MandateCard({ decision, room, actions }: { decision: Decision; room: Ro
 function PayView({ card, room, actions }: { card: PayCard; room: RoomModel; actions: RoomActions }) {
   const payer = userOf(room.users, card.payer_person_id);
   const mine = visible(card.actions, room.me.id);
-  const approve = mine.find((a) => a.style === "primary") ?? mine[0];
+  // The payer's button by its id, never its label: Go words it ("Pay with ixigo money", "Start again" once expired).
+  const approve = mine.find((a) => a.action_id === PAY_APPROVE);
   const decline = mine.find((a) => a !== approve);
   const waiting = card.state === "waiting";
+  // An expired card still offers its payer the button, to start the payment again.
+  const open = Boolean(approve) && (waiting || card.state === "expired");
   const expires = until(card.expires_at);
   return (
     <PayAskCard
@@ -286,14 +291,15 @@ function PayView({ card, room, actions }: { card: PayCard; room: RoomModel; acti
           ? { title: copy.pay.freeCancel(formatDay(wallTime(card.refundable_until))), sub: waiting && expires ? copy.pay.expires(`in ${expires}`) : "" }
           : undefined
       }
-      state={waiting && approve ? "open" : "claimed"}
+      state={open ? "open" : "claimed"}
+      // The tap is the payment: it answers at once, and the card reads paid from then on (§4.7).
       cta={
-        waiting && approve
+        open && approve
           ? { label: approve.label, pending: actions.pending === card.card_id, onPress: () => actions.tap(card.card_id, approve.action_id) }
           : undefined
       }
-      secondary={waiting && decline ? { label: decline.label, onPress: () => actions.tap(card.card_id, decline.action_id) } : undefined}
-      helper={waiting && approve ? copy.pay.helper : undefined}
+      secondary={waiting && open && decline ? { label: decline.label, onPress: () => actions.tap(card.card_id, decline.action_id) } : undefined}
+      helper={open && !waiting ? copy.pay.expired : undefined}
       booker={
         waiting
           ? { user: payer, title: copy.pay.waiting(payer.firstName), sub: expires ? copy.pay.expires(`in ${expires}`) : "" }
@@ -563,8 +569,52 @@ function ChecklistView({ card, room, actions }: { card: ChecklistCard; room: Roo
 // record cards drawn from the trip's own rows
 // ---------------------------------------------------------------------------
 
-function TicketView({ bookingId, room }: { bookingId: Id; room: RoomModel }) {
-  const b = room.view.bookings.find((x) => x.booking_id === bookingId);
+/** A ticket's card with its booking not read yet: the size of the ticket, so what lands in its place does not move. */
+function TicketSkeleton() {
+  return (
+    <div aria-busy className="mr-4 ml-[38px]">
+      <span role="status" className="sr-only">
+        {copy.ticket.loading}
+      </span>
+      <div aria-hidden className="flex h-[104px] items-stretch rounded-5xl border border-line bg-white shadow-float">
+        <span className="w-[88px] shrink-0 rounded-l-5xl bg-line" />
+        <div className="flex flex-1 flex-col justify-center gap-1 px-3.5 py-3">
+          <span className="text-11 font-bold">
+            <span className={SKELETON_BAR}>STAY · BOOKED</span>
+          </span>
+          <span className="text-20 leading-[1.2] font-semibold">
+            <span className={SKELETON_BAR}>Booking name</span>
+          </span>
+          <span className="text-14">
+            <span className={SKELETON_BAR}>Fri 6 → Mon 9</span>
+          </span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Go posts the ticket right after the payment, and its message can reach the room before the trip's own re-read brings
+ * the booking. Read that one booking now and hold a placeholder; only if the read fails does the card's own text stay.
+ */
+function TicketPending({ card, room }: { card: Extract<KnownCard, { kind: "ticket" }>; room: RoomModel }) {
+  const [failed, setFailed] = useState(false);
+  const { tripId } = room;
+  const bookingId = card.booking_id;
+  useEffect(() => {
+    let current = true;
+    loadBooking(tripId, bookingId).catch(() => current && setFailed(true));
+    return () => {
+      current = false;
+    };
+  }, [tripId, bookingId]);
+  return failed ? fallback(card) : <TicketSkeleton />;
+}
+
+function TicketView({ bookingId, room, actions }: { bookingId: Id; room: RoomModel; actions: RoomActions }) {
+  // The bookings read, once it has been made, is the same row; the trip's own list always has it.
+  const b = room.data.bookings?.find((x) => x.booking_id === bookingId) ?? room.view.bookings.find((x) => x.booking_id === bookingId);
   if (!b) return null;
   const kind = b.kind.toUpperCase();
   const start = b.journey ? wallTime(b.journey.depart_at) : b.starts_at ? wallTime(b.starts_at) : null;
@@ -577,8 +627,11 @@ function TicketView({ bookingId, room }: { bookingId: Id; room: RoomModel }) {
       : start
         ? formatDayShort(start)
         : b.vendor;
+  // The ticket opens the booking's own sheet: my seat and PNR, or the stay's dates, and each of its files (a return
+  // flight has one e-ticket per leg). Only a booking that covers me has any of that to show (§1.7).
+  const mine = coversMe(b, room.me.id);
   return (
-    <div className="mr-[30px] ml-[38px]">
+    <div className="mr-4 ml-[38px]">
       <BookedTicketCard
         img={httpUrl(b.image_url) ?? httpUrl(placePhoto(b.place)) ?? illustrationFor(b.booking_id, b.place?.name ?? b.title)}
         imgAlt={b.title}
@@ -587,6 +640,7 @@ function TicketView({ bookingId, room }: { bookingId: Id; room: RoomModel }) {
         dates={dates}
         stub={nights > 0 ? copy.ticket.nights(nights) : copy.ticket.stub}
         showReaction={false}
+        open={mine ? { label: copy.ticket.open(b.title), onPress: () => actions.openBooking(b.booking_id) } : undefined}
       />
     </div>
   );
@@ -721,7 +775,11 @@ function renderKnown(card: KnownCard, room: RoomModel, actions: RoomActions): Re
       return decision?.mandate ? <MandateCard decision={decision} room={room} actions={actions} /> : null;
     }
     case "ticket":
-      return room.view.bookings.some((b) => b.booking_id === card.booking_id) ? <TicketView bookingId={card.booking_id} room={room} /> : null;
+      return room.view.bookings.some((b) => b.booking_id === card.booking_id) ? (
+        <TicketView bookingId={card.booking_id} room={room} actions={actions} />
+      ) : (
+        <TicketPending card={card} room={room} />
+      );
     case "expense":
       return <ExpenseView expenseId={card.expense_id} room={room} />;
     case "settle_up":

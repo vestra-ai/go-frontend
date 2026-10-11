@@ -26,7 +26,7 @@ export default function TicketPage() {
   if (!ticket) notFound();
   return (
     <Screen bg="viewer">
-      <PdfViewer tripId={tripId} ticket={ticket} />
+      <PdfViewer key={ticket.documentId} tripId={tripId} ticket={ticket} />
     </Screen>
   );
 }

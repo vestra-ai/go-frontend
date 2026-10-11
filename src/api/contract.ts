@@ -328,6 +328,11 @@ export interface BookingDocument {
   size_bytes: number;
   pages?: number | null;
   visibility: "covered" | "group";
+  /**
+   * A signed link to the file, valid 1 hour and minted on each read: open, download or share it directly, never store
+   * it. When it is absent or has run out, `GET …/documents/:document_id` answers a fresh one.
+   */
+  url?: string | null;
 }
 
 export interface Booking {
@@ -355,7 +360,7 @@ export interface Booking {
   details?: Array<{ label: string; value: string }> | null;
   /** Covered people only (§1.7). */
   passengers?: Array<{ person_id: Id; seat?: string | null; pnr?: string | null }> | null;
-  /** Covered people only; opened through GET …/documents/:document_id. */
+  /** Covered people only. Empty right after Go books: the file lands a moment later, with `trip_changed kinds:["booking"]`. */
   documents?: BookingDocument[] | null;
 }
 

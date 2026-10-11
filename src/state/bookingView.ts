@@ -1,6 +1,7 @@
-import type { Booking as ApiBooking, Id, Journey } from "@/api/contract";
-import type { Booking, DetailRow, TicketDoc, User } from "@/data/types";
-import { daysBetween, formatClock, formatDate, formatDay, formatDayClock, formatDayStamp, wallTime } from "@/lib/dates";
+import type { Booking as ApiBooking, BookingDocument, Id, Journey } from "@/api/contract";
+import { PRIVATE_COPY } from "@/data/seed/bookings";
+import type { Booking, BookingFileRef, DetailRow, PrivateDetails, TicketDoc, User } from "@/data/types";
+import { daysBetween, formatClock, formatDate, formatDay, formatDayClock, formatDayStamp, monthShort, wallTime, weekdayShort } from "@/lib/dates";
 import { inr } from "@/lib/format";
 import { fromMinor, placePhoto, userOf } from "@/state/view";
 
@@ -137,38 +138,86 @@ export function toTicketDoc(b: ApiBooking, documentId: Id | undefined, me: User)
       : { code: "OUT", place: b.place?.address ?? b.vendor, time: end },
     documentId: doc.document_id,
     bookingId: b.booking_id,
+    ...(httpUrl(doc.url) ? { url: httpUrl(doc.url) } : {}),
     mime: doc.mime,
     carrier: j?.carrier_name ?? b.vendor,
     ...(httpUrl(j?.logo_url) ? { logoUrl: httpUrl(j?.logo_url) } : {}),
   };
 }
 
-/** The "Just for you" sheet: my own leg of a travel booking that covers me (seat and PNR only come with `GET …/bookings`). */
-export function toPrivateDetails(b: ApiBooking, meId: Id): import("@/data/types").PrivateDetails | null {
+/**
+ * A journey's e-tickets, one per leg: the file named after the leg's route ("E-ticket BLR-GOX.pdf"), else the one in
+ * its place (onward first).
+ */
+function legFiles(b: ApiBooking): { out?: BookingDocument; back?: BookingDocument } {
+  const docs = b.documents ?? [];
+  const named = (j?: Journey | null) => (j ? docs.find((d) => d.name.toUpperCase().includes(`${stop(j.origin)}-${stop(j.destination)}`.toUpperCase())) : undefined);
+  const backNamed = named(b.return_journey);
+  const out = named(b.journey) ?? docs.find((d) => d !== backNamed);
+  const back = b.return_journey ? (backNamed ?? docs.find((d) => d !== out)) : undefined;
+  return { out, back };
+}
+
+const fileRef = (doc: BookingDocument | undefined, label: string): { file?: BookingFileRef } => (doc ? { file: { documentId: doc.document_id, label } } : {});
+
+/**
+ * The booking's sheet, opened from its ticket in the room: my own leg of a travel booking that covers me (seat and PNR
+ * only come with `GET …/bookings`), or a stay with its dates. Each leg carries its own file, and so does the stay.
+ */
+export function toPrivateDetails(b: ApiBooking, meId: Id): PrivateDetails | null {
   const j = b.journey;
-  if (!j) return null;
+  if (!j) {
+    if (b.kind !== "stay" || !b.starts_at || !b.ends_at) return null;
+    const checkIn = wallTime(b.starts_at);
+    const checkOut = wallTime(b.ends_at);
+    const date = (d: Date) => ({ code: `${d.getDate()} ${monthShort(d)}`, time: weekdayShort(d) });
+    return {
+      airline: { name: b.place?.name ?? b.title, logo: "" },
+      flight: b.ref,
+      from: date(checkIn),
+      to: date(checkOut),
+      cells: [
+        { label: PRIVATE_COPY.checkIn, value: formatClock(checkIn) },
+        { label: PRIVATE_COPY.checkOut, value: formatClock(checkOut) },
+        { label: PRIVATE_COPY.nights, value: String(Math.max(daysBetween(checkIn, checkOut), 1)) },
+      ],
+      bookingId: b.booking_id,
+      ...fileRef(b.documents?.[0], PRIVATE_COPY.openVoucher),
+    };
+  }
   const mine = b.passengers?.find((p) => p.person_id === meId);
   const depart = wallTime(j.depart_at);
   const back = b.return_journey;
+  const files = legFiles(b);
   return {
     airline: { name: j.carrier_name ?? b.vendor, logo: httpUrl(j.logo_url) ?? "" },
     flight: j.number ?? "",
     from: { code: stop(j.origin), time: `${formatDay(depart).split(" ")[0]} ${formatClock(depart)}` },
     to: { code: stop(j.destination), time: formatClock(wallTime(j.arrive_at)) },
-    seat: mine?.seat ?? "—",
-    boards: formatClock(depart),
-    pnr: mine?.pnr ?? b.ref,
+    cells: [
+      { label: PRIVATE_COPY.seat, value: mine?.seat ?? "—" },
+      { label: PRIVATE_COPY.boards, value: formatClock(depart) },
+      { label: PRIVATE_COPY.pnr, value: mine?.pnr ?? b.ref },
+    ],
     bookingId: b.booking_id,
+    ...fileRef(files.out, PRIVATE_COPY.openTicket),
     ...(back
       ? {
           ret: {
-            emoji: "🛬",
+            emoji: b.kind === "flight" ? "🛬" : bookingEmoji(b.kind),
             title: `Return · ${formatDay(wallTime(back.depart_at))}`,
             sub: [back.number, `${stop(back.origin)} ${formatClock(wallTime(back.depart_at))} → ${stop(back.destination)} ${formatClock(wallTime(back.arrive_at))}`]
               .filter(Boolean)
               .join(" · "),
+            ...fileRef(files.back, PRIVATE_COPY.openReturn),
           },
         }
       : {}),
   };
+}
+
+/** The booking's files that its sheet shows no button for (none belongs to a leg, or to the stay): listed under it. */
+export function otherFiles(b: ApiBooking, details: PrivateDetails | null): BookingDocument[] {
+  const shown = new Set([details?.file?.documentId, details?.ret?.file?.documentId]);
+  return (b.documents ?? []).filter((d) => !shown.has(d.document_id));
 }

@@ -17,7 +17,7 @@ export function TicketSheet({ tripId, open, onOpenChange, ticket }: TicketSheetP
   return (
     // No grab bar over the toolbar. A swipe down dismisses from the toolbar, or from the pages once they are back at the top.
     <BottomSheet open={open} onOpenChange={onOpenChange} top={96} grabber={false} aria-label={ticket?.title}>
-      {ticket && <PdfViewer tripId={tripId} ticket={ticket} onClose={() => onOpenChange(false)} />}
+      {ticket && <PdfViewer key={ticket.documentId} tripId={tripId} ticket={ticket} onClose={() => onOpenChange(false)} />}
     </BottomSheet>
   );
 }

@@ -1,6 +1,7 @@
 import type {
   AddBooking,
   Booking,
+  Card,
   CardActionResult,
   CardInRoom,
   CheckinState,
@@ -15,6 +16,7 @@ import type {
   OptionDetailsFull,
   PatchCheckinBody,
   PatchTripBody,
+  PayCard,
   PostMessageBody,
   SettlementMethod,
   TransactionFilter,
@@ -263,6 +265,25 @@ export const loadBookings = (tripId: Id) =>
     const res = await api.bookings(tripId);
     if (isFresh(tripId, "bookings", res.seq)) set((s) => void (tripDraft(s, tripId).bookings = res.items));
     return res.items;
+  });
+
+/**
+ * One booking as it stands now (`GET …/bookings/:id`): what Go's `ticket` card is drawn from when the card reaches the
+ * room before the trip's own re-read does. It takes its place in the lists the app holds; their next read replaces it.
+ */
+export const loadBooking = (tripId: Id, bookingId: Id) =>
+  once(`booking|${tripId}|${bookingId}`, async () => {
+    const booking = await api.booking(tripId, bookingId);
+    set((s) => {
+      const t = tripDraft(s, tripId);
+      for (const list of [t.view?.bookings, t.bookings]) {
+        if (!list) continue;
+        const at = list.findIndex((b) => b.booking_id === bookingId);
+        if (at >= 0) list[at] = booking;
+        else list.unshift(booking);
+      }
+    });
+    return booking;
   });
 
 export const loadItinerary = (tripId: Id, scope: "everyone" | "me") =>
@@ -602,22 +623,51 @@ export async function deleteMessage(tripId: Id, messageId: Id) {
 // Go's cards (§4.7) and the vault
 // ---------------------------------------------------------------------------
 
+/** The payer's button on a `pay` card: keyed on its id, never its label (§4.7). On an expired card it reads "Start again". */
+export const PAY_APPROVE = "approve";
+
+/** A card as the app holds it: in the room, else in Go's cards (`GET …/cards`). */
+function heldCard(tripId: Id, cardId: Id): Card | undefined {
+  const t = get().trips[tripId];
+  if (!t) return undefined;
+  const inRoom = Object.values(t.messages).find((m) => m.card?.card_id === cardId)?.card;
+  return inRoom ?? t.goCards[cardId]?.card;
+}
+
 /**
  * One press of a Go card button. Go's answer comes back as it is; `open` links are handled by the caller at once
  * (a `go://` route in the app, anything else in the browser). Do not retry on your own: a new press is a new `press_id`.
+ *
+ * The payer's Approve on a waiting `pay` card is the payment (§4.7): `done` means it is paid, with no page to open. The
+ * card reads paid from that moment; Go's `card` and `message` frames then bring the card as it really stands.
  */
-export function tapCard(
+export async function tapCard(
   tripId: Id,
   cardId: Id,
   actionId: string,
   opts: { optionId?: Id; payload?: { trip: "oneway" | "round" } } = {},
 ): Promise<CardActionResult> {
-  return api.cardAction(tripId, cardId, {
+  const before = heldCard(tripId, cardId);
+  const paying = actionId === PAY_APPROVE && before?.kind === "pay" && (before as PayCard).state === "waiting";
+  const result = await api.cardAction(tripId, cardId, {
     action_id: actionId,
     press_id: newKey(),
     ...(opts.optionId ? { option_id: opts.optionId } : {}),
     ...(opts.payload ? { payload: opts.payload } : {}),
   });
+  if (paying && result.result === "done") {
+    set((s) => {
+      const t = tripDraft(s, tripId);
+      const held = [...Object.values(t.messages).map((m) => m.card), t.goCards[cardId]?.card];
+      for (const card of held) {
+        // Only a card that is still waiting: a frame that landed first already says how it stands.
+        if (card?.card_id !== cardId || card.kind !== "pay" || (card as PayCard).state !== "waiting") continue;
+        (card as PayCard).state = "paid";
+        (card as PayCard).actions = null;
+      }
+    });
+  }
+  return result;
 }
 
 /** Every kind of card that is Go's own (§4.7): the ones with buttons, read by `GET …/cards`. */

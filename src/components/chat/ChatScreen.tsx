@@ -66,13 +66,14 @@ import {
   type TripData,
 } from "@/state";
 import { buildBoard, type BoardTarget } from "@/state/boardView";
-import { toPrivateDetails, toTicketDoc } from "@/state/bookingView";
+import { coversMe, isTravel, otherFiles, toPrivateDetails, toTicketDoc } from "@/state/bookingView";
 import { toCall, type CallModel } from "@/state/homeView";
 import { myVoteIndex, toCabCard, toPlaceOption, toRouteCard, toStay, voteShape, withDetails } from "@/state/optionView";
 import { buildRoom } from "@/state/roomView";
 import { fromMinor, toTripDates, toUser, tripFromView, userOf, usersById } from "@/state/view";
 import { toWorking } from "@/state/workingView";
 import { kFormat } from "@/lib/format";
+import { formatBytes } from "@/lib/media";
 import type { OptionRef, RoomModel } from "./CardView";
 import { MessageRenderer, userAvatar, type MessageActions } from "./MessageRenderer";
 import { useChatSheets } from "./useChatSheets";
@@ -166,7 +167,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
   const [routeCard, setRouteCard] = useState<OptionsCard | null>(null);
   const [cabCard, setCabCard] = useState<OptionsCard | null>(null);
   const [privateBookingId, setPrivateBookingId] = useState<string | null>(null);
-  const [ticketBookingId, setTicketBookingId] = useState<string | null>(null);
+  const [ticketRef, setTicketRef] = useState<{ bookingId: string; documentId?: string } | null>(null);
   const [attachment, setAttachment] = useState<Extract<Attachment, { kind: "image" | "file" }> | null>(null);
   const [recordTarget, setRecordTarget] = useState<RecordTarget | null>(null);
   const [recording, setRecording] = useState<CallModel | null>(null);
@@ -405,6 +406,7 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
       setLiveCardId(card.card_id);
       sheets.open("live");
     },
+    openBooking: (bookingId) => openPrivate(bookingId),
     openAttachment: (a) => {
       if (a.kind === "voice") return;
       setAttachment(a);
@@ -464,8 +466,17 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
 
   const bookings = data.bookings ?? view.bookings;
   const privateBooking = bookings.find((b) => b.booking_id === privateBookingId);
-  const ticketBooking = bookings.find((b) => b.booking_id === ticketBookingId);
-  const ticket = ticketBooking ? toTicketDoc(ticketBooking, undefined, me) : null;
+  // Read from the booking as it stands now, so the file's signed link is the latest one the Server gave (§4.10).
+  const privateDetails = privateBooking ? toPrivateDetails(privateBooking, me.id) : null;
+  // "Just for you" is my own flight, train, bus or cab: a journey booked for me alone. A stay, or a journey booked for
+  // several people, is worded as the booking it is.
+  const privatePeople = privateBooking?.for_person_ids.length ?? 1;
+  const privateShared = privateBooking ? !(isTravel(privateBooking) && privatePeople === 1) : false;
+  // Go's booking is answered without its file, which lands a moment later; one a person added never has any (§4.10).
+  const privateFileComing =
+    privateBooking && !privateBooking.documents?.length && privateBooking.status === "confirmed" && !privateBooking.added_by_person_id && coversMe(privateBooking, me.id);
+  const ticketBooking = bookings.find((b) => b.booking_id === ticketRef?.bookingId);
+  const ticket = ticketBooking ? toTicketDoc(ticketBooking, ticketRef?.documentId, me) : null;
 
   const book = (cardId: string, actionId: string) => (optionId: string, tripType: TripType) =>
     void cardTap.tap(cardId, actionId, { optionId, payload: { trip: tripType } }).then((result) => {
@@ -651,21 +662,35 @@ function Room({ tripId, data, slideIn }: { tripId: TripId; data: TripData; slide
       <PrivateSheet
         open={sheet === "private"}
         onOpenChange={closeOnFalse}
-        title={PRIVATE_COPY.title}
-        sub={PRIVATE_COPY.sub}
-        details={privateBooking ? toPrivateDetails(privateBooking, me.id) : null}
-        // Private sheet -> ticket viewer in one swap, so closing the viewer lands back on the chat.
-        onOpenTicket={
-          privateBooking?.documents?.length
-            ? () => {
-                setTicketBookingId(privateBooking.booking_id);
-                sheets.swap("ticket");
-              }
-            : undefined
-        }
+        title={privateShared ? PRIVATE_COPY.sharedTitle(privateBooking?.kind === "stay") : PRIVATE_COPY.title}
+        sub={privateShared ? PRIVATE_COPY.sharedSub(privatePeople) : PRIVATE_COPY.sub}
+        details={privateDetails}
+        files={(privateBooking ? otherFiles(privateBooking, privateDetails) : []).map((d) => ({
+          documentId: d.document_id,
+          name: d.name,
+          sub: PRIVATE_COPY.file(formatBytes(d.size_bytes)),
+          openLabel: PRIVATE_COPY.openFile(d.name),
+        }))}
+        pendingSince={privateFileComing ? privateBooking.created_at : undefined}
+        // Sheet -> ticket viewer in one swap.
+        onOpenFile={(documentId) => {
+          if (!privateBooking) return;
+          setTicketRef({ bookingId: privateBooking.booking_id, documentId });
+          sheets.swap("ticket");
+        }}
       />
       <AttachmentSheet open={sheet === "attachment"} onOpenChange={closeOnFalse} attachment={attachment} />
-      <TicketSheet tripId={tripId} open={sheet === "ticket"} onOpenChange={closeOnFalse} ticket={ticket} />
+      <TicketSheet
+        tripId={tripId}
+        open={sheet === "ticket"}
+        // Closing the viewer lands back on the chat, unless the booking has more files to open: then on its sheet.
+        onOpenChange={(open) => {
+          if (open) return;
+          if ((ticketBooking?.documents?.length ?? 0) > 1 && ticketBooking?.booking_id === privateBookingId) sheets.swap("private");
+          else sheets.close();
+        }}
+        ticket={ticket}
+      />
       <BoardSheet board={board} open={sheet === "board"} onOpenChange={closeOnFalse} onAction={boardAction} />
       <RecordPaymentSheet open={sheet === "record"} onOpenChange={closeOnFalse} target={recordTarget} />
       <RecordingSheet tripId={tripId} call={recording} open={sheet === "recording"} onOpenChange={closeOnFalse} />

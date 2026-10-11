@@ -210,9 +210,21 @@ export const api = {
   // -- §4.10 Bookings, documents, itinerary -----------------------------------
   bookings: (tripId: Id, o?: CallOpts) => http.get<{ items: Booking[]; seq: number }>(`${trip(tripId)}/bookings`, o),
   booking: (tripId: Id, bookingId: Id, o?: CallOpts) => http.get<Booking>(`${trip(tripId)}/bookings/${seg(bookingId)}`, o),
-  /** The file's bytes, through the Server's redirect to a signed link (valid 10 minutes). Covered people only. */
-  bookingDocument: (tripId: Id, bookingId: Id, documentId: Id, signal?: AbortSignal) =>
-    requestBlob(`${trip(tripId)}/bookings/${seg(bookingId)}/documents/${seg(documentId)}`, signal),
+  /**
+   * The file's bytes. Covered people only. `url` is the signed link the booking was read with (valid 1 hour): it is
+   * fetched as it is. Without one, or once it has run out, the Server's own route redirects to a fresh link.
+   */
+  bookingDocument: async (tripId: Id, bookingId: Id, documentId: Id, o: { url?: string; signal?: AbortSignal } = {}) => {
+    if (o.url) {
+      // No Authorization: it is Supabase Storage, and the link itself is the access.
+      const res = await fetch(o.url, { signal: o.signal, credentials: "omit" }).catch((err) => {
+        if (err instanceof DOMException && err.name === "AbortError") throw err;
+        return null;
+      });
+      if (res?.ok) return res.blob();
+    }
+    return requestBlob(`${trip(tripId)}/bookings/${seg(bookingId)}/documents/${seg(documentId)}`, o.signal);
+  },
   /** No body key at all: pass `idempotencyKey` per press, or a retry adds a second booking (§1.4). */
   addBooking: (tripId: Id, body: AddBooking, o: CallOpts & { idempotencyKey: string }) =>
     http.post<Booking & { seq: number }>(`${trip(tripId)}/bookings`, { ...o, body }),

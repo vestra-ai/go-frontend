@@ -105,6 +105,7 @@ export function PendingSheet({ tripId, view, data, features, item, open, onOpenC
     openRecord: onRecord,
     openRecording: toChat,
     openLive: toChat,
+    openBooking: toChat,
   };
 
   // The card to draw: the Server's own row for a vote or a mandate, Go's card as it stands now for the rest.

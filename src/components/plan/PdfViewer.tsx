@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Share, X } from "@/components/icons/generated";
 import { PageCounterPill } from "@/components/plan/PageCounterPill";
+import { PdfDocument, PdfPageSkeleton } from "@/components/plan/PdfDocument";
 import { PdfPage } from "@/components/plan/PdfPage";
 import { StickyDock } from "@/components/shell/StickyDock";
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,29 @@ type PdfViewerProps = {
   onClose?: () => void;
 };
 
-/** Ticket PDF viewer: sticky toolbar, pages in the document flow with a live page counter, sticky Save/Share bar. */
+/** A document that is a picture (a booking's file is a PDF or an image, CONTRACT-APP §4.10). */
+function ImagePage({ file, alt }: { file: File; alt: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  useEffect(() => {
+    const url = URL.createObjectURL(file);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- the object URL lives exactly as long as this effect
+    setSrc(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
+  if (!src) return <PdfPageSkeleton />;
+  return (
+    <div data-pdf-page className="w-full">
+      {/* eslint-disable-next-line @next/next/no-img-element -- a local object URL, nothing for next/image to optimise */}
+      <img src={src} alt={alt} className="block w-full bg-white shadow-page" />
+    </div>
+  );
+}
+
+/**
+ * Ticket viewer: sticky toolbar, the file's own pages in the document flow with a live page counter, sticky Save/Share
+ * bar. The pages are the stored PDF itself (the e-ticket, the hotel voucher). The page drawn from the booking's fields
+ * stands in only when there is no file to read, or it cannot be read. Give it the document's id as `key`: it holds one file.
+ */
 export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
   const embedded = onClose !== undefined;
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -36,11 +59,40 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
   const [busy, setBusy] = useState(false);
   const raf = useRef(0);
 
-  /** The stored file, through the Server's redirect to a signed link (valid 10 minutes, covered people only). */
+  const { bookingId, documentId, fileName, mime } = ticket;
+  const hasFile = Boolean(bookingId && documentId);
+  const [file, setFile] = useState<File | null>(null);
+  const [failed, setFailed] = useState(false);
+  /** The file's own page count once it is open; the booking's until then. */
+  const [filePages, setFilePages] = useState<number | null>(null);
+  const total = filePages ?? ticket.pages;
+  const unreadable = useCallback(() => setFailed(true), []);
+  // Every read of the booking mints a new signed link (valid 1 hour): the latest one is used, and never kept.
+  const link = useRef(ticket.url);
+  useEffect(() => {
+    link.current = ticket.url;
+  }, [ticket.url]);
+
+  const toFile = useCallback((blob: Blob) => new File([blob], fileName, { type: mime ?? blob.type }), [fileName, mime]);
+
+  // The stored file (covered people only): from the booking's signed link, else through the Server's redirect to a fresh one.
+  useEffect(() => {
+    if (!bookingId || !documentId) return;
+    const ctrl = new AbortController();
+    api
+      .bookingDocument(tripId, bookingId, documentId, { url: link.current, signal: ctrl.signal })
+      .then((blob) => setFile(toFile(blob)))
+      .catch(() => {
+        if (!ctrl.signal.aborted) setFailed(true);
+      });
+    return () => ctrl.abort();
+  }, [tripId, bookingId, documentId, toFile]);
+
+  /** For Save and Share: the file on screen, or a new read when it could not be shown. */
   async function fetchFile(): Promise<File | null> {
-    if (!ticket.bookingId || !ticket.documentId) return null;
-    const blob = await api.bookingDocument(tripId, ticket.bookingId, ticket.documentId);
-    return new File([blob], ticket.fileName, { type: ticket.mime ?? blob.type });
+    if (file) return file;
+    if (!bookingId || !documentId) return null;
+    return toFile(await api.bookingDocument(tripId, bookingId, documentId, { url: link.current }));
   }
 
   async function run(job: (file: File) => Promise<void>) {
@@ -91,7 +143,7 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
     const height = box ? box.clientHeight : window.innerHeight;
     const scrollHeight = box ? box.scrollHeight : document.documentElement.scrollHeight;
     if (scrollTop + height >= scrollHeight - 4) {
-      setCurrent(ticket.pages);
+      setCurrent(total);
       return;
     }
     const top = box ? box.getBoundingClientRect().top : 0;
@@ -102,7 +154,7 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
       return r.top <= mid && mid <= r.bottom;
     });
     if (hit >= 0) setCurrent(hit + 1);
-  }, [embedded, ticket.pages]);
+  }, [embedded, total]);
 
   useEffect(() => {
     const target: HTMLElement | Window = (embedded ? scrollRef.current : null) ?? window;
@@ -137,7 +189,7 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
       )}
       <div className="flex min-w-0 flex-1 flex-col gap-px">
         <h1 className="truncate text-16 font-semibold leading-[1.3] tracking-body">{ticket.title}</h1>
-        <span className="truncate text-13 tracking-caption text-muted">{copy.fileLine(ticket.fileName, ticket.pages)}</span>
+        <span className="truncate text-13 tracking-caption text-muted">{copy.fileLine(ticket.fileName, total)}</span>
       </div>
       <Button variant="ghost" size="icon" aria-label={copy.download} aria-busy={busy} onClick={save}>
         <Download className="size-5" />
@@ -149,22 +201,32 @@ export function PdfViewer({ tripId, ticket, onClose }: PdfViewerProps) {
   );
   const content = (
     <>
-      <div ref={pagesRef} className="flex flex-col items-center gap-4 px-3 pb-[120px] pt-5">
-        <div data-pdf-page className="flex w-full justify-center">
-          <PdfPage ticket={ticket} />
-        </div>
-        <div
-          data-pdf-page
-          aria-hidden
-          className="flex h-[120px] w-full max-w-[360px] flex-col gap-1.5 bg-white p-[22px] font-sans shadow-[0_2px_6px_rgb(0_0_0/0.12)]"
-        >
-          {["80%", "70%", "76%"].map((w) => (
-            <span key={w} className="block h-2.5 rounded-xs bg-skeleton" style={{ width: w }} />
-          ))}
-        </div>
+      <div ref={pagesRef} aria-busy={hasFile && !file && !failed} className="flex flex-col items-center gap-4 px-3 pb-[120px] pt-5">
+        {failed || !hasFile ? (
+          <>
+            <div data-pdf-page className="flex w-full justify-center">
+              <PdfPage ticket={ticket} />
+            </div>
+            <div
+              data-pdf-page
+              aria-hidden
+              className="flex h-[120px] w-full max-w-[360px] flex-col gap-1.5 bg-white p-[22px] font-sans shadow-[0_2px_6px_rgb(0_0_0/0.12)]"
+            >
+              {["80%", "70%", "76%"].map((w) => (
+                <span key={w} className="block h-2.5 rounded-xs bg-skeleton" style={{ width: w }} />
+              ))}
+            </div>
+          </>
+        ) : !file ? (
+          <PdfPageSkeleton />
+        ) : file.type.startsWith("image/") ? (
+          <ImagePage file={file} alt={ticket.title} />
+        ) : (
+          <PdfDocument file={file} onPages={setFilePages} onFailed={unreadable} />
+        )}
       </div>
       <StickyDock>
-        <PageCounterPill current={current} total={ticket.pages} />
+        <PageCounterPill current={Math.min(current, total)} total={total} />
         <div className="absolute inset-x-0 bottom-0 flex gap-2.5 bg-white px-4 pb-[max(28px,env(safe-area-inset-bottom))] pt-4 shadow-[0_-1px_0_rgb(11_27_63/0.06)]">
           <Button variant="secondary" size="md" className="flex-1 gap-1.5 px-3.5 text-15 tracking-sm" aria-busy={busy} onClick={save}>
             <Download className="size-[18px]" />

@@ -20,7 +20,7 @@ export type PayAskCardProps = {
   /** The green reassurance line ("Free cancellation until 1 Nov"). */
   assurance?: { title: string; sub: string };
   /**
-   * `open`: the buttons, for the one who may act (who books, the payer's "Yes, book it", "Approve").
+   * `open`: the buttons, for the one who may act (who books, the payer's "Yes, book it", the payer's pay button).
    * `claimed`: the row saying who has it ("Rahul is booking for all 4").
    */
   state: "open" | "claimed";
@@ -33,7 +33,7 @@ export type PayAskCardProps = {
 /**
  * The booking ask in the room, in its three lives: "One person books for all" (a `notice` with a `claim` action),
  * "Yes, book it?" (the `mandate`, the Server's own buttons, payer only) and the payment waiting for its payer (the
- * `pay` card, whose Approve opens Go's vault page). A payment never happens in the app (CONTRACT-APP §4.8).
+ * `pay` card, whose button is the payment: Go books at once and the card reads paid, CONTRACT-APP §4.7).
  */
 export function PayAskCard({ img, imgAlt, badge, title, total, sub, assurance, state, cta, secondary, helper, booker }: PayAskCardProps) {
   const tag = splitEmoji(badge);

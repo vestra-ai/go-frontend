@@ -65,7 +65,7 @@ export function BookingTicketCard({ booking, members }: { booking: Booking; memb
         {stub.kind === "count" ? (
           <>
             <span className="text-26 font-bold leading-none tabular-nums">{stub.n}</span>
-            <Eyebrow>{BOOKINGS_COPY.tickets}</Eyebrow>
+            <Eyebrow>{BOOKINGS_COPY.tickets(stub.n)}</Eyebrow>
           </>
         ) : (
           <>

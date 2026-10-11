@@ -2,31 +2,35 @@ import { Eyebrow } from "@/components/common/Eyebrow";
 import { ArrowRight, FileText } from "@/components/icons/generated";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { PRIVATE_COPY } from "@/data/seed/bookings";
 import type { PrivateDetails } from "@/data/types";
+import { FileOnItsWay } from "./FileOnItsWay";
 
-type BoardingInfoCardProps = { details: PrivateDetails; onOpenTicket?: () => void };
+type BoardingInfoCardProps = {
+  details: PrivateDetails;
+  /** Opens this leg's own file (`details.file`). Absent when the booking carries none for me. */
+  onOpenTicket?: () => void;
+  /** The booking's `created_at`, while its file may still be on its way: the button's place says so meanwhile. */
+  pendingSince?: string;
+};
 
-/** Flight, route, seat / boards / PNR and the ticket link (F-travel.md §1.4). No money. */
-export function BoardingInfoCard({ details, onOpenTicket }: BoardingInfoCardProps) {
-  const cells = [
-    { label: PRIVATE_COPY.seat, value: details.seat, className: "" },
-    { label: PRIVATE_COPY.boards, value: details.boards, className: "tabular-nums" },
-    { label: PRIVATE_COPY.pnr, value: details.pnr, className: "" },
-  ];
+/**
+ * Flight, route, seat / departs / PNR and the ticket link (F-travel.md §1.4). No money. A stay is drawn the same way:
+ * the hotel, check-in → check-out, its times and nights, and the voucher link.
+ */
+export function BoardingInfoCard({ details, onOpenTicket, pendingSince }: BoardingInfoCardProps) {
 
   return (
     <Card variant="float-sm" radius="2xl" className="flex flex-col gap-3 p-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         {details.airline.logo ? (
           <span className="grid h-8 place-items-center rounded-lg border border-line bg-white px-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element -- the carrier's wordmark from the booking */}
             <img src={details.airline.logo} alt={details.airline.name} className="h-auto max-h-5 w-14 object-contain" />
           </span>
         ) : (
-          <span className="text-15 font-semibold">{details.airline.name}</span>
+          <span className="min-w-0 truncate text-15 font-semibold">{details.airline.name}</span>
         )}
-        <span className="text-13 font-semibold text-muted">{details.flight}</span>
+        <span className="shrink-0 text-13 font-semibold text-muted">{details.flight}</span>
       </div>
       <div className="flex items-end justify-between gap-2">
         <div className="flex flex-col">
@@ -40,18 +44,20 @@ export function BoardingInfoCard({ details, onOpenTicket }: BoardingInfoCardProp
         </div>
       </div>
       <div className="grid grid-cols-3 gap-2 border-t-[1.5px] border-dashed border-line-2 pt-2.5">
-        {cells.map((cell) => (
-          <div key={cell.label} className="flex flex-col gap-0.5">
+        {details.cells.map((cell) => (
+          <div key={cell.label} className="flex min-w-0 flex-col gap-0.5">
             <Eyebrow>{cell.label}</Eyebrow>
-            <span className={`text-18 font-bold ${cell.className}`}>{cell.value}</span>
+            <span className="truncate text-18 font-bold tabular-nums">{cell.value}</span>
           </div>
         ))}
       </div>
-      {onOpenTicket && (
+      {onOpenTicket && details.file ? (
         <Button type="button" variant="secondary" size="sm" className="h-[42px] w-full gap-1.5" onClick={onOpenTicket}>
           <FileText className="size-4" />
-          {PRIVATE_COPY.openTicket}
+          {details.file.label}
         </Button>
+      ) : (
+        pendingSince && <FileOnItsWay key={pendingSince} since={pendingSince} />
       )}
     </Card>
   );

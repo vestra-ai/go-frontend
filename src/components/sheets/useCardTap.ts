@@ -12,8 +12,8 @@ import { buttonGone, tapCard } from "@/state";
 /**
  * The one answer that opens in the browser itself, never framed (CONTRACT-APP §4.7): a call's listen-in page (`listen`).
  * Its tab is opened inside the tap. Every other page Go answers with opens inside the app, the vault's included
- * (Approve on a `pay` card, "Add your details"): since 11 Oct 2026 every vault page lets the app frame it, with Face ID
- * working inside the frame (`GoPageSheet`).
+ * ("Add your details"): since 11 Oct 2026 every vault page lets the app frame it, with Face ID working inside the frame
+ * (`GoPageSheet`). The payer's button on a `pay` card opens no page: it answers `done`, and that is the payment.
  */
 const OPENS_IN_BROWSER = new Set(["listen"]);
 
